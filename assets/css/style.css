@@ -432,3 +432,8 @@ a.sitesearch-result:hover{background:var(--surface2)}
 .hostblock p{margin:0 0 8px;font-size:14px;color:var(--muted);line-height:1.55}
 .hostblock p b{color:var(--ink)}
 .hostblock .lookcmd{margin-top:8px}
+.incident h4.subhead{margin:14px 0 6px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-family:"IBM Plex Mono",monospace;color:var(--ink)}
+.tlist{display:grid;gap:4px;margin:0 0 12px}
+.tlist>div{font-size:14px;color:var(--muted);line-height:1.55;padding-left:12px;border-left:2px solid var(--line)}
+.paircard .storylink{margin-top:12px;font-size:13.5px;line-height:1.55}
+.paircard .storylink b{color:var(--ink)}
