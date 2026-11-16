@@ -1176,10 +1176,10 @@
   "k": "seed sql users table asha download reproducible examples"
  },
  {
-  "t": "Real stories: what broke at Uber, GitHub, Notion, Slack and Shopify",
+  "t": "Real stories: what broke at Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma and Dropbox",
   "u": "stories/index.html",
   "s": "Stories",
-  "k": "stories real incidents uber github notion slack shopify vitess orchestrator sharding failover"
+  "k": "stories real incidents uber github notion slack shopify adyen figma dropbox vitess orchestrator sharding failover dbproxy panda reshard"
  },
  {
   "t": "Uber: one update became four writes",
@@ -1222,6 +1222,42 @@
   "u": "stories/index.html#shopify-vitess",
   "s": "Stories",
   "k": "shopify vitess mysql sharding verifiers user_id ghostferry cross-shard"
+ },
+ {
+  "t": "Adyen: one partition hit 30 TB",
+  "u": "stories/index.html#adyen",
+  "s": "Stories",
+  "k": "adyen postgres partition 30 TB upgrade snapshot wraparound HOT WAL index rebuild"
+ },
+ {
+  "t": "Notion: the DMS copy came back three times the size",
+  "u": "stories/index.html#notion-dms",
+  "s": "Stories",
+  "k": "notion DMS postgres upgrade bloat vacuum TOAST logical copy"
+ },
+ {
+  "t": "Figma: they stayed on Postgres and built the sharding layer themselves",
+  "u": "stories/index.html#figma",
+  "s": "Stories",
+  "k": "figma postgres sharding dbproxy pgbouncer shard key colo scatter gather"
+ },
+ {
+  "t": "Dropbox: one customer outgrew one shard",
+  "u": "stories/index.html#dropbox-panda",
+  "s": "Stories",
+  "k": "dropbox panda mysql sharding tenant mit spanner key value store"
+ },
+ {
+  "t": "Notion: the re-shard, 32 databases to 96, with zero downtime",
+  "u": "stories/index.html#notion-reshard",
+  "s": "Stories",
+  "k": "notion reshard postgres replication pgbouncer failover dark reads 32 96"
+ },
+ {
+  "t": "Notion: sharding fixed the live database, and the warehouse broke next",
+  "u": "stories/index.html#notion-hudi",
+  "s": "Stories",
+  "k": "notion hudi debezium kafka spark warehouse CDC fivetran snowflake upsert"
  },
  {
   "t": "Hosting PostgreSQL: on-prem, EC2, Kubernetes, managed",
