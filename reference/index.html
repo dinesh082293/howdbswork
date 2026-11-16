@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Quick lookup: side-by-side engine comparison, annotated EXPLAIN output, the log-file pattern and failure modes, and the DBA checklist."/>
+<link rel="icon" href="data:,"/>
+<title>Reference — Compare, EXPLAIN, DBA Checklist · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <h1>Reference</h1>
+</div></header>
+<section id="evidence" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">In Practice · reading the evidence</div>
+  <h2>Explain output, annotated line by line — red flags named</h2>
+  <p class="sub">Mechanism knowledge is only useful if it terminates in a diagnostic. These are the two outputs that settle the majority of production query incidents. Each line below is annotated with what it proves; the red flags are the lines that change the decision.</p>
+
+  <h3 style="margin:18px 0 8px;font-size:17px">PostgreSQL — <span class="mono" style="font-size:14px">EXPLAIN (ANALYZE, BUFFERS)</span> on a lookup by email</h3>
+<pre class="evidence">Index Scan using users_email_idx on users
+  (cost=0.43..8.45 rows=1 width=68) <span class="c">← planner estimate: 1 row</span>
+  (actual time=0.041..0.043 rows=1 loops=1)
+  Index Cond: (email = 'asha@example.com')
+  <span class="good">Buffers: shared hit=4</span>             <span class="c">← 4 pages, all from cache. Healthy.</span>
+Planning Time: 0.081 ms
+Execution Time: 0.052 ms</pre>
+  <p class="evnote"><b>What proves health:</b> estimated rows (1) match actual rows (1) — statistics are current. <b>Buffers: shared hit=4</b> is the index root, internal, leaf, and one heap page: exactly the 4 reads the B+ tree math predicts. <span style="color:#b45309"><b>Red flags in this output shape:</b></span> <b>Seq Scan</b> in place of Index Scan on a large table; <b>rows estimated 1, actual 48,000</b> (stale statistics — run ANALYZE before touching the query); <b>Buffers: shared read</b> dominating hit (working set no longer fits in <span class="mono">shared_buffers</span>); and on an Index Only Scan, <b>Heap Fetches</b> in the hundreds — the visibility map is stale and the "index-only" scan is silently fetching the heap per row.</p>
+
+  <h3 style="margin:18px 0 8px;font-size:17px">MongoDB — <span class="mono" style="font-size:14px">explain("executionStats")</span> on an orders query</h3>
+<pre class="evidence">"winningPlan": { "stage": "FETCH",
+  "inputStage": { "stage": <span class="good">"IXSCAN"</span>,
+    "indexName": "status_1_createdAt_-1_amount_1" } }
+"executionStats": {
+  "nReturned": 42,
+  "totalDocsExamined": 42,      <span class="c">← equals nReturned: perfect selectivity</span>
+  "totalKeysExamined": 43,
+  "executionTimeMillis": 3,
+  <span class="flag">"stage": "SORT"</span>              <span class="c">← RED FLAG if present in the winning plan</span>
+}</pre>
+  <p class="evnote"><b>The ratio is the diagnostic:</b> <span class="mono">totalDocsExamined ÷ nReturned</span> = 1.0 here. At 10×, the index is scanning ten documents for every one returned — poor selectivity, usually a low-cardinality leading field. At 1,000×, the index is decorative. <b>A SORT stage in the winning plan</b> means the index does not cover the sort: results are buffered and sorted in memory, and the query aborts outright at the 100 MB in-memory sort limit (<span class="mono">Sort exceeded memory limit of 104857600 bytes</span>). <b>COLLSCAN</b> as the winning stage means no usable index exists for the filter at all — at 10M documents of ~2 KB, that is ~20 GB read to return what may be a single document.</p>
+
+  <div class="derive"><b class="dt">Derivation — why ESR is a theorem, not a convention</b>A compound index stores keys lexicographically: sorted by field 1, then within equal field-1 values by field 2, then within equal (field 1, field 2) pairs by field 3. Three consequences follow mechanically. <b>Equality first:</b> an equality predicate on field 1 collapses the scan to one contiguous key range, located in O(log N). <b>Sort second:</b> within that contiguous range, field-2 keys are already stored in sort order, so the scan emits rows sorted — no SORT stage, no 100 MB abort. <b>Range last:</b> a range predicate on a field terminates the usable ordering — every key after the range boundary must still be visited for subsequent fields, so a range field placed before the sort field destroys the sort guarantee. Reverse the order and the equality condition degrades from an O(log N) seek to a scan of every key inside the range — on a range covering 80% of the index, the index is 80% of a full scan. ESR is the only ordering that preserves all three properties simultaneously, because of how the keys are physically stored. Nothing about it is stylistic.</div>
+</div></section>
+<section id="compare" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Side by side · the same job, three ways</div>
+  <h2>The same work, done by three different file layouts</h2>
+  <p class="sub">Read down a column for one engine's complete physical design; read across a row for the same job in three layouts. The differences that matter operationally are all here: page size (8 KB vs 16 KB vs variable compressed blocks), log count (one log doing two jobs vs two specialized logs), and where old versions live (in the table file, in separate undo tablespaces, or in cache). Those three choices predict each engine's characteristic failure modes more reliably than any benchmark.</p>
+  <div class="cmp">
+    <div class="cmpcol pg"><header>PostgreSQL</header>
+      <p class="best">Pick it when being exactly right matters more than being flexible.</p><dl>
+      <dt>Write-ahead log</dt><dd>WAL — 16 MB segments in <span class="mono">pg_wal/</span>, named like <span class="mono">000000010000000000000003</span>. One log does crash recovery <i>and</i> replication.</dd>
+      <dt>The row lives in</dt><dd>A heap file: <span class="mono">base/&lt;db oid&gt;/&lt;relfilenode&gt;</span>, 8 KB pages. Find it with <span class="mono">pg_relation_filepath('users')</span>.</dd>
+      <dt>Kept hot in memory by</dt><dd><span class="mono">shared_buffers</span> (plus the OS page cache).</dd>
+      <dt>Old versions</dt><dd>UPDATE writes a new tuple in the same file; <span class="mono">VACUUM</span> / autovacuum removes dead tuples later.</dd>
+      <dt>Replicas stay in sync by</dt><dd>Streaming the WAL byte-for-byte. Check <span class="mono">pg_stat_replication</span>.</dd>
+      <dt>Look inside with</dt><dd><span class="mono">psql</span>: <span class="mono">\d+ users</span> · <span class="mono">pg_waldump</span> · <span class="mono">EXPLAIN ANALYZE</span></dd>
+      <dt>Watch out</dt><dd>Dead tuples piling up when autovacuum falls behind, and too many connections — front it with PgBouncer.</dd>
+    </dl></div>
+    <div class="cmpcol my"><header>MySQL · InnoDB</header>
+      <p class="best">Pick it for a fast website where most lookups are by ID.</p><dl>
+      <dt>Write-ahead logs — two of them</dt><dd>Redo log (<span class="mono">ib_logfile0/1</span>) for crash recovery, plus the binary log (<span class="mono">mysql-bin.000001</span>…) for replicas and point-in-time recovery.</dd>
+      <dt>The row lives in</dt><dd><span class="mono">shop/users.ibd</span> — one file per table, and the file <i>is</i> the primary-key B+ tree: rows in ID order, 16 KB pages.</dd>
+      <dt>Kept hot in memory by</dt><dd>The InnoDB buffer pool — <span class="mono">innodb_buffer_pool_size</span>.</dd>
+      <dt>Old versions</dt><dd>Row updated in place; old version rebuilt from undo records in <span class="mono">undo_001/undo_002</span>, removed by the purge thread.</dd>
+      <dt>Replicas stay in sync by</dt><dd>Replaying the binary log, positioned exactly by GTID. Check <span class="mono">SHOW REPLICA STATUS</span>.</dd>
+      <dt>Look inside with</dt><dd><span class="mono">SHOW BINARY LOGS</span> · <span class="mono">mysqlbinlog</span> · <span class="mono">SHOW ENGINE INNODB STATUS</span></dd>
+      <dt>Watch out</dt><dd>Random IDs (e.g. random UUIDs) as primary keys: inserts land all over the <span class="mono">.ibd</span> file and split pages constantly.</dd>
+    </dl></div>
+    <div class="cmpcol mo"><header>MongoDB · WiredTiger</header>
+      <p class="best">Pick it when records all look different and you need to spread across many computers.</p><dl>
+      <dt>Write-ahead logs — two of them</dt><dd>Journal (<span class="mono">journal/WiredTigerLog.*</span>) for crash recovery, plus the oplog (<span class="mono">local.oplog.rs</span>, a capped collection) for replica sets.</dd>
+      <dt>The document lives in</dt><dd><span class="mono">collection-*.wt</span> — one compressed file per collection; <span class="mono">_mdb_catalog.wt</span> maps names to files. Indexes are separate <span class="mono">index-*.wt</span> files.</dd>
+      <dt>Kept hot in memory by</dt><dd>The WiredTiger cache — by default ~50% of (RAM − 1 GB).</dd>
+      <dt>Old versions</dt><dd>Timestamped versions kept in the cache; readers read at a snapshot timestamp. Checkpoints (~60 s) write a consistent state to the <span class="mono">.wt</span> files.</dd>
+      <dt>Replicas stay in sync by</dt><dd>Tailing the primary's oplog. If the primary dies, members elect a new one. Check <span class="mono">rs.status()</span>.</dd>
+      <dt>Look inside with</dt><dd><span class="mono">mongosh</span>: <span class="mono">rs.printReplicationInfo()</span> · <span class="mono">db.serverStatus().wiredTiger</span> · <span class="mono">explain('executionStats')</span></dd>
+      <dt>Watch out</dt><dd>A shard key chosen badly — it is nearly permanent — and queries that must scatter to every shard because they don't include the shard key.</dd>
+    </dl></div>
+  </div>
+</div></section>
+<section id="logs-pattern"><div class="wrap">
+<div class="kicker">The log files · the pattern</div>
+<h2>Five logs run everything. Know these five.</h2>
+<div class="logcard">
+      <span class="tag all">All 3</span>
+      <h3>The pattern behind all five</h3>
+      <div class="fname">log first → data file later</div>
+      <dl>
+        <dt>The rule</dt><dd>Two kinds of log appear above. <b>Physical logs</b> (WAL, redo, journal) record <i>what changed in which page</i> — they exist for crash recovery on the same server. <b>Logical logs</b> (binlog, oplog) record <i>what operation happened</i> — they exist so other servers can redo the same operations.</dd>
+        <dt>Why two kinds</dt><dd>A replica can't apply "bytes 40–88 of page 7 changed" unless its pages are byte-identical — streaming WAL replication does exactly that. A logical log is portable across versions and layouts, at the cost of re-executing each operation.</dd>
+        <dt>The commit rule</dt><dd>In all three engines, COMMIT means one thing: <b>the log record is on disk</b>. The data file catching up is housekeeping (the checkpoint). If you remember one sentence from this page, make it that one.</dd>
+      </dl>
+    </div><p style="font-size:14.5px;color:var(--muted)">The five logs, one by one: <a href="../postgresql/index.html#logs">PostgreSQL — WAL</a> · <a href="../mysql/index.html#logs">MySQL — redo log and binary log</a> · <a href="../mongodb/index.html#logs">MongoDB — journal and oplog</a></p>
+<h3 style="margin:26px 0 4px;font-size:19px">Where the logs break — the five failure modes that page people</h3>
+  <p style="font-size:14px;color:var(--muted);margin:0">Each row is a log, the way it fails in production, and the window math that would have predicted it.</p>
+  <table class="breaks"><thead><tr><th>Failure mode</th><th>Root cause</th><th>Production blast radius</th><th>Mitigation</th></tr></thead><tbody>
+    <tr><td>WAL cannot recycle; <span class="mono">pg_wal/</span> fills the disk</td><td>Archiving failing, or a dead standby/replication slot holding segments indefinitely</td><td>Primary panics and stops accepting writes when the filesystem reaches 100%. Recovery requires freeing space without deleting held segments by hand</td><td>Alert on <span class="mono">pg_wal</span> size and slot lag; drop dead slots; fix archiving before it is an outage</td></tr>
+    <tr><td>Redo log wraps into unflushed pages</td><td>Checkpoint age approaches <span class="mono">innodb_redo_log_capacity</span> because page flushing cannot match the write rate</td><td>InnoDB forces aggressive flushing; write latency spikes at peak load, in the worst case to near-stall</td><td>Raise redo capacity (8.0.30+ allows up to 100 GB); alert at 75% checkpoint age</td></tr>
+    <tr><td>Binlog purged before a replica reads it</td><td><span class="mono">binlog_expire_logs_seconds</span> shorter than the replica's downtime</td><td>Replica cannot resume; full re-copy of the source dataset, hours at production scale</td><td>Retention longer than the longest planned replica outage; alert on oldest unconsumed binlog</td></tr>
+    <tr><td>Journal on the same contended volume as data files</td><td>Journal fsyncs queue behind checkpoint writes on one device</td><td>Every <span class="mono">j:true</span> write inherits the contention; commit latency degrades instance-wide, not per-query</td><td>Separate journal volume; monitor journal commit latency in <span class="mono">serverStatus</span></td></tr>
+    <tr><td>Secondary down longer than the oplog window</td><td>Oplog size ÷ write rate &lt; downtime duration</td><td>Full initial sync at production traffic levels: hours of elevated load on the primary, plus a second copy of the dataset in flight</td><td>Size the oplog so the window exceeds the longest maintenance; recompute monthly as write rate grows</td></tr>
+  </tbody></table>
+
+</div></section>
+<section id="checklist" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">The DBA checklist · commands included</div>
+  <h2>What to check before go-live — and in the first 5 minutes of an incident</h2>
+  <p class="sub">Left: the checks that prevent the majority of the incidents above, each with its threshold stated as a number — connections by state, lag in seconds, disk at 70% with a growth rate, oldest transaction under 5 minutes. Right: the triage order when something is already broken. The order is deliberate: “what is running right now” eliminates half of all incident classes in one query, before any dashboard is opened. Every item carries the exact command per engine.</p>
+  <div class="checkcols">
+    <div class="checkpanel"><h3>Before go-live</h3>
+      <div class="checkitem"><h4>Connections are pooled and capped</h4><p>App pool sized from DB capacity, pooler in place (PgBouncer / ProxySQL), timeouts set for idle-in-transaction and long statements.</p><div class="lookcmd">-- PG: SELECT count(*), state FROM pg_stat_activity GROUP BY state;
+-- MySQL: SHOW VARIABLES LIKE 'max_connections'; SHOW PROCESSLIST;
+-- Mongo: db.serverStatus().connections</div></div>
+      <div class="checkitem"><h4>Slow-query capture is ON</h4><p>You cannot fix what you never recorded. Enable it before launch, with a threshold (100 ms–1 s) and a review habit.</p><div class="lookcmd">-- PG: log_min_duration_statement = 1000 + pg_stat_statements
+-- MySQL: slow_query_log=ON, long_query_time=1 (+ pt-query-digest)
+-- Mongo: db.setProfilingLevel(1, {slowms: 100})</div></div>
+      <div class="checkitem"><h4>Indexes match the real queries — and unused ones are dropped</h4><p>Run the app's top 20 queries through EXPLAIN. Then find indexes nobody reads: they still tax every write.</p><div class="lookcmd">-- PG: SELECT relname, idx_scan FROM pg_stat_user_indexes WHERE idx_scan = 0;
+-- MySQL: SELECT * FROM sys.schema_unused_indexes;
+-- Mongo: db.users.aggregate([{$indexStats:{}}])</div></div>
+      <div class="checkitem"><h4>Replication lag is measured and alerted</h4><p>Know normal lag (usually &lt; 1 s), alert at 2–5 s, and know the oplog/binlog/WAL window: how long a replica can be down and still catch up.</p><div class="lookcmd">-- PG: SELECT replay_lag FROM pg_stat_replication;
+-- MySQL: SHOW REPLICA STATUS\G  (Seconds_Behind_Source)
+-- Mongo: rs.printReplicationInfo(); rs.status()</div></div>
+      <div class="checkitem"><h4>Disk, bloat, and log retention are bounded</h4><p>Log retention set by time and size, autovacuum/purge verified working, disk alert at 70% with a growth-rate view, retention jobs for events/sessions tables.</p><div class="lookcmd">-- PG: SELECT relname, n_dead_tup FROM pg_stat_user_tables ORDER BY n_dead_tup DESC LIMIT 5;
+-- MySQL: SHOW BINARY LOGS; (check binlog_expire_logs_seconds)
+-- Mongo: db.stats(); db.serverStatus().wiredTiger.cache</div></div>
+      <div class="checkitem"><h4>Backup exists — and a restore has actually been tested</h4><p>An untested backup is a hope, not a backup. Restore to a scratch server, time it, and verify point-in-time recovery (backup + log replay) reaches a chosen minute.</p><div class="lookcmd">-- PG: pg_basebackup + WAL archive → restore &amp; recovery_target_time test
+-- MySQL: XtraBackup / mysqldump → restore + mysqlbinlog replay to a timestamp
+-- Mongo: mongodump / snapshot → mongorestore to a test replica set</div></div>
+    </div>
+    <div class="checkpanel"><h3>When something breaks — first 5 minutes, in order</h3>
+      <div class="checkitem"><h4>1 · What is running right now?</h4><p>Before logs, before dashboards: ask the database what it is doing this second. One query answers half of all incidents.</p><div class="lookcmd">-- PG: SELECT pid, state, wait_event_type, now()-query_start AS age, query FROM pg_stat_activity WHERE state != 'idle' ORDER BY age DESC;
+-- MySQL: SHOW FULL PROCESSLIST;
+-- Mongo: db.currentOp({active:true, secs_running:{$gt:5}})</div></div>
+      <div class="checkitem"><h4>2 · Is someone blocking everyone else?</h4><p>Find the head of the lock chain and the oldest transaction. Killing the blocker is often the whole fix — then fix why it ran long.</p><div class="lookcmd">-- PG: SELECT pid, pg_blocking_pids(pid) FROM pg_stat_activity WHERE cardinality(pg_blocking_pids(pid)) &gt; 0;
+-- MySQL: SELECT * FROM performance_schema.data_lock_waits; SHOW ENGINE INNODB STATUS\G
+-- Mongo: db.currentOp({waitingForLock:true})</div></div>
+      <div class="checkitem"><h4>3 · Vitals: connections, lag, disk</h4><p>Three numbers rule out three incident classes in under a minute: pool/connections saturated? replica lag spiking? disk about to fill?</p><div class="lookcmd">-- Connections: pg_stat_activity count / SHOW PROCESSLIST count / serverStatus().connections
+-- Lag: pg_stat_replication / SHOW REPLICA STATUS\G / rs.status()
+-- Disk: df -h + biggest relations (see go-live list)</div></div>
+      <div class="checkitem"><h4>4 · What changed?</h4><p>Deploys, a new report, a marketing email, a batch job that “only runs monthly.” Correlate the slowdown start time with the slow log's first bad entries and the top query by total time.</p><div class="lookcmd">-- PG: SELECT query, calls, total_exec_time FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 5;
+-- MySQL: pt-query-digest on the slow log around the start time
+-- Mongo: db.system.profile sorted by ts around the start time</div></div>
+      <div class="checkitem"><h4>5 · Read one bad plan before changing anything</h4><p>Pick the single worst query from step 4 and explain it. Seq scan on a big table, rows examined ≫ rows returned, or a sort spilling to disk — the plan names the fix.</p><div class="lookcmd">-- PG: EXPLAIN (ANALYZE, BUFFERS) &lt;query&gt;;
+-- MySQL: EXPLAIN FORMAT=TREE &lt;query&gt;;
+-- Mongo: db.coll.find(…).explain("executionStats")</div></div>
+      <div class="checkitem"><h4>6 · Fix the cause, write down the check</h4><p>After the fire: the lasting fix (index, pool, timeout, routing, partition) plus one alert that would have caught it at minute one. An incident without a new alert will repeat.</p><div class="lookcmd">-- Leave behind: slow-log alert · lag alert · oldest-transaction alert · disk growth alert
+-- All four are one query each — see the cards in “When the app starts hurting”.</div></div>
+    </div>
+  </div>
+</div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk — <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page — durability, replication, point-in-time recovery — is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+</div></footer><script src="../assets/js/main.js"></script>
+</body>
+</html>
