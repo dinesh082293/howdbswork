@@ -14,7 +14,8 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>MySQL · InnoDB</h1>
@@ -35,6 +36,7 @@
       </div></div></div>
       <div class="fnote"><b>Who does what:</b> Connection threads run queries. Page cleaners flush dirty pages to the <span class="mono">.ibd</span> files. The purge thread deletes undo records no reader still needs. Threads share one process. A crash takes all of them. Redo rebuilds the state.</div>
     </div></div>
+  <p style="font-size:14.5px;color:var(--muted)">See the real thing: the official <a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-architecture.html">InnoDB Architecture</a> diagram, Figure 17.1. One picture, in-memory structures on one side, on-disk structures on the other.</p>
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">Every log file a DBA needs to know</h3>
@@ -135,10 +137,28 @@ SHOW ENGINE INNODB STATUS\G
 SHOW REPLICA STATUS\G</pre></div></div>
 </div></section>
 <section><div class="wrap">
+<h3 style="margin:6px 0 4px;font-size:19px">The optimizer's selectivity decision</h3>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Problem.</b> I add an index. The query ignores it. I run EXPLAIN first. It says full scan. That feels wrong. It is often right.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Mechanism.</b> An index lookup reads pages one at a time, in key order. Those pages sit scattered across the <span class="mono">.ibd</span> file. Each one is a random read. A full scan reads the same file front to back, in one pass. One sequential pass can beat thousands of random reads. The planner compares those two costs. It picks the cheaper one. It skips the index when the query must return a large share of the table.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The planner estimates row counts from statistics. A bulk load can leave those statistics stale. The planner then guesses wrong. <span class="mono">ANALYZE TABLE</span> refreshes the statistics. Run it after a bulk load. Then read EXPLAIN again.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">A secondary index does not hold the row. It holds the primary key value. Each match needs a second read into the clustered index. That read fetches the row from <span class="mono">users.ibd</span>. This is the bookmark lookup. One match costs two reads. A thousand matches cost two thousand reads.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Every secondary entry carries a copy of the primary key. A long string key makes every secondary entry longer. Longer entries mean more pages per index. Keep the primary key short. Use an integer id when you can.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Exact check.</b> Run EXPLAIN. Then refresh statistics. Then check what the index holds.</p>
+<div class="lookcmd">EXPLAIN SELECT id, email FROM users WHERE status = 'active';
+
+ANALYZE TABLE users;
+
+SELECT INDEX_NAME, COLUMN_NAME, CARDINALITY
+FROM information_schema.statistics
+WHERE TABLE_SCHEMA = 'shop' AND TABLE_NAME = 'users';</div>
+<p style="font-size:14.5px;color:var(--muted);margin:8px 0 0;max-width:820px">Read EXPLAIN for the access type. A scan on a wide query is the planner doing its job. A scan on a narrow query means stale statistics or a missing index.</p>
+</div></section>
+<section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">One incident I keep coming back to</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Writes started failing. Then the database refused writes entirely.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">I broke the disk down by owner before touching anything. The binlog was the filler. It could not be purged because a replica was down.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The fix was the holder, not the files. Revive or remove the dead replica. Never rm old binlog files by hand. Set log retention by time and size, and alert at 70 percent, not 98 percent.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Real versions of this story: GitHub automated the failover with Orchestrator, then upgraded 1,200 hosts the same way, and Slack and Shopify both moved to Vitess. All four are on the <a href="../stories/index.html#mysql">Stories page</a>. How to host MySQL on-prem, on EC2, in Kubernetes, or managed is on the <a href="../cloud/index.html#my-hosting">Cloud page</a>.</p>
 <h3 style="margin:18px 0 4px;font-size:19px">Before you leave, check this</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One command. It tells you how close the redo log is to stalling writes.</p>
 <div class="lookcmd">SHOW ENGINE INNODB STATUS\G
@@ -148,6 +168,11 @@ SHOW REPLICA STATUS\G</pre></div></div>
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL. <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL. <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page follows from that ordering: durability, replication, point-in-time recovery. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
 </body>
 </html>
