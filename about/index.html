@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Who wrote this site and why: a production database engineer on PostgreSQL, MySQL, MongoDB and Aurora, and how to use the site from zero to staff level."/>
+<link rel="icon" href="data:,"/>
+<title>About · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <h1>About</h1>
+  <p class="lede">I run production databases for a living. PostgreSQL, MySQL, MongoDB, Aurora. Ten years of it.</p>
+  <p class="lede">This site is the page I wished someone had handed me when I started. It starts with the files on disk. It ends with the check you run at 2 AM.</p>
+</div></header>
+<section id="why"><div class="wrap">
+  <div class="kicker">Why I wrote this</div>
+  <h2>Most of what I know, I learned the expensive way</h2>
+  <p class="sub">A page at 2 AM. A query that was fine yesterday and slow today. A disk that filled up while nobody was watching. A replica that was three seconds behind and a user staring at data they had just saved.</p>
+  <p class="sub">Nobody handed me a page that started with the files on disk. So I wrote one.</p>
+  <p class="sub">This site teaches three databases the way they actually exist on a server. A process, a block of memory, and a directory of files. If you know where the bytes sit, the performance follows. If you do not, you are guessing, and guessing is how you end up restarting a database at 2 AM hoping the problem goes away.</p>
+  <p class="sub">It goes from zero to staff level. The facts are the same at every level. Only the questions get harder.</p>
+</div></section>
+<section id="how-to-use" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">How to use this site</div>
+  <h2>Three ways in, depending on where you are</h2>
+  <p class="sub">Start at <a href="../index.html">Home</a> if you are new. It follows one insert from the app to the log file to the data page to the replica, then walks through a read, an update, a delete, and a crash.</p>
+  <p class="sub">Follow the <a href="../staff-path/index.html">Staff Path</a> if you want the guided route. It goes from zero to staff level in order, one problem and one diagram at a time.</p>
+  <p class="sub">Keep the <a href="../cheat-sheet/index.html">Cheat Sheet</a> open if you already know the ideas and need the numbers. Three sheets, one per engine, eight rules each.</p>
+  <p class="sub">If something is broken right now, skip the reading. Go to the incident cards on <a href="../index.html">Home</a>. Find your symptom. Run the check named beside it.</p>
+  <p class="sub"><b style="color:var(--ink)">Before you leave, check this:</b> run <span class="mono">EXPLAIN (ANALYZE, BUFFERS)</span> on your slowest query. Look at the pages it read. That number tells you what to fix.</p>
+</div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+</body>
+</html>
