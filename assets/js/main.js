@@ -317,7 +317,7 @@ ls $dbPath/rollback/  <span class="c">← any file here = writes that were ackno
    problem:"WAL segments can only be recycled after a checkpoint; write faster than checkpoints complete and the safety log becomes the outage.",
    growth:[["MB of WAL/day","Defaults are fine. Checkpoints are timed, an hour apart.",0],["GB/day","Requested checkpoints appear in pg_stat_bgwriter. Still self-managing, at a price in I/O smoothness.",0],["Transition: hundreds of MB/min","Checkpoint I/O competes with query I/O every few minutes. Latency spikes align with checkpoint starts.",1],["Archive failure at this rate","pg_wal grows unbounded, GB per hour, until the filesystem fills and the primary panics, by design.",1]],
    diagram:[["Write rate","WAL generated per minute",""],["max_wal_size / checkpoint_timeout","whichever hits first triggers checkpoint","hot"],["Checkpoint writes dirty pages","segments before it recycle","good"],["Budget too small","requested checkpoints, I/O storms","hot"]],
-   why:"Checkpoint tuning is the highest-leverage PostgreSQL write tuning there is: it converts random write bursts into steady background I/O, or fails to.",
+   why:"Checkpoint tuning is the most effective PostgreSQL write tuning there is: it converts random write bursts into steady background I/O, or fails to.",
    tradeoff:"Large max_wal_size (tens of GB on busy primaries) smooths I/O but lengthens crash recovery and the disk pg_wal can consume before recycling.",
    practice:{out:`SELECT checkpoints_req, checkpoints_timed FROM pg_stat_bgwriter;
  req = 214   timed = 30  <span class="flag">← 88% of checkpoints are size-triggered: the budget is the problem</span>
@@ -399,9 +399,10 @@ function renderPair(P){
    '</div></div>';
 }
 
+var LEVEL_MINS=[15,20,20,25,20,20];
 if(levelsEl){LEVELS.forEach(function(L,i){
   var d=document.createElement('div'); d.className='level'+(i===0?' open':''); d.id='lvl'+i;
-  d.innerHTML='<button class="level-head" aria-expanded="'+(i===0)+'"><span class="lvl-num">'+i+'</span><span><h3>'+L.t+'</h3><p>Problem: '+L.problem+'</p></span></button>'+
+  d.innerHTML='<button class="level-head" aria-expanded="'+(i===0)+'"><span class="lvl-num">'+i+'</span><span><h3>'+L.t+'</h3><p>Problem: '+L.problem+'</p><span class="lvl-meta">Level '+i+' · about '+LEVEL_MINS[i]+' minutes</span></span></button>'+
   '<div class="level-body"><div class="problem"><b class="label">Problem</b><p>'+L.problem+'</p></div>'+
   '<div class="pairgrid">'+L.pairs.map(renderPair).join('')+'</div>'+
   '<div class="takeaway">Remember: '+L.take+'</div>'+
