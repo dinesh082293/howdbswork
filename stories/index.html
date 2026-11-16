@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Seven real database incidents from Uber, GitHub, Notion, Slack and Shopify, each with the numbers, the fix, and the lesson. Plus a diagram per story."/>
+<link rel="icon" href="data:,"/>
+<title>Real Stories: What Broke at Uber, GitHub, Notion, Slack and Shopify · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <h1>Real stories</h1>
+  <p class="lede">Every page on this site explains a mechanism. This page shows what happens when the mechanism meets real traffic. Seven stories, all from companies that wrote up what broke. Each one has the numbers, the fix, and the lesson I took from it. The source is linked at the end of each story.</p>
+  <p class="lede">None of these are my incidents. I read them the way I read a postmortem: what broke first, what the numbers were, and what decision would have prevented it.</p>
+</div></header>
+<section id="postgresql" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">PostgreSQL · three stories</div>
+  <h2>PostgreSQL: the layout is the cost</h2>
+  <p class="sub">Two of these three stories are the same failure wearing different clothes. A physical layout decision, made early, priced later at scale. The third is a planner that had the right index and refused to use it.</p>
+
+  <div class="incident" id="uber">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Uber: one update became four writes, and the WAL crossed an ocean</h3>
+    <p class="inside">Uber kept its trip data on one Postgres instance in early 2014. Trip growth ate disk so fast that the team expected to run out of room before the end of the year. The database would stop, not slow down.</p>
+    <div class="diagram"><p class="dcap">One logical update, four physical writes</p>
+      <div class="fanout">
+        <div class="dbox"><b>1 logical UPDATE</b>one row changes</div>
+        <span class="darrow">→</span>
+        <div class="fcol">
+          <div class="dbox hot"><b>new row version</b>in the heap</div>
+          <div class="dbox"><b>index 1</b>rewritten</div>
+          <div class="dbox"><b>index 2</b>rewritten</div>
+          <div class="dbox"><b>index 12</b>rewritten</div>
+        </div>
+      </div>
+      <div class="dflow" style="margin-top:10px">
+        <div class="dbox"><b>primary</b>writes the WAL</div><span class="darrow">→</span>
+        <div class="dbox"><b>physical WAL stream</b>every extra byte crosses the network</div><span class="darrow">→</span>
+        <div class="dbox"><b>replica, other data center</b>replays it all</div>
+      </div>
+      <p class="dcap" style="margin-top:10px">A table with a dozen indexes rewrites all twelve on every update. The cost is physical, not logical.</p>
+    </div>
+    <p class="inside">They were running Postgres 9.2. Every update wrote a brand-new row version, and every secondary index pointed at the row's physical spot on disk. One logical update became 4 or more physical writes. A table with a dozen indexes rewrote all twelve on every update. The WAL stream was physical too, so every extra byte crossed the network to replicas in the other data center. A bug in 9.2 returned duplicate rows on replicas after a timeline switch, and the only fix was a full resync. Long queries on replicas got killed by cleanup. Upgrades needed full downtime, so old instances stayed on 9.2 while 9.5 was current.</p>
+    <p class="inside">The fix was Schemaless, built on MySQL and InnoDB. In InnoDB, a secondary index points at the primary key, not at a disk address. An update touches the row in place and leaves the other indexes alone. Replication is logical, through the binlog, so the stream across data centers is far smaller.</p>
+    <p class="inside">Write amplification went away. Replication got cheaper. Upgrades stopped needing full downtime. The lesson I take is not that Postgres is slow. The lesson is that index layout and replication format are the whole cost at write-heavy scale. One more thing: the post is from July 2016, about Postgres 9.2. Later versions fixed some of the named bugs. The layout difference is still real.</p>
+    <p class="backlink">Source: <a href="https://www.uber.com/in/en/blog/postgres-to-mysql-migration/">Why Uber Engineering Switched from Postgres to MySQL</a>, Uber Engineering Blog, July 26, 2016.</p>
+  </div>
+
+  <div class="incident" id="notion-sharding" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Notion: VACUUM stalled, and the database nearly stopped writing</h3>
+    <p class="inside">Notion ran its product on one Postgres monolith. Every paragraph, heading, image, and to-do is a block, and every block is a row in one giant table. By mid-2020, usage had outgrown the single database.</p>
+    <div class="diagram"><p class="dcap">Before and after: one monolith, 480 shards</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>Before</h4><b>One Postgres monolith.</b> Every block is a row in one giant table. VACUUM stalls, dead tuples pile up, and transaction ID wraparound threatens to stop all writes.</div>
+        <div class="vsbox actual"><h4>After</h4><b>480 logical shards, 32 physical databases.</b> Routing by workspace ID, so one workspace's data stays together.</div>
+      </div>
+      <div class="shardgrid" style="margin-top:12px"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+      <p class="dcap" style="margin-top:10px">32 physical databases, 15 logical shards each. The shard key is the whole project.</p>
+    </div>
+    <div class="hooknum">
+      <div class="hn"><b>500 GB</b><span>Cap per table, set by the team before the migration.</span></div>
+      <div class="hn"><b>10 TB</b><span>Cap per physical database.</span></div>
+      <div class="hn"><b>60K IOPS</b><span>Cap per physical database.</span></div>
+      <div class="hn"><b>5 min</b><span>Cutover downtime, after a 3-day backfill on a 96-CPU machine.</span></div>
+    </div>
+    <p class="inside">The trigger was specific. VACUUM started stalling, so dead tuples stopped being reclaimed and disk space stopped coming back. Behind that sat transaction ID wraparound. Postgres stops all writes rather than overwrite old data. That is not a slowdown. That is the product stopping.</p>
+    <p class="inside">The design was application-level sharding, routing by workspace ID so one workspace's data stays together. They built 480 logical shards spread across 32 physical databases. They set their own caps: 500 GB per table, 10 TB per physical database, 60K IOPS. Logical replication could not keep up with the block table's write volume during the first snapshot, so they moved to an audit-log double-write. The backfill ran 3 days on an m5.24xlarge with 96 CPUs. They used dark reads to verify, and the verification code was written by different people than the migration code. The cutover took 5 minutes of scheduled downtime.</p>
+    <p class="inside">Their own lessons: shard earlier, aim for zero downtime, and use a combined primary key instead of a separate partition key. Mine: the shard key decision is the whole project. Workspace ID kept queries local. Pick the key from the query pattern, and pick it before you are forced to.</p>
+    <p class="backlink">Source: <a href="https://www.notion.com/de/blog/sharding-postgres-at-notion">Herding elephants: Lessons learned from sharding Postgres at Notion</a>, Notion Blog, October 6, 2021.</p>
+  </div>
+
+  <div class="incident" id="notion-gin" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Notion again: the index existed, and the planner ignored it</h3>
+    <p class="inside">Same company, different week. Notion ran one large Postgres database on RDS from 2015 to 2020. A new feature was already 20 percent of the application's query load before it shipped to everyone. One of its queries filtered JSON on space_id and permission.</p>
+    <div class="diagram"><p class="dcap">Same query, two index shapes</p>
+      <div class="dflow">
+        <div class="dbox"><b>GIN index existed</b>on space_id and permission</div><span class="darrow">→</span>
+        <div class="dbox hot"><b>planner skipped it</b>poor cardinality, stale statistics</div><span class="darrow">→</span>
+        <div class="dbox good"><b>jsonb_path_ops GIN</b>fits containment queries on JSON</div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="hbar-row"><span class="hbar-label">Before, default GIN shape</span><div class="hbar-track"><i class="hbar-fill warn" style="width:100%"></i></div><b class="mono">about 5000 ms</b></div>
+        <div class="hbar-row"><span class="hbar-label">After, jsonb_path_ops GIN</span><div class="hbar-track"><i class="hbar-fill" style="width:12%"></i></div><b class="mono">about 600 ms</b></div>
+      </div>
+      <p class="dcap" style="margin-top:10px">More than 8 times faster. The index existed. The planner ignored it. The fix was the index shape, not a bigger instance.</p>
+    </div>
+    <p class="inside">The check showed a GIN index already existed on those columns. The planner was not using it on the development database. Poor cardinality and stale statistics made the planner skip it. The fix was a different index shape. A GIN index with jsonb_path_ops fits containment queries on JSON better than the default GIN shape.</p>
+    <p class="inside">The query went from about 5000 ms to about 600 ms. That is more than 8 times faster. Staging comparisons showed no mismatches, so it went to production cleanly.</p>
+    <p class="inside">Sourcing note: this one comes from a pganalyze case study, not from Notion's own blog. It quotes named Notion engineers, and the numbers line up with the sharding post's timeline. I keep it because the lesson is checkable. The index existed, the planner ignored it, and the fix was the index shape, not a bigger instance. When a query is slow, read the plan before you buy hardware.</p>
+    <p class="backlink">Source: <a href="https://pganalyze.com/customers/how-notion-runs-postgres-at-scale-on-amazon-rds">How Notion Runs PostgreSQL at Scale on Amazon RDS with pganalyze</a>, pganalyze, February 27, 2025.</p>
+  </div>
+</div></section>
+<section id="mysql" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">MySQL · four stories</div>
+  <h2>MySQL: failover, upgrades, and the shard key</h2>
+  <p class="sub">GitHub shows the two halves of operating MySQL at scale: the failover you automate, and the upgrade you survive. Slack and Shopify show the same lesson from the other side: the shard key decides everything, and the migration only works if you can compare both copies before you trust one.</p>
+
+  <div class="incident" id="github-orchestrator">
+    <span class="tag my">MySQL</span>
+    <h3>GitHub: the master died, and nobody woke up</h3>
+    <p class="inside">GitHub stores its metadata in MySQL. Issues, pull requests, comments, organizations, notifications. One master takes the writes. Replicas serve the reads. A dead master used to mean a human waking up and running a failover by hand. That was too slow for the availability they wanted.</p>
+    <div class="diagram"><p class="dcap">One master, three replicas, one watcher</p>
+      <div class="topo">
+        <div class="dbox good"><b>master</b>takes writes</div>
+        <div class="dbox"><b>Orchestrator</b>watches the cluster, asks the replicas what happened</div>
+        <div class="dbox"><b>guardrail</b>one automatic failover per cluster, then blocked 30 minutes or until a human says go</div>
+      </div>
+      <div class="dflow" style="margin-top:10px">
+        <div class="dbox"><b>replica 1</b>serves reads</div>
+        <div class="dbox"><b>replica 2</b>serves reads</div>
+        <div class="dbox good"><b>replica 3, promoted</b>master in 30 seconds or less</div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Detection plus a flap guard, not just a tool. Automation without a guardrail is a second outage waiting to happen.</p>
+    </div>
+    <p class="inside">They run Orchestrator. It watches the replication topology and runs the failover itself. Their target was detection plus recovery in 30 seconds or less, with minimal loss of hosts. Detection is holistic. It asks the replication cluster what happened instead of trusting one monitor. They tested its decisions for months before they turned on automatic recovery.</p>
+    <p class="inside">The guardrails matter as much as the tool. Flapping is not allowed. Orchestrator runs at most one automatic failover per cluster in a set time period. After a failover, the cluster is blocked from another one for 30 minutes, or until a human acknowledges it. It also handles a dead intermediate master, so a middle layer failing does not strand the replicas below it. Later work added Pseudo-GTID handling for replicas that fall behind or go unreachable.</p>
+    <p class="inside">My take: the failover tool is only half the story. The other half is the policy around it. One failover, then a block, then a human. Automation without a flap guard is a second outage waiting to happen. I check for that guardrail in any failover tool before I trust it.</p>
+    <p class="backlink">Source: <a href="https://github.blog/engineering/infrastructure/orchestrator-github/">Orchestrator at GitHub</a>, The GitHub Blog.</p>
+  </div>
+
+  <div class="incident" id="github-mysql-8" style="margin-top:14px">
+    <span class="tag my">MySQL</span>
+    <h3>GitHub: upgrading 1,200 MySQL hosts without dropping a query</h3>
+    <p class="inside">The fleet was 1,200-plus MySQL hosts, a mix of Azure VMs and bare metal. They held 300-plus TB of data and served 5.5 million queries per second across 50-plus clusters. MySQL 5.7 was near end of life, so they moved to 8.0. Planning, testing, and the upgrade took over a year.</p>
+    <div class="hooknum">
+      <div class="hn"><b>1,200+ hosts</b><span>Azure VMs and bare metal, 300+ TB of data, 5.5M queries per second, 50+ clusters.</span></div>
+      <div class="hn"><b>1+ year</b><span>Planning, testing, and the upgrade. Prep started July 2022.</span></div>
+      <div class="hn"><b>24 hours</b><span>Validation cycle per cluster before the rollback path closed.</span></div>
+    </div>
+    <div class="diagram"><p class="dcap">The upgrade, in four steps</p>
+      <div class="opflow">
+        <div class="opstep"><div class="dotline"><div class="odot">1</div><div class="oline"></div></div><p><b>Jul 2022: 8.0 added to CI.</b> 5.7 and 8.0 side by side, so regressions showed up before production.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">2</div><div class="oline"></div></div><p><b>Dual chains.</b> 8.0 replicas online, one data center at a time, behind 5.7 primaries kept as rollback.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">3</div><div class="oline"></div></div><p><b>Promote.</b> An 8.0 replica becomes primary through Orchestrator. No primary was ever upgraded in place.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">4</div><div class="oline"></div></div><p><b>24-hour validation.</b> Then the 5.7 rollback path closes. The collation change, roles, and one replica bug bit along the way.</p></div>
+      </div>
+    </div>
+    <p class="inside">Prep started in July 2022. They added 8.0 to CI and ran 5.7 and 8.0 side by side, so regressions showed up before production. They never upgraded a primary in place. They brought 8.0 replicas online, one data center at a time, and promoted an 8.0 replica to primary through Orchestrator.</p>
+    <p class="inside">The rollback path was the design, not an afterthought. They kept 5.7 standbys behind the 8.0 primaries, so they could roll back without a disruption. Each cluster got a 24-hour validation cycle before the rollback path closed. The collation change bit them. Version 8.0 defaults to utf8mb4_0900_ai_ci, and 5.7 does not understand it, so backward replication broke. Roles broke replication too. A replica_preserve_commit_order bug, fixed in 8.0.28, was another one. A WHERE IN list with tens of thousands of values crashed MySQL.</p>
+    <p class="inside">My take: the upgrade was a replication project, not a version bump. If you cannot roll back, you cannot upgrade a fleet this size. I would copy the shape. Dual chains, one cluster at a time, a fixed validation window, and the rollback kept alive until the window closes.</p>
+    <p class="backlink">Source: <a href="https://github.blog/engineering/infrastructure/upgrading-github-com-to-mysql-8-0/">Upgrading GitHub.com to MySQL 8.0</a>, The GitHub Blog, December 7, 2023.</p>
+  </div>
+
+  <div class="incident" id="slack-vitess" style="margin-top:14px">
+    <span class="tag my">MySQL</span>
+    <h3>Slack: the shard key was the hot spot</h3>
+    <p class="inside">Slack started moving its MySQL datastores to Vitess in 2017. By December 2020, 99 percent of all MySQL traffic ran on Vitess. Peak load was 2.3 million queries per second: 2 million reads, 300 thousand writes. Median latency was 2 ms. p99 was 11 ms.</p>
+    <div class="hooknum">
+      <div class="hn"><b>2.3M QPS</b><span>Peak load. 2M reads, 300K writes. Median 2 ms, p99 11 ms.</span></div>
+      <div class="hn"><b>99%</b><span>Of all MySQL traffic on Vitess by December 2020.</span></div>
+      <div class="hn"><b>+50% in a week</b><span>Query rates in March 2020. They split a busy keyspace live and kept serving.</span></div>
+    </div>
+    <div class="diagram"><p class="dcap">Workspace sharding vs channel ID resharding</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>Before: workspace sharding</h4>
+          <div class="vbars"><div class="vbar hot" style="height:100%">hot</div><div class="vbar" style="height:25%">idle</div><div class="vbar" style="height:20%">idle</div><div class="vbar" style="height:30%">idle</div></div>
+          <p style="margin:8px 0 0;font-size:13px">One big customer lands on one shard. It runs hot while the rest sit idle.</p>
+        </div>
+        <div class="vsbox actual"><h4>After: channel ID resharding</h4>
+          <div class="vbars"><div class="vbar even" style="height:55%"></div><div class="vbar even" style="height:60%"></div><div class="vbar even" style="height:50%"></div><div class="vbar even" style="height:58%"></div></div>
+          <p style="margin:8px 0 0;font-size:13px">Traffic spreads. In March 2020 query rates rose 50 percent in one week. They split a busy keyspace live and kept serving.</p>
+        </div>
+      </div>
+      <div class="dflow" style="margin-top:12px">
+        <div class="dbox"><b>write to both</b>double-write backfill</div><span class="darrow">→</span>
+        <div class="dbox"><b>read from both</b>double-read diffing</div><span class="darrow">→</span>
+        <div class="dbox good"><b>cut over</b>only after both copies agree</div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Sharding is a routing problem before it is a capacity problem.</p>
+    </div>
+    <p class="inside">The old shape was workspace sharding on active-active MySQL. It worked until a big customer landed on one shard and made it hot while the rest sat idle. Enterprise Grid and Slack Connect broke the model further, because one user's data now spanned workspaces.</p>
+    <p class="inside">The move was a re-shard by channel ID under Vitess. The migration ran on double-write backfill plus double-read diffing. Write to both, read from both, compare, and only then cut over. In March 2020, query rates rose 50 percent in one week. They split a busy keyspace horizontally and kept serving. Without resharding, they wrote, their largest customers would have had downtime.</p>
+    <p class="inside">The extra win came later. The same Vitess clusters now run their International Data Residency product in six regions. My take: sharding is a routing problem before it is a capacity problem. The channel key fixed the hot spot that the workspace key created. Pick the key from the access pattern, and build the migration so you can compare both copies before you trust one.</p>
+    <p class="backlink">Source: <a href="https://slack.engineering/scaling-datastores-at-slack-with-vitess/">Scaling Datastores at Slack with Vitess</a>, Slack Engineering, December 1, 2020.</p>
+  </div>
+
+  <div class="incident" id="shopify-vitess" style="margin-top:14px">
+    <span class="tag my">MySQL</span>
+    <h3>Shopify: the verifiers were the project</h3>
+    <p class="inside">The Shop app backend is Ruby on Rails on a single MySQL, their managed system called KateSQL. Growth was steep. Disk grew to many terabytes. Schema migrations took weeks. When the database got busy, they throttled background jobs.</p>
+    <div class="diagram"><p class="dcap">The five verifiers, checked before any data moved</p>
+      <div class="scheck">
+        <div><span class="smark">✓</span>every query carries the sharding key</div>
+        <div><span class="smark">✓</span>no transaction crosses databases</div>
+        <div><span class="smark">✓</span>no transaction crosses shards</div>
+        <div><span class="smark">✓</span>no write crosses shards</div>
+        <div><span class="smark">✓</span>no join crosses keyspaces</div>
+      </div>
+      <div class="dflow" style="margin-top:12px">
+        <div class="dbox"><b>step 1</b>insert the row in the new shard</div><span class="darrow">→</span>
+        <div class="dbox"><b>step 2</b>delete it from the old shard</div>
+      </div>
+      <p class="dcap" style="margin-top:10px">A commit that lands on one shard and fails on another does not roll back the first. Build the check first, move the data second.</p>
+    </div>
+    <p class="inside">The first fix was federation. GhostFerry moved whole tables onto new databases, and new domains got their own databases. That bought time and limited blast radius. It hit its own wall. Migrations on big tables still took weeks, joins across databases got hard, and the app had to know where every table lived.</p>
+    <p class="inside">The second fix was Vitess, sharded by user_id. User-owned data went into a sharded users keyspace. Everything else went into an unsharded global keyspace. Before moving, they built query verifiers into the app layer. The verifiers caught queries missing the sharding key, transactions crossing databases, transactions crossing shards, writes crossing shards, and queries joining across keyspaces. They removed cross-shard transactions entirely. A commit that lands on one shard and fails on another does not roll back the first. Moving a row across shards became two steps: insert in the new shard, then delete from the old one.</p>
+    <p class="inside">My take: the verifiers were the project. Shopify wrote that if they could credit one thing for the move working, it was the correctness of the verifiers. Sharding without a check that every query carries its key is a data corruption incident on a schedule. Build the check first, move the data second.</p>
+    <p class="backlink">Source: <a href="https://shopify.engineering/horizontally-scaling-the-rails-backend-of-shop-app-with-vitess">Horizontally scaling the Rails backend of Shop app with Vitess</a>, Shopify Engineering, January 17, 2024.</p>
+  </div>
+</div></section>
+<section style="padding-top:6px"><div class="wrap">
+  <p class="sub"><b style="color:var(--ink)">Before you leave, check this:</b> pick the story closest to your own system, and name the one decision in it you have not made yet. The shard key, the failover guardrail, the rollback path, the index shape. That decision is the incident you have not had yet. The hosting side of the same question, on-prem, EC2, Kubernetes, or managed, is on the <a href="../cloud/index.html">Cloud page</a>.</p>
+</div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+</body>
+</html>
