@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Books, tools and posts this site leans on, with one line each on what each is best for and which pages it backs."/>
+<link rel="icon" href="data:,"/>
+<title>References · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <h1>References</h1>
+  <p class="sub">These are the books, tools and posts this site leans on. Read them when you want the full story behind a page here. Each entry says what it is best for and which pages it backs.</p>
+</div></header>
+<section id="books"><div class="wrap">
+  <div class="kicker">Books and courses</div>
+  <h2>The books behind the trade-offs</h2>
+  <ul>
+    <li><b>Designing Data-Intensive Applications, 2nd edition</b>, Martin Kleppmann and Chris Riccomini, O'Reilly, 2026. <a href="https://dataintensive.net/">dataintensive.net</a> Best for learning replication, partitioning, transactions and consistency as trade-offs instead of recipes. Backs <a href="../index.html">Home</a>, <a href="../staff-path/index.html">Staff Path</a> and <a href="../cloud/index.html">Cloud</a>.</li>
+    <li><b>Database Internals</b>, Alex Petrov, O'Reilly, 2019. <a href="https://www.goodreads.com/book/show/44647144-database-internals">goodreads.com</a> Best for the implementation underneath this site: B-tree and log-structured storage, page cache, write-ahead log, and how clusters reach consistency. Backs <a href="../index.html">Home</a>, <a href="../postgresql/index.html">PostgreSQL</a>, <a href="../mysql/index.html">MySQL</a>, <a href="../mongodb/index.html">MongoDB</a> and <a href="../staff-path/index.html">Staff Path</a>.</li>
+    <li><b>Use The Index, Luke</b>, Markus Winand. <a href="https://use-the-index-luke.com/">use-the-index-luke.com</a> Best for the fastest way to stop writing slow queries: B-trees from the leaf nodes up, then how the WHERE clause, joins and sorting use an index or fail to. Backs <a href="../reference/index.html">Reference</a>, <a href="../postgresql/index.html">PostgreSQL</a>, <a href="../mysql/index.html">MySQL</a> and <a href="../cheat-sheet/index.html">Cheat Sheet</a>.</li>
+    <li><b>PostgreSQL 14 Internals</b>, Egor Rogov, Postgres Pro, 2023, free PDF. <a href="https://postgrespro.com/community/books/internals">postgrespro.com</a> Best for how Postgres actually works: MVCC, buffer cache, WAL, locking, the planner, and every index type. Backs <a href="../postgresql/index.html">PostgreSQL</a> and <a href="../reference/index.html">Reference</a>.</li>
+    <li><b>The Art of PostgreSQL, 2nd edition</b>, Dimitri Fontaine, 2026 update. <a href="https://theartofpostgresql.com/">theartofpostgresql.com</a> Best for writing SQL that does the work instead of thousands of lines of application code, with real datasets to run it against. Backs <a href="../postgresql/index.html">PostgreSQL</a> and <a href="../reference/index.html">Reference</a>.</li>
+    <li><b>Building with Patterns</b>, Daniel Coupal and Ken W. Alger, MongoDB blog. <a href="https://www.mongodb.com/company/blog/building-with-patterns-a-summary">mongodb.com</a> Best for MongoDB schema design before you build: twelve patterns, each with its trade-off stated. Backs <a href="../mongodb/index.html">MongoDB</a> and <a href="../staff-path/index.html">Staff Path</a>.</li>
+  </ul>
+</div></section>
+<section id="tools" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Tools and posts</div>
+  <h2>The tools and posts behind the checks</h2>
+  <ul>
+    <li><b>explain.depesz.com</b>, Hubert Lubaczewski. <a href="https://explain.depesz.com/">explain.depesz.com</a> Best for reading a Postgres plan line by line in a readable layout instead of raw text. Backs <a href="../reference/index.html">Reference</a> and <a href="../postgresql/index.html">PostgreSQL</a>.</li>
+    <li><b>pgMustard</b>. <a href="https://www.pgmustard.com/">pgmustard.com</a> Best for pasting in a Postgres plan and getting the slow lines flagged with the fix beside each one. Backs <a href="../reference/index.html">Reference</a> and <a href="../postgresql/index.html">PostgreSQL</a>.</li>
+    <li><b>MySQL 8.0 Reference Manual: InnoDB Architecture (Figure 17.1)</b>. <a href="https://dev.mysql.com/doc/refman/8.0/en/innodb-architecture.html">dev.mysql.com</a> Best for seeing the InnoDB layout in one picture: buffer pool, redo log, undo, and how they connect. Backs <a href="../mysql/index.html">MySQL</a>.</li>
+    <li><b>MySQL Internals: Pages, B+Trees, Indexes, the Optimizer, WAL, Binlog and Replication</b>, Amar. <a href="https://blog.amarkhamkar.com/posts/mysql-internals/">blog.amarkhamkar.com</a> Best for a single walk through MySQL internals from pages and B+ trees to the optimizer, WAL, binlog and replication. Backs <a href="../mysql/index.html">MySQL</a> and <a href="../staff-path/index.html">Staff Path</a>.</li>
+    <li><b>Data Structure Simulators: B-Tree, B+Tree, Quad-Tree, R-Tree</b>. <a href="https://simulation.amarkhamkar.com/">simulation.amarkhamkar.com</a> Best for watching a tree grow, split and rebalance instead of picturing it from a diagram. Backs <a href="../index.html">Home</a>, <a href="../staff-path/index.html">Staff Path</a> and <a href="../cheat-sheet/index.html">Cheat Sheet</a>.</li>
+  </ul>
+</div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+</body>
+</html>
