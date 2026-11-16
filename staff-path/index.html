@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Zero to staff level in 6 levels: every concept as one problem plus one diagram, with labs on data pages, B+ trees and MVCC, and every idea on one card."/>
+<link rel="icon" href="data:,"/>
+<title>Zero to Staff Level — Guided Path · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <h1>Zero to staff-level</h1>
+</div></header>
+<section id="path"><div class="wrap">
+  <div class="kicker">Guided path · 6 levels · one problem, one diagram each</div>
+  <h2>Zero to staff-level, in order — every concept is a problem + a diagram</h2>
+  <p class="sub">One rule for the whole path: <b style="color:var(--ink)">no diagram without its problem, no problem without its diagram.</b> Each pair follows the same five-part structure — <b style="color:var(--ink)">The hook</b> (a number contrast, with the math that makes it real) → <b style="color:var(--ink)">Situation</b> (the diagram: real files, memory areas, log flow) → <b style="color:var(--ink)">The Problem</b> (one line, plus the growth curve: fine at small scale, slow at 1M, an incident at 10M, with the transition point named) → <b style="color:var(--ink)">Mechanism</b> (derived from the physical layout, with its tradeoff priced) → <b style="color:var(--ink)">In Practice</b> (real output, annotated, red flags named, the exact check) → <b style="color:var(--ink)">Where It Breaks</b> (root cause, blast radius, mitigation — plus the staff-level mistake and the metric that exposes it first). Mark levels as understood to track progress.</p>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px"><div class="progressbar" style="flex:1"><i id="pfill"></i></div><span class="mono" id="plabel" style="font-size:13px">0 / 6 levels</span></div>
+  <div id="levels"></div>
+</div></section>
+<section id="labs" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Diagrams · real structures only</div>
+  <h2>Three structures worth seeing with your own eyes — each with its one problem</h2>
+  <p class="sub">The three structures that determine nearly every performance number on this page: the data page (the unit of all I/O), the B+ tree (the reason lookup cost is logarithmic), and the MVCC version chain (the reason reads do not block — and the reason cleanup exists). Each diagram is the real layout, not a simplification of it.</p>
+
+  <div class="lab">
+    <h3>1 — Inside a data page</h3>
+    <div class="problem"><b class="label">Problem</b><div><p>Databases never read or write one row at a time — they move whole pages between disk and memory.</p><small>So the page layout decides speed, waste, and how versions are tracked. If you understand the page, you understand most of the rest.</small></div></div>
+    <p>Pick a database, then tap each part of the page.</p>
+    <div class="seg" id="engineSeg">
+      <button aria-pressed="true" data-e="pg">PostgreSQL · page = 8 KB</button>
+      <button aria-pressed="false" data-e="my">InnoDB · page = 16 KB</button>
+      <button aria-pressed="false" data-e="mo">WiredTiger · blocks vary</button>
+    </div>
+    <div class="pagegrid">
+      <div class="pagebox" id="pageBox"></div>
+      <div class="pagedetail" id="pageDetail"><h4>Tap a part</h4><p style="margin:0;color:var(--muted)">Each part has one job.</p></div>
+    </div>
+  </div>
+
+  <div class="lab">
+    <h3>2 — B+ tree lookup: finding one key among millions</h3>
+    <div class="problem"><b class="label">Problem</b><div><p>A sequential scan of a 10-million-row table reads ~1,250,000 pages. A B+ tree lookup of the same table reads 3.</p><small>The derivation is arithmetic, not convention: an 8 KB internal page holds roughly 400 key-pointer pairs (fanout ≈ 400), so depth = log<sub>400</sub>(rows). 400² = 160,000 rows at depth 2; 400³ = 64 million at depth 3; 400⁴ = 25.6 billion at depth 4. Internal pages hold only guide keys; leaf pages hold keys plus row pointers. That is the entire mechanism — every index behavior on this page, including the ESR rule in the reference atlas, follows from how these pages store keys.</small></div></div>
+    <div class="growth">
+      <div class="g"><b>10K rows</b>Scan: 125 pages, 5–20 ms. Passes every test.</div>
+      <div class="g"><b>1M rows</b>Scan: 12,500 pages, 0.5–2 s. Users start noticing.</div>
+      <div class="g hot"><b>500K–2M rows</b>The transition zone: scan cost crosses the timeout budget while traffic is also at its highest.</div>
+      <div class="g hot"><b>10M rows</b>Scan: ~3–8 s per query. An incident, not a slowdown.</div>
+    </div>
+    <p>Type a number and watch the lookup walk: root → internal → leaf. Only 3 pages are read, no matter how big the table file gets.</p>
+    <div class="btree-wrap"><div class="btree">
+      <div class="brow"><div class="bnode" data-node="root"><span data-k="30">30</span><span data-k="70">70</span></div></div>
+      <div class="brow">
+        <div class="bnode" data-node="mid"><span data-k="10">10</span><span data-k="20">20</span></div>
+        <div class="bnode" data-node="mid"><span data-k="45">45</span><span data-k="60">60</span></div>
+        <div class="bnode" data-node="mid"><span data-k="85">85</span><span data-k="95">95</span></div>
+      </div>
+      <div class="brow">
+        <div class="bnode leaf" data-node="leaf"><span data-k="5">5</span><span data-k="12">12</span><span data-k="18">18</span><span data-k="27">27</span></div>
+        <div class="bnode leaf" data-node="leaf"><span data-k="33">33</span><span data-k="48">48</span><span data-k="61">61</span><span data-k="69">69</span></div>
+        <div class="bnode leaf" data-node="leaf"><span data-k="72">72</span><span data-k="88">88</span><span data-k="93">93</span><span data-k="99">99</span></div>
+      </div>
+    </div></div>
+    <div class="controls">
+      <label style="font-size:13.5px;font-weight:600">Find key <input type="number" id="findKey" value="48" min="1" max="100"></label>
+      <button class="btn primary" id="findBtn">Find it</button>
+      <span class="mono" id="findMsg" style="font-size:12.5px;color:var(--muted)">3 page reads — vs scanning every page of the table file</span>
+    </div>
+    <div class="controls"><label style="font-size:13.5px;font-weight:600">Table size: <span class="mono" id="rowLabel">1,000,000</span> rows</label>
+      <input type="range" id="rowRange" min="3" max="9" step="1" value="6" style="flex:1;min-width:140px">
+      <span class="mono" id="depthLabel" style="font-size:12.5px">tree depth ≈ 3</span></div>
+    <p style="font-size:14px;color:var(--muted);margin:10px 0 0"><b style="color:var(--ink)">The consequence:</b> at 1 billion rows the tree is ~4 levels deep — one additional page read versus 10 million rows. A missing index is therefore not a percentage regression; it is a change of complexity class, from O(log N) page reads to O(N). That is why the same query passes QA at 10K rows and pages the on-call at 10M, with no code change in between.</p>
+  </div>
+
+  <div class="lab">
+    <h3>3 — MVCC: two transactions, one row, no waiting</h3>
+    <div class="problem"><b class="label">Problem</b><div><p>Transaction B is reading a balance while transaction A changes it. Locking the row would freeze B; overwriting would corrupt B's total.</p><small>Fix (MVCC): never overwrite. A creates a new version; B keeps reading the version from its snapshot. Old versions are removed later — by VACUUM in PostgreSQL, by purge of the undo log in InnoDB.</small></div></div>
+    <p>One account balance starts at <span class="mono">100</span>. A changes it to 150. B started reading before A committed — so B should still see 100. Run the steps in order:</p>
+    <div class="mvcc-grid">
+      <div class="txbox"><h4>Transaction A — the writer</h4>
+        <div class="controls" style="margin-top:0">
+          <button class="btn" data-tx="a-begin">1. BEGIN</button>
+          <button class="btn" data-tx="a-write">2. UPDATE → 150</button>
+          <button class="btn" data-tx="a-commit">3. COMMIT</button>
+        </div>
+        <div id="versA"></div>
+      </div>
+      <div class="txbox"><h4>Transaction B — the reader</h4>
+        <div class="controls" style="margin-top:0">
+          <button class="btn" data-tx="b-begin">1. BEGIN</button>
+          <button class="btn" data-tx="b-read">2. SELECT balance</button>
+        </div>
+        <div id="versB" style="font-size:14px;margin-top:8px">B sees: <b class="mono">—</b></div>
+      </div>
+    </div>
+    <div class="logbox" id="mvccLog">Try this order: A BEGIN → B BEGIN → A UPDATE → A COMMIT → B SELECT. B still sees 100. That is snapshot isolation, and it is the default behaviour in all three engines.</div>
+    <p style="font-size:14px;color:var(--muted);margin:12px 0 0"><b style="color:var(--ink)">Same trick, 3 mechanisms:</b> PostgreSQL stores both tuple versions in the heap file until VACUUM · InnoDB stores the new version in <span class="mono">users.ibd</span> and rebuilds the old one from undo records · WiredTiger keeps timestamped versions in its cache.</p>
+  </div>
+</div></section>
+<section id="reference" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Quick lookup · reference atlas</div>
+  <h2>Every idea on one card — one problem, one diagram, staff depth</h2>
+  <p class="sub">Same structure as the path, compressed: the bold line is the <b style="color:var(--ink)">one problem</b>, then the <b style="color:var(--ink)">diagram</b> of the real structures, the mechanism, the <b style="color:var(--ink)">tradeoff</b>, and <b style="color:var(--ink)">where it breaks + the exact check</b>. Search any word — try “crash”, “wal”, “ibd”, “oplog”, “slow”, “freeze”, “purge”.</p>
+  <div class="filters">
+    <input type="search" id="refSearch" placeholder="Search… try: wal, binlog, vacuum, oplog, slow, cache">
+  </div>
+  <div class="seg" id="refSeg">
+    <button aria-pressed="true" data-f="all">All</button>
+    <button aria-pressed="false" data-f="pg">PostgreSQL</button>
+    <button aria-pressed="false" data-f="my">MySQL</button>
+    <button aria-pressed="false" data-f="mo">MongoDB</button>
+  </div>
+  <div class="refgrid" id="refGrid"></div>
+  <p class="mono" id="refCount" style="font-size:12.5px;color:var(--muted);margin-top:14px"></p>
+</div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk — <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page — durability, replication, point-in-time recovery — is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+</div></footer><script src="../assets/js/main.js"></script>
+</body>
+</html>
