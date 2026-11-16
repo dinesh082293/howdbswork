@@ -14,7 +14,8 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="index.html">Home</a><a href="postgresql/index.html">PostgreSQL</a><a href="mysql/index.html">MySQL</a><a href="mongodb/index.html">MongoDB</a><a href="cheat-sheet/index.html">Cheat Sheet</a><a href="staff-path/index.html">Staff Path</a><a href="reference/index.html">Reference</a><a href="cloud/index.html">Cloud</a></div>
+  <div class="navlinks"><a href="index.html">Home</a><a href="postgresql/index.html">PostgreSQL</a><a href="mysql/index.html">MySQL</a><a href="mongodb/index.html">MongoDB</a><a href="cheat-sheet/index.html">Cheat Sheet</a><a href="staff-path/index.html">Staff Path</a><a href="reference/index.html">Reference</a><a href="cloud/index.html">Cloud</a><a href="stories/index.html">Stories</a><a href="about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>Real databases, <em>explained with real files.</em></h1>
@@ -72,6 +73,15 @@
     <div class="gitem"><b>Replica</b><span>A second server that replays the main server's log and ends up with identical data. The delay is called lag.</span><span class="mono">PG: streams WAL · MySQL: replays binlog · MongoDB: tails the oplog</span></div>
   </div>
 </section></div>
+<section id="paths" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Start here · pick your path</div>
+  <h2>Three ways in, depending on how much time you have</h2>
+  <div class="jobs">
+    <div class="job"><div class="num">10 min</div><h3>The insert plus the three rules</h3><p>Follow one row end to end. Learn the three rules that run every database on this site.</p><div class="real"><a href="#insert">Follow one insert, end to end →</a></div></div>
+    <div class="job"><div class="num">30 min</div><h3>The incident cards</h3><p>Eight ways apps break. Each card has the exact check I run first.</p><div class="real"><a href="#hurting">When the app starts hurting →</a></div></div>
+    <div class="job"><div class="num">2 hr</div><h3>The full guided path</h3><p>Six levels. Eighteen problem and diagram pairs. Zero to staff level.</p><div class="real"><a href="staff-path/index.html#path">Guided path: zero to architect →</a></div></div>
+  </div>
+</div></section>
 <section id="start-here"><div class="wrap">
   <div class="kicker">Start here · for the beginner</div>
   <h2>What each database actually is</h2>
@@ -167,6 +177,21 @@
     <div class="isteps" id="insSteps"></div>
 
     <p style="font-size:14px;color:var(--muted);margin:14px 0 0"><b style="color:var(--ink)">The one moment that matters:</b> the row is truly safe at the COMMIT step, when the <i>log</i> is forced to disk. Not when the data page is written. The page can follow minutes later, at the next checkpoint. Switch databases above and replay it. The file names change (WAL, redo log plus binlog, journal plus oplog). The order of the trick does not.</p>
+    <div class="lab" id="liveSql" style="margin-top:18px">
+      <h3 style="margin:0 0 6px;font-size:17px">Try it live: a real Postgres, in your browser</h3>
+      <p style="font-size:14px;color:var(--muted);margin:0 0 12px">No install, no account. This panel runs a real PostgreSQL in your browser. It starts with the same users table as the walkthrough above, ids 10, 25, and 87. Run the insert, then the select, then the EXPLAIN, and watch the same numbers come out of a real plan.</p>
+      <p id="liveSqlStatus" style="font-size:13.5px;color:var(--muted);margin:0 0 10px">Live Postgres is not started yet. Press the button below.</p>
+      <div class="controls" style="margin-top:0">
+        <button class="btn primary" id="liveSqlStart">Start live Postgres</button>
+        <button class="btn" data-sql="insert">Run the INSERT</button>
+        <button class="btn" data-sql="select">Run the SELECT</button>
+        <button class="btn" data-sql="explain">Run the EXPLAIN</button>
+      </div>
+      <textarea id="liveSqlInput" spellcheck="false">INSERT INTO users (id, name) VALUES (42, 'Asha');</textarea>
+      <div class="controls" style="margin-top:10px"><button class="btn primary" id="liveSqlRun">Run</button></div>
+      <pre id="liveSqlOut">Nothing run yet.</pre>
+      <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">The same table as a file: <a href="assets/seed.sql" download>seed.sql</a>. Run it in psql, the mysql client, or mongosh and every example on this site reproduces.</p>
+    </div>
   </div>
 </div></section>
 <section id="operations" style="padding-top:6px"><div class="wrap">
@@ -519,9 +544,26 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
   </ol>
   <p style="font-size:14px;color:var(--muted);margin:16px 0 0"><b style="color:var(--ink)">Before you leave, check this:</b> pick your slowest query, run <span class="mono">EXPLAIN (ANALYZE, BUFFERS)</span> on it, and count the pages it reads. That number tells you whether you have an index problem or a volume problem.</p>
 </div></section>
+<section id="whats-new" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">What's new</div>
+  <h2>What changed, and when</h2>
+  <p class="sub">I update this log when the site changes. New pages first. Small fixes do not get a line.</p>
+  <ul style="font-size:15px;line-height:1.8;max-width:760px">
+    <li><b>Nov 16, 2026:</b> real stories added, seven incidents from Uber, GitHub, Notion, Slack, and Shopify, each with a diagram, plus hosting blocks for all three engines on the Cloud page.</li>
+    <li><b>Nov 16, 2026:</b> the site split into eight pages, one per engine plus cheat sheet, staff path, reference, and cloud.</li>
+    <li><b>Nov 16, 2026:</b> every page rewritten in my voice.</li>
+    <li><b>Nov 15, 2026:</b> the cheat sheet added, three sheets, one per engine, eight rules each.</li>
+  </ul>
+</div></section>
 <footer><div class="wrap">
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="references/index.html">References</a></p>
 </div></footer><script src="assets/js/main.js"></script>
+<script src="assets/js/copy-buttons.js"></script>
+<script src="assets/js/search.js"></script>
+<script type="module" src="assets/js/pglite-panel.js"></script>
 </body>
 </html>
