@@ -4,9 +4,9 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="color-scheme" content="light dark"/>
-<meta name="description" content="PostgreSQL internals: WAL, 8 KB pages, shared_buffers, MVCC and VACUUM — files on disk, log files, outage parameters and commands."/>
+<meta name="description" content="PostgreSQL internals: WAL, 8 KB pages, shared_buffers, MVCC and VACUUM. Files on disk, log files, outage parameters and commands."/>
 <link rel="icon" href="data:,"/>
-<title>PostgreSQL Internals — Real Databases, Simply</title>
+<title>PostgreSQL Internals: Real Databases, Simply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/style.css"/>
@@ -19,40 +19,41 @@
 <header class="hero"><div class="wrap">
   <h1>PostgreSQL</h1>
 </div></header>
-<section><div class="wrap"><div class="engines"><div class="ecard"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL — in one line</h3>
-      <p class="plain">A relational database: rows in tables, one data directory, correctness first.</p>
-      <p><b style="color:var(--ink)">Good at:</b> money, orders, bookings — anything with joins, constraints, and questions nobody has thought of yet. One log (the WAL) does both crash recovery and replication.</p>
+<section><div class="wrap"><p class="sub" style="font-size:16px">This page is about one directory. I show you where PostgreSQL keeps every table, every index, and every log record. After it you will be able to point at a file for any table, read the WAL position, check replica lag, and tell whether dead row versions are piling up.</p></div></section>
+<section><div class="wrap"><div class="engines"><div class="ecard"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL: in one line</h3>
+      <p class="plain">A relational database. Rows in tables. One data directory. Correctness first.</p>
+      <p><b style="color:var(--ink)">Good at:</b> Money, orders, bookings. Anything with joins, constraints, and questions nobody has thought of yet. One log does both jobs. The WAL handles crash recovery and replication.</p>
       <span class="mono">Runs as: one postmaster + a backend process per connection</span></div></div></div></section>
 <section><div class="wrap">
-<h3 style="margin:6px 0 4px;font-size:19px">The architecture of each — processes, memory, disk</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Read each column top to bottom: a request enters at the process layer, is served from the memory layer when possible, and is made permanent in the disk layer. When something is slow or broken on-prem, it is slow or broken in exactly one of these three layers — naming the layer is the first diagnostic step.</p>
-  <div class="filegrid" style="margin-bottom:22px"><div class="filecard pg"><header>PostgreSQL — architecture</header>
+<h3 style="margin:6px 0 4px;font-size:19px">The architecture: processes, memory, disk</h3>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Read each column top to bottom. A request enters at the process layer. Memory serves it when it can. Disk makes it permanent. When something is slow or broken, it lives in exactly one of these three layers. Name the layer first. That is the first diagnostic step.</p>
+  <div class="filegrid" style="margin-bottom:22px"><div class="filecard pg"><header>PostgreSQL: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">Request path</p><div class="dflow">
         <div class="dbox"><b>Processes</b>postmaster + 1 backend per connection · checkpointer · bgwriter · WAL writer · autovacuum workers</div><span class="darrow">→</span>
         <div class="dbox"><b>Memory</b>shared_buffers (~25% of RAM) + per-operation work_mem, on top of the OS page cache</div><span class="darrow">→</span>
-        <div class="dbox good"><b>Disk — one data directory</b>base/ (table + index files) · pg_wal/ · pg_xact/ · global/pg_control</div>
+        <div class="dbox good"><b>Disk: one data directory</b>base/ (table + index files) · pg_wal/ · pg_xact/ · global/pg_control</div>
       </div></div></div>
-      <div class="fnote"><b>Who does what:</b> backends execute queries; the checkpointer flushes dirty pages; the WAL writer fsyncs the log; autovacuum removes dead row versions. One process dying is survivable — the postmaster restarts it.</div>
+      <div class="fnote"><b>Who does what:</b> Backends run queries. The checkpointer flushes dirty pages. The WAL writer fsyncs the log. Autovacuum removes dead row versions. One process dying is survivable. The postmaster restarts it.</div>
     </div></div>
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">Every log file a DBA needs to know</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0">Exact names, the on-prem locations from the file trees above, the job each log does, and the one thing to check in it during an incident. The deep dive on the five data logs is in <a href="#logs">The log files</a>; this table adds the operational logs (server / error / slow) a DBA reads first.</p>
-  <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag pg">PostgreSQL</span><br>Write-ahead log</td><td class="mono">pg_wal/000000010000000000000003</td><td><span class="mono">pg_wal/</span> inside the data directory</td><td>Every change, recorded before the data file changes; commit = this log fsynced. Also feeds replicas and PITR.</td><td>Total size (<span class="mono">du -sh pg_wal</span>) and <span class="mono">archive_status/</span>: a growing pile of <span class="mono">.ready</span> files means archiving is failing.</td></tr><tr><td><span class="tag pg">PostgreSQL</span><br>Server log</td><td class="mono">postgresql-16-main.log</td><td><span class="mono">/var/log/postgresql/</span> (Debian) or <span class="mono">log/</span> in the data directory</td><td>The server's own diary: checkpoints, slow statements (if enabled), errors, crash recovery.</td><td>Checkpoint frequency, "duration:" lines for slow statements, and the first error at the incident's start time.</td></tr></tbody></table>
+  <p style="font-size:14.5px;color:var(--muted);margin:0">These are the exact names. They sit in the locations from the file trees above. Each log has one job. Each log has one thing to check during an incident. The deep dive on the five data logs is in <a href="#logs">The log files</a>. This table adds the operational logs a DBA reads first: server, error, slow.</p>
+  <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag pg">PostgreSQL</span><br>Write-ahead log</td><td class="mono">pg_wal/000000010000000000000003</td><td><span class="mono">pg_wal/</span> inside the data directory</td><td>Every change, recorded before the data file changes. Commit means this log is fsynced. It also feeds replicas and point-in-time recovery.</td><td>Total size (<span class="mono">du -sh pg_wal</span>) and <span class="mono">archive_status/</span>. A growing pile of <span class="mono">.ready</span> files means archiving is failing.</td></tr><tr><td><span class="tag pg">PostgreSQL</span><br>Server log</td><td class="mono">postgresql-16-main.log</td><td><span class="mono">/var/log/postgresql/</span> (Debian) or <span class="mono">log/</span> in the data directory</td><td>The server's own diary. Checkpoints. Slow statements, if enabled. Errors. Crash recovery.</td><td>Checkpoint frequency. "duration:" lines for slow statements. The first error at the incident's start time.</td></tr></tbody></table>
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The parameters DBAs actually touch during outages</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 6px;max-width:820px">Not the full configuration reference — the short list that comes up in real incidents. Each row states what the parameter does and the outage rule for it: <b style="color:var(--ink)">safe live lever</b> (change it during the incident), <b style="color:var(--ink)">planned change</b> (needs a restart or a window — do not improvise it mid-incident), or <b style="color:var(--ink)">do not touch</b> (changing it converts the incident into data loss or a longer outage).</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 6px;max-width:820px">This is not the full configuration reference. It is the short list that comes up in real incidents. Each row states what the parameter does and the outage rule for it. <b style="color:var(--ink)">Safe live lever</b> means change it during the incident. <b style="color:var(--ink)">Planned change</b> means it needs a restart or a window. Do not improvise it mid-incident. <b style="color:var(--ink)">Do not touch</b> means changing it converts the incident into data loss or a longer outage.</p>
 
   <h4 style="margin:18px 0 6px;font-size:16px"><span class="tag pg">PostgreSQL</span> Outage parameters</h4>
   <table class="breaks"><thead><tr><th>Parameter</th><th>What it does</th><th>During an outage</th></tr></thead><tbody>
-    <tr><td class="mono">shared_buffers</td><td>Size of the page cache (start ~25% of RAM).</td><td><b>Planned change.</b> Requires a restart — never the mid-incident lever. If the working set outgrew it, that is next week's change, sized from <span class="mono">pg_stat_bgwriter</span> evidence.</td></tr>
-    <tr><td class="mono">work_mem</td><td>Memory per sort/hash operation — per operation, not per connection, so total use is work_mem × operations × connections.</td><td><b>Safe live lever, per session:</b> <span class="mono">SET work_mem='256MB'</span> for the one reporting query that is spilling. A global raise mid-incident is an OOM risk at full concurrency.</td></tr>
-    <tr><td class="mono">max_connections</td><td>Hard cap on backend processes; each costs memory and bookkeeping.</td><td><b>Do not raise to fix "pool exhausted"</b> — it admits more load into an already overloaded server and needs a restart anyway. The fix is a pooler (PgBouncer) and killing idle-in-transaction sessions.</td></tr>
-    <tr><td class="mono">wal_level</td><td>How much information the WAL carries: minimal / replica / logical.</td><td><b>Do not touch.</b> Restart-required, and replicas plus logical subscribers are built on the current level. Changing it mid-incident breaks the copies you may be about to fail over to.</td></tr>
-    <tr><td class="mono">max_wal_size</td><td>WAL volume that triggers a checkpoint (default 1 GB).</td><td><b>Safe live lever</b> (reload, no restart) when <span class="mono">checkpoints_req</span> shows size-triggered checkpoint storms: raise it and reload.</td></tr>
-    <tr><td class="mono">checkpoint_timeout</td><td>Time trigger for checkpoints (default 5 min); whichever of size/time fires first wins.</td><td><b>Safe live lever</b> (reload) alongside max_wal_size. Lengthening spreads the flush I/O; the price is longer crash recovery.</td></tr>
-    <tr><td class="mono">autovacuum_*</td><td>naptime, max workers, and per-table vacuum/analyze scale factors — how aggressively dead tuples and stale stats are cleaned.</td><td><b>Safe live lever for bloat:</b> raise workers, lower the scale factor on the one hot table (<span class="mono">ALTER TABLE … SET</span>). <b>Never disable autovacuum</b> to "help" — that is how bloat and wraparound start.</td></tr>
+    <tr><td class="mono">shared_buffers</td><td>Size of the page cache. Start at about 25% of RAM.</td><td><b>Planned change.</b> It requires a restart. Never use it as the mid-incident lever. If the working set outgrew it, that is next week's change. Size it from <span class="mono">pg_stat_bgwriter</span> evidence.</td></tr>
+    <tr><td class="mono">work_mem</td><td>Memory per sort or hash operation. Per operation, not per connection. Total use is work_mem times operations times connections.</td><td><b>Safe live lever, per session:</b> <span class="mono">SET work_mem='256MB'</span> for the one reporting query that is spilling. A global raise mid-incident is an OOM risk at full concurrency.</td></tr>
+    <tr><td class="mono">max_connections</td><td>Hard cap on backend processes. Each one costs memory and bookkeeping.</td><td><b>Do not raise to fix "pool exhausted"</b> It admits more load into an already overloaded server. It needs a restart anyway. The fix is a pooler (PgBouncer) and killing idle-in-transaction sessions.</td></tr>
+    <tr><td class="mono">wal_level</td><td>How much information the WAL carries: minimal, replica, or logical.</td><td><b>Do not touch.</b> It needs a restart. Replicas and logical subscribers are built on the current level. Changing it mid-incident breaks the copies you may be about to fail over to.</td></tr>
+    <tr><td class="mono">max_wal_size</td><td>WAL volume that triggers a checkpoint. Default 1 GB.</td><td><b>Safe live lever</b> (reload, no restart) Use it when <span class="mono">checkpoints_req</span> shows size-triggered checkpoint storms. Raise it and reload.</td></tr>
+    <tr><td class="mono">checkpoint_timeout</td><td>Time trigger for checkpoints. Default 5 min. Whichever fires first wins, size or time.</td><td><b>Safe live lever</b> (reload) alongside max_wal_size. Lengthening it spreads the flush I/O. The price is longer crash recovery.</td></tr>
+    <tr><td class="mono">autovacuum_*</td><td>Naptime, max workers, and per-table vacuum and analyze scale factors. They set how aggressively dead tuples and stale stats are cleaned.</td><td><b>Safe live lever for bloat:</b> Raise workers, lower the scale factor on the one hot table (<span class="mono">ALTER TABLE … SET</span>). <b>Never disable autovacuum</b> to "help". That is how bloat and wraparound start.</td></tr>
   </tbody></table>
   <div class="lookcmd">-- check
 SHOW shared_buffers; SHOW work_mem; SHOW wal_level; SHOW max_wal_size;
@@ -66,13 +67,13 @@ ALTER TABLE orders SET (autovacuum_vacuum_scale_factor = 0.05);</div>
 </div></section>
 <section id="files"><div class="wrap">
 <div class="kicker">Files on disk · what <span style="text-transform:none">ls</span> actually shows</div>
-<p class="sub">Situation: there is no hidden state. Every table, index, and log discussed on this page is a file in one directory, owned by one process, inspectable with <span class="mono">ls</span> and <span class="mono">du</span> while the server runs. When disk fills in production — and the failure is always a specific file class, never "the database" in the abstract — this tree is how you identify which one in under a minute. Paths below are the common Linux defaults; the command under each tree asks the server for its own.</p><div class="filegrid"><div class="filecard pg"><header>PostgreSQL — the data directory</header>
+<p class="sub">There is no hidden state. Every table, index, and log on this page is a file in one directory. One process owns it. You can inspect it with <span class="mono">ls</span> and <span class="mono">du</span> while the server runs. When disk fills in production, the failure is always a specific file class. It is never "the database" in the abstract. This tree tells you which file class in under a minute. Paths below are the common Linux defaults. The command under each tree asks the server for its own.</p><div class="filegrid"><div class="filecard pg"><header>PostgreSQL: the data directory</header>
 <pre class="term"><span class="cmd">$ ls /var/lib/postgresql/16/main</span>
-<span class="f">PG_VERSION</span>        <span class="c"># "16" — which version owns this dir</span>
+<span class="f">PG_VERSION</span>        <span class="c"># "16": which version owns this dir</span>
 <span class="f">base/</span>             <span class="c"># one subfolder per database</span>
 <span class="f">global/</span>           <span class="c"># cluster-wide tables + pg_control,</span>
                   <span class="c"># the file startup reads first</span>
-<span class="f">pg_wal/</span>           <span class="c"># THE WAL — 16 MB segment files:</span>
+<span class="f">pg_wal/</span>           <span class="c"># THE WAL: 16 MB segment files:</span>
   000000010000000000000003
   000000010000000000000004
 <span class="f">pg_xact/</span>          <span class="c"># which transactions committed</span>
@@ -85,31 +86,31 @@ postgresql.conf  pg_hba.conf
 <span class="f">16397</span>             <span class="c"># ← table "users" is THIS file</span>
 16397_fsm  16397_vm <span class="c"># free-space + visibility maps</span>
 <span class="f">16405</span>             <span class="c"># ← index "users_pkey": also a file</span></pre>
-      <div class="fnote"><b>Find any table's file:</b> <span class="mono">SELECT pg_relation_filepath('users');</span> → <span class="mono">base/16384/16397</span>. File names are numbers (relfilenodes), not table names — the catalog maps them.</div>
+      <div class="fnote"><b>Find any table's file:</b> <span class="mono">SELECT pg_relation_filepath('users');</span> gives <span class="mono">base/16384/16397</span>. File names are numbers (relfilenodes), not table names. The catalog maps them.</div>
     </div></div>
 </div></section>
 <section id="logs"><div class="wrap">
 <div class="kicker">The log files · one by one</div>
-<p class="sub">Every durability, replication, and recovery guarantee on this page reduces to one of five logs. For each: the exact file name, where it sits, the mechanism, the failure mode when it is undersized, misplaced, or allowed to fill — and the command that shows you its current state. The pattern to hold: a log's size divided by the write rate is a time window, and every operational budget on this page (recovery time, replica downtime tolerance, checkpoint headroom) is one of those windows.</p><div class="loggrid"><div class="logcard">
+<p class="sub">Every durability, replication, and recovery guarantee on this page reduces to one of five logs. For each log I give you the exact file name, where it sits, the mechanism, the failure mode when it is undersized, misplaced, or allowed to fill, and the command that shows its current state. Hold this pattern. A log's size divided by the write rate is a time window. Every operational budget on this page is one of those windows: recovery time, replica downtime tolerance, checkpoint headroom.</p><div class="loggrid"><div class="logcard">
       <span class="tag pg">PostgreSQL</span>
       <h3>Write-Ahead Log (WAL)</h3>
       <div class="fname">pg_wal/000000010000000000000003</div>
       <dl>
-        <dt>Where it sits</dt><dd>The <span class="mono">pg_wal/</span> folder inside the data directory. A chain of segment files, <b>16 MB each</b> by default, with hex names: timeline + log + segment.</dd>
-        <dt>What it does</dt><dd>Every change is written here <i>before</i> the data file is allowed to change — that's the "write-ahead". COMMIT only returns after the WAL record is forced to disk (fsync). The same stream feeds replicas and, when archived, point-in-time recovery.</dd>
-        <dt>What breaks without it</dt><dd>No crash safety at all: a power cut could leave half-written pages and silently lost commits. No streaming replication either — replicas have nothing to replay.</dd>
+        <dt>Where it sits</dt><dd>The <span class="mono">pg_wal/</span> folder inside the data directory. A chain of segment files, <b>16 MB each</b> by default, with hex names: timeline plus log plus segment.</dd>
+        <dt>What it does</dt><dd>Every change is written here <i>before</i> the data file is allowed to change. That is the "write-ahead". COMMIT only returns after the WAL record is forced to disk (fsync). The same stream feeds replicas and, when archived, point-in-time recovery.</dd>
+        <dt>What breaks without it</dt><dd>No crash safety at all. A power cut could leave half-written pages and silently lost commits. No streaming replication either. Replicas have nothing to replay.</dd>
         <dt>Look at it</dt><dd><div class="lookcmd">$ ls $PGDATA/pg_wal
 $ pg_waldump pg_wal/000000010000000000000003
 -- in psql: SELECT pg_current_wal_lsn();</div></dd>
       </dl>
     </div></div>
-<p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../mysql/index.html#logs">MySQL · InnoDB — redo log and binary log</a> · <a href="../mongodb/index.html#logs">MongoDB · WiredTiger — journal and oplog</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
+<p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../mysql/index.html#logs">MySQL · InnoDB: redo log and binary log</a> · <a href="../mongodb/index.html#logs">MongoDB · WiredTiger: journal and oplog</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
 </div></section>
 <section id="commands"><div class="wrap">
 
   <div class="kicker">See it yourself · copy-paste commands</div>
   <h2>Open a real database and check every claim on this page</h2>
-  <p class="sub">In Practice: every mechanism above is observable on a running server in under two minutes. These commands are grouped by the question they answer — where the files are, where the log position is, how far behind the copies are, and whether cleanup is keeping up. Run them against any install; the output either confirms the model on this page or identifies the specific place your system deviates from it.</p>
+  <p class="sub">Every mechanism above is observable on a running server in under two minutes. These commands are grouped by the question they answer. Where are the files. Where is the log position. How far behind are the copies. Is cleanup keeping up. Run them against any install. The output either confirms the model on this page or shows you the specific place your system deviates from it.</p>
   <div class="cmdgrid"><div class="cmdcol pg"><header>PostgreSQL · psql + shell</header>
 <pre class="term"><span class="c">-- where is everything?</span>
 SHOW data_directory;
@@ -129,9 +130,19 @@ SELECT client_addr, state, replay_lag
 SELECT relname, n_dead_tup
   FROM pg_stat_user_tables;</pre></div></div>
 </div></section>
+<section><div class="wrap">
+<h3 style="margin:6px 0 4px;font-size:19px">One incident I keep coming back to</h3>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The app slowed down over days. The file grew to 5 times its size. Live row counts did not move.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">I checked the oldest open transaction first. One long transaction was stopping VACUUM, so dead tuples piled up and the heap file bloated.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The fix was the transaction, not the space. Kill it or fix the code path, set idle_in_transaction_session_timeout, and run reports on a replica.</p>
+<h3 style="margin:18px 0 4px;font-size:19px">Before you leave, check this</h3>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One command. It tells you whether cleanup is keeping up.</p>
+<div class="lookcmd">SELECT relname, n_dead_tup FROM pg_stat_user_tables;</div>
+<p style="font-size:14.5px;color:var(--muted);margin:8px 0 0;max-width:820px">If n_dead_tup keeps climbing on a hot table, VACUUM is not keeping up.</p>
+</div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
-  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk — <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page — durability, replication, point-in-time recovery — is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL. <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL. <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page follows from that ordering: durability, replication, point-in-time recovery. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
 </div></footer><script src="../assets/js/main.js"></script>
 </body>
