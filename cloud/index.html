@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="light dark"/>
 <meta name="description" content="On-prem vs cloud for PostgreSQL, MySQL and MongoDB: what RDS, Aurora, Cloud SQL and Atlas take over, what the DBA still owns, and the tradeoffs."/>
 <link rel="icon" href="data:,"/>
-<title>Cloud vs On-Prem Databases — Real Databases, Simply</title>
+<title>Cloud vs On-Prem Databases: Real Databases, Simply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/style.css"/>
@@ -22,31 +22,31 @@
 <section id="cloud" style="padding-top:6px"><div class="wrap">
   <div class="kicker">The cloud side · same engines, different owner</div>
   <h2>On-prem vs cloud: the physics stays, the 3 AM work moves</h2>
-  <p class="sub">A managed database does not repeal anything on this page. A commit on Aurora still waits for log writes; an Atlas oplog window is still <b style="color:var(--ink)">size ÷ write rate</b>; autovacuum still runs — and still falls behind — on RDS. What changes is the ownership boundary from the Start here section: the provider absorbs the sysadmin and storage layers wholesale, part of the DBA layer, and none of the query layer. Price that boundary precisely, per engine.</p>
+  <p class="sub">I wrote this page because the cloud changes who does the work, not how the database works. A managed database does not repeal anything on this site. A commit on Aurora still waits for log writes. An Atlas oplog window is still <b style="color:var(--ink)">size ÷ write rate</b>. Autovacuum still runs on RDS, and it still falls behind. What changes is the ownership boundary. The provider absorbs the sysadmin and storage layers wholesale, part of the DBA layer, and none of the query layer. After this page you will price that boundary per engine, and you will know which checks stay yours.</p>
 
   <div class="hooknum">
-    <div class="hn"><b>6 copies, 3 AZs</b><span>Aurora's storage layer keeps six copies of every log record and data page across three availability zones, and grows in 10 GB increments up to 128 TB. Storage provisioning — a storage-team job on-prem — simply stops existing as a task.</span></div>
-    <div class="hn"><b>~60–120 s</b><span>Typical RDS Multi-AZ failover time: the standby is promoted and the endpoint's DNS flips. On-prem, the same failover is your script, your monitoring, and your pager — measured in minutes if it is rehearsed, hours if it is not.</span></div>
-    <div class="hn"><b>35 days</b><span>Maximum automated-backup retention on RDS — point-in-time recovery to any second inside that window, with no archive scripting. The on-prem equivalent is a base backup plus a WAL/binlog archive you built, monitor, and restore-test yourself.</span></div>
+    <div class="hn"><b>6 copies, 3 AZs</b><span>Aurora's storage layer keeps six copies of every log record and data page across three availability zones, and grows in 10 GB increments up to 128 TB. Storage provisioning was a storage-team job on-prem. Here it simply stops existing as a task.</span></div>
+    <div class="hn"><b>~60-120 s</b><span>Typical RDS Multi-AZ failover time. The standby is promoted and the endpoint's DNS flips. On-prem, the same failover is your script, your monitoring, and your pager. It is measured in minutes if it is rehearsed, hours if it is not.</span></div>
+    <div class="hn"><b>35 days</b><span>Maximum automated-backup retention on RDS. Point-in-time recovery to any second inside that window, with no archive scripting. The on-prem equivalent is a base backup plus a WAL/binlog archive you built, monitored, and restore-tested yourself.</span></div>
   </div>
 
   <h3 style="margin:10px 0 4px;font-size:20px"><span class="tag pg">PostgreSQL</span> RDS for PostgreSQL · Aurora PostgreSQL · Cloud SQL · Azure Database</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> provisioning, patching, backup plumbing, and failover mechanics for the most correctness-sensitive engine — the work that is identical at every company and expert at none of them by default. <b style="color:var(--ink)">Why it is easy to maintain:</b> automated backups with PITR, one-click Multi-AZ, parameter groups instead of config files, and minor-version upgrades scheduled by the provider.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> provisioning, patching, backup plumbing, and failover mechanics for the most correctness-sensitive engine. That work is identical at every company and expert at none of them by default. <b style="color:var(--ink)">Why it is easy to maintain:</b> automated backups with PITR, one-click Multi-AZ, parameter groups instead of config files, and minor-version upgrades scheduled by the provider.</p>
   <div class="owns">
     <div class="vsbox actual"><h4>The cloud takes over</h4><ul>
       <li>Provisioning, OS and engine patching, hardware failure</li>
       <li>Automated backups + PITR (up to 35 days on RDS); storage scaling</li>
       <li>Multi-AZ failover mechanics (~60–120 s, endpoint unchanged)</li>
-      <li>Aurora: the storage layer itself — 6 copies across 3 AZs, up to 128 TB</li>
+      <li>Aurora: the storage layer itself: 6 copies across 3 AZs, up to 128 TB</li>
       <li>Monitoring plumbing (Performance Insights, enhanced monitoring)</li></ul></div>
     <div class="vsbox usual"><h4>The DBA still owns</h4><ul>
-      <li>Schema, indexes, query plans — every incident in "When it hurts" still applies</li>
+      <li>Schema, indexes, query plans: every incident in "When it hurts" still applies</li>
       <li>Autovacuum health: it runs, it can still fall behind, and wraparound is still possible</li>
       <li>Parameter group tuning: shared_buffers is set as a fraction of instance RAM; some parameters are locked outright</li>
       <li>Connection pooling (RDS Proxy or your own PgBouncer) and lag monitoring</li>
-      <li>Restore tests — the button is theirs, the verification is yours</li></ul></div>
+      <li>Restore tests: the button is theirs, the verification is yours</li></ul></div>
   </div>
-  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no superuser and no host — you cannot read <span class="mono">pg_wal</span> files, run <span class="mono">pg_waldump</span>, install an unlisted extension, or set parameters the provider locks. Failover timing and maintenance windows are the provider's schedule. Cost is a per-hour instance + per-GB + per-I/O rent that beats on-prem at small scale and can exceed it at large, steady scale.</p>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no superuser and no host. You cannot read <span class="mono">pg_wal</span> files, run <span class="mono">pg_waldump</span>, install an unlisted extension, or set parameters the provider locks. Failover timing and maintenance windows are the provider's schedule. Cost is a per-hour instance plus per-GB plus per-I/O rent that beats on-prem at small scale and can exceed it at large, steady scale.</p>
   <table class="breaks"><thead><tr><th>Concern</th><th>On-prem PostgreSQL</th><th>Managed (RDS / Aurora / Cloud SQL)</th></tr></thead><tbody>
     <tr><td>Provisioning &amp; patching</td><td>Your team: install, minor/major upgrades, OS patches</td><td>Provider: console/API provisioning; upgrades scheduled, major versions still planned by you</td></tr>
     <tr><td>Backups &amp; PITR</td><td>Base backups + WAL archiving you build and restore-test</td><td>Automated; PITR to any second within retention (≤ 35 days on RDS)</td></tr>
@@ -57,22 +57,22 @@
   </tbody></table>
 
   <h3 style="margin:28px 0 4px;font-size:20px"><span class="tag my">MySQL · InnoDB</span> RDS for MySQL · Aurora MySQL · Cloud SQL for MySQL</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> the operational machinery around InnoDB — backups, replica provisioning, failover — for an engine whose typical deployment is many similar web workloads. <b style="color:var(--ink)">Why it is easy to maintain:</b> read replicas in minutes, automated snapshots plus binlog-based PITR, and on Aurora a shared storage layer that makes replica lag mostly a non-event because replicas read the same storage the writer writes.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> the operational machinery around InnoDB. Backups, replica provisioning, failover. That is for an engine whose typical deployment is many similar web workloads. <b style="color:var(--ink)">Why it is easy to maintain:</b> read replicas in minutes, automated snapshots plus binlog-based PITR, and on Aurora a shared storage layer that makes replica lag mostly a non-event because replicas read the same storage the writer writes.</p>
   <div class="owns">
     <div class="vsbox actual"><h4>The cloud takes over</h4><ul>
       <li>Provisioning, patching, snapshot backups + PITR</li>
       <li>Replica creation and Multi-AZ failover mechanics</li>
       <li>Binlog retention management within the window you configure</li>
-      <li>Aurora: redo-driven storage layer — replicas share storage, failover is fast, storage auto-grows</li>
+      <li>Aurora: redo-driven storage layer: replicas share storage, failover is fast, storage auto-grows</li>
       <li>Parameter delivery via parameter groups</li></ul></div>
     <div class="vsbox usual"><h4>The DBA still owns</h4><ul>
-      <li>Queries, indexes, and the purge/history-list problem — a long transaction pins purge on RDS exactly as on-prem</li>
+      <li>Queries, indexes, and the purge/history-list problem: a long transaction pins purge on RDS exactly as on-prem</li>
       <li>Buffer pool sizing, via parameter group, inside instance-class limits</li>
       <li>Primary-key discipline: random UUID PKs fragment Aurora and RDS tables the same way</li>
       <li>Replica lag on binlog-based replicas, and GTID consistency at failover</li>
-      <li>Durability settings: flush/sync choices still exist in the parameter group — and can still be set wrong</li></ul></div>
+      <li>Durability settings: flush/sync choices still exist in the parameter group, and can still be set wrong</li></ul></div>
   </div>
-  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no SUPER privilege and no filesystem — <span class="mono">ib_logfile0</span> and the binlog files are unreachable; binlog access is through stored procedures and retention settings, and some InnoDB internals (change buffer behavior, redo sizing on Aurora) are managed for you whether you like their values or not. Sharding remains your problem (Vitess runs on top, not inside).</p>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no SUPER privilege and no filesystem. <span class="mono">ib_logfile0</span> and the binlog files are unreachable. Binlog access is through stored procedures and retention settings, and some InnoDB internals (change buffer behavior, redo sizing on Aurora) are managed for you whether you like their values or not. Sharding remains your problem. Vitess runs on top, not inside.</p>
   <table class="breaks"><thead><tr><th>Concern</th><th>On-prem MySQL</th><th>Managed (RDS / Aurora / Cloud SQL)</th></tr></thead><tbody>
     <tr><td>Provisioning &amp; patching</td><td>Your team, per server</td><td>Provider; replicas and Multi-AZ in minutes</td></tr>
     <tr><td>Backups &amp; PITR</td><td>XtraBackup/mysqldump + binlog archive you operate</td><td>Automated snapshots + binlog PITR within retention</td></tr>
@@ -83,7 +83,7 @@
   </tbody></table>
 
   <h3 style="margin:28px 0 4px;font-size:20px"><span class="tag mo">MongoDB · WiredTiger</span> MongoDB Atlas (and compatible managed offerings)</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> replica-set and sharded-cluster operations — elections, member replacement, balancer supervision, backup consistency across shards — which are the easiest parts of MongoDB to run badly by hand. <b style="color:var(--ink)">Why it is easy to maintain:</b> a replica set or a sharded cluster is a configuration choice in a console, snapshots and continuous backup are built in, and members are replaced by the platform instead of by a runbook.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> replica-set and sharded-cluster operations. Elections, member replacement, balancer supervision, backup consistency across shards. Those are the easiest parts of MongoDB to run badly by hand. <b style="color:var(--ink)">Why it is easy to maintain:</b> a replica set or a sharded cluster is a configuration choice in a console, snapshots and continuous backup are built in, and members are replaced by the platform instead of by a runbook.</p>
   <div class="owns">
     <div class="vsbox actual"><h4>The cloud takes over</h4><ul>
       <li>Provisioning replica sets and sharded clusters; member replacement after failure</li>
@@ -92,13 +92,13 @@
       <li>Patching and version upgrades as rolling operations</li>
       <li>Monitoring and alerting plumbing (including oplog window visibility)</li></ul></div>
     <div class="vsbox usual"><h4>The DBA still owns</h4><ul>
-      <li>Schema design and indexing — the ESR rule and COLLSCAN economics are unchanged</li>
+      <li>Schema design and indexing: the ESR rule and COLLSCAN economics are unchanged</li>
       <li>The shard key: still chosen by you, still near-permanent, jumbo chunks still possible</li>
-      <li>Read/write concerns per application — Atlas cannot choose your durability</li>
+      <li>Read/write concerns per application: Atlas cannot choose your durability</li>
       <li>The oplog window math: Atlas shows the window; sizing the tier so the window fits your maintenance is your decision</li>
       <li>Tier sizing and cost: an oversized cluster is the most common Atlas incident, and it is a billing incident</li></ul></div>
   </div>
-  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no host and no dbPath — <span class="mono">journal/</span> files, <span class="mono">WiredTiger.wt</span>, and the rollback directory are not yours to inspect; logs come through the UI/API, and only a subset of <span class="mono">setParameter</span> knobs are exposed. Network design (peering, private endpoints) becomes part of the database's latency profile. In exchange, the entire on-prem ownership table from Start here — sysadmin, storage, most of operations — collapses into the provider's column.</p>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no host and no dbPath. <span class="mono">journal/</span> files, <span class="mono">WiredTiger.wt</span>, and the rollback directory are not yours to inspect. Logs come through the UI/API, and only a subset of <span class="mono">setParameter</span> knobs are exposed. Network design (peering, private endpoints) becomes part of the database's latency profile. In exchange, the entire on-prem ownership table from Start here, sysadmin, storage, most of operations, collapses into the provider's column.</p>
   <table class="breaks"><thead><tr><th>Concern</th><th>On-prem MongoDB</th><th>MongoDB Atlas</th></tr></thead><tbody>
     <tr><td>Provisioning &amp; patching</td><td>Your team: mongod installs, rolling upgrades by runbook</td><td>Console/API; rolling upgrades operated by the platform</td></tr>
     <tr><td>Backups &amp; PITR</td><td>mongodump/snapshots you schedule, store, and restore-test</td><td>Built-in snapshots + continuous backup with PITR</td></tr>
@@ -108,11 +108,12 @@
     <tr><td>Cost shape &amp; exit</td><td>Hardware + people; mongodump out at will</td><td>Per-tier hourly rent (RAM/CPU/storage bundled); exit via live migration or dump</td></tr>
   </tbody></table>
 
-  <p style="font-size:14.5px;color:var(--muted);margin:16px 0 0;max-width:840px"><b style="color:var(--ink)">The decision rule that survives every vendor:</b> cloud removes operational work whose difficulty is the same everywhere (patching, failover mechanics, backup plumbing) and removes none of the work whose difficulty is specific to your data (schema, indexes, shard keys, cleanup health, the window math). If your incidents are mostly the first kind, managed wins. If they are mostly the second kind — and the eight cards in "When it hurts" say they usually are — the cloud changes who holds the pager, not whether it rings.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:16px 0 0;max-width:840px"><b style="color:var(--ink)">The decision rule that survives every vendor:</b> cloud removes operational work whose difficulty is the same everywhere. Patching, failover mechanics, backup plumbing. It removes none of the work whose difficulty is specific to your data. Schema, indexes, shard keys, cleanup health, the window math. If your incidents are mostly the first kind, managed wins. If they are mostly the second kind, and the eight cards in "When it hurts" say they usually are, the cloud changes who holds the pager, not whether it rings.</p>
+  <p class="sub" style="margin-top:20px"><b style="color:var(--ink)">Before you leave, check this:</b> run <span class="mono">SELECT replay_lag FROM pg_stat_replication;</span> If lag is over 5 seconds, your replicas are not where you think they are.</p>
 </div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
-  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk — <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page — durability, replication, point-in-time recovery — is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
 </div></footer><script src="../assets/js/main.js"></script>
 </body>
