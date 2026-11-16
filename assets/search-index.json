@@ -1,0 +1,1244 @@
+[
+ {
+  "t": "Real databases, explained with real files.",
+  "u": "index.html",
+  "s": "Home",
+  "k": "home postgresql mysql mongodb wal redo binlog journal oplog pages index"
+ },
+ {
+  "t": "Durability is an ordering rule, not a feature",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "durability log first commit fsync pg_wal ib_logfile0 WiredTigerLog"
+ },
+ {
+  "t": "Lookup cost is page count, nothing else",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "lookup index B+ tree pages 8 KB 16 KB slow query sequential scan"
+ },
+ {
+  "t": "MVCC trades disk for non-blocking reads",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "MVCC old versions vacuum purge snapshot readers writers"
+ },
+ {
+  "t": "Page",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "page 8 KB 16 KB fixed size read write"
+ },
+ {
+  "t": "Write-ahead log (WAL)",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "WAL write-ahead log pg_wal redo journal before data file"
+ },
+ {
+  "t": "Index (B+ tree)",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "index B+ tree sorted key page lookup 3 page reads"
+ },
+ {
+  "t": "Transaction",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "transaction BEGIN COMMIT xid trx id txnNumber"
+ },
+ {
+  "t": "Checkpoint",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "checkpoint dirty pages flush log recycle checkpoint_timeout"
+ },
+ {
+  "t": "Replica",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "replica lag replay WAL binlog oplog secondary"
+ },
+ {
+  "t": "Six terms. Every one of them is a file, a size, or a number.",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "glossary page WAL index transaction checkpoint replica vocabulary"
+ },
+ {
+  "t": "What each database actually is",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "beginner start here postgresql mysql mongodb architecture"
+ },
+ {
+  "t": "Who manages what, on-prem",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "DBA sysadmin storage team responsibilities on-prem"
+ },
+ {
+  "t": "The standard outage runbook: same steps, every engine",
+  "u": "index.html#start-here",
+  "s": "Home",
+  "k": "outage runbook incident triage declare blocker vitals postmortem"
+ },
+ {
+  "t": "Follow one row: INSERT INTO users, end to end",
+  "u": "index.html#insert",
+  "s": "Home",
+  "k": "insert users 42 Asha log first data page index replica commit"
+ },
+ {
+  "t": "SELECT: reading one row",
+  "u": "index.html#operations",
+  "s": "Home",
+  "k": "SELECT read index lookup EXPLAIN page shared_buffers visibility MVCC"
+ },
+ {
+  "t": "UPDATE: changing row 42's name",
+  "u": "index.html#operations",
+  "s": "Home",
+  "k": "UPDATE new version lock log first WAL redo undo journal index"
+ },
+ {
+  "t": "DELETE: removing row 42",
+  "u": "index.html#operations",
+  "s": "Home",
+  "k": "DELETE mark deleted xmax delete flag snapshot vacuum purge"
+ },
+ {
+  "t": "CRASH + RESTART: the log files earn their keep",
+  "u": "index.html#operations",
+  "s": "Home",
+  "k": "crash restart recovery replay redo undo pg_control checkpoint LSN"
+ },
+ {
+  "t": "3 real problems, 3 different answers",
+  "u": "index.html#architect",
+  "s": "Home",
+  "k": "payments catalogue profiles workload postgres mysql mongodb sharding"
+ },
+ {
+  "t": "Payments: handling money",
+  "u": "index.html#architect",
+  "s": "Home",
+  "k": "payments ledger UNIQUE synchronous_commit synchronous standby WAL archiving"
+ },
+ {
+  "t": "Product catalogue: lots of browsing",
+  "u": "index.html#architect",
+  "s": "Home",
+  "k": "catalogue read replicas covering index EXPLAIN buffer pool mysql-bin"
+ },
+ {
+  "t": "User profiles: users in 40 countries",
+  "u": "index.html#architect",
+  "s": "Home",
+  "k": "profiles sharded region shard key writeConcern majority oplog"
+ },
+ {
+  "t": "Quick check: did it click?",
+  "u": "index.html#architect",
+  "s": "Home",
+  "k": "quiz questions files logs"
+ },
+ {
+  "t": "When the app starts hurting",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "incidents symptoms slow query pool exhausted deadlock stale reads bloat disk full N+1 hot shard"
+ },
+ {
+  "t": "1. Pages that were fast are now slow. No deploy, no traffic spike",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "slow query missing index sequential scan pg_stat_statements EXPLAIN ANALYZE BUFFERS stale stats"
+ },
+ {
+  "t": "2. Connection pool exhausted: app queues, DB looks idle",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "connection pool exhausted pool exhausted max_connections idle in transaction PgBouncer ProxySQL maxPoolSize"
+ },
+ {
+  "t": "3. Random failures: deadlocks and lock waits",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "deadlock lock waits retry pg_blocking_pids SHOW ENGINE INNODB STATUS data_lock_waits"
+ },
+ {
+  "t": "4. Stale reads: I saved it, refreshed, and it is old",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "stale reads replica lag replay_lag Seconds_Behind_Source optime read-your-own-write"
+ },
+ {
+  "t": "Replica lag",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "replica lag stale reads pg_stat_replication SHOW REPLICA STATUS rs.status replay_lag"
+ },
+ {
+  "t": "5. Everything slows down over days. Disk grows, rows do not.",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "bloat dead tuples vacuum purge history list long transaction n_dead_tup"
+ },
+ {
+  "t": "Bloat from dead tuples and a pinned snapshot",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "bloat vacuum dead tuples n_dead_tup history list purge idle in transaction"
+ },
+ {
+  "t": "6. Disk full: writes fail, database goes read-only",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "disk full disk grows WAL binlog cannot purge du pg_wal base retention 70 percent"
+ },
+ {
+  "t": "7. One page, 500 queries: the N+1 problem",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "N+1 one page 500 queries pg_stat_statements calls JOIN WHERE id IN eager load DataLoader $lookup $in"
+ },
+ {
+  "t": "8. One tenant, one product, one shard is hot, the rest is fine",
+  "u": "index.html#hurting",
+  "s": "Home",
+  "k": "hot shard hot tenant hot key monotonic shard key bucket counters sh.status getShardDistribution mongostat"
+ },
+ {
+  "t": "Pick the database from the workload, not the fashion",
+  "u": "index.html#design",
+  "s": "Home",
+  "k": "design workload OLTP analytics full-text search cache queues time series documents graph"
+ },
+ {
+  "t": "Same app, three answers: an online store",
+  "u": "index.html#design",
+  "s": "Home",
+  "k": "online store design OLTP search analytics"
+ },
+ {
+  "t": "When to split across two databases",
+  "u": "index.html#design",
+  "s": "Home",
+  "k": "split two databases OLTP search analytics Redis"
+ },
+ {
+  "t": "These are the books and blogs this site leans on",
+  "u": "index.html#reading",
+  "s": "Home",
+  "k": "books blogs further reading Kleppmann Petrov Use The Index Luke Rogov"
+ },
+ {
+  "t": "PostgreSQL",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "postgresql postgres data directory WAL 8 KB pages shared_buffers MVCC vacuum"
+ },
+ {
+  "t": "PostgreSQL: in one line",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "postgresql relational rows tables one data directory correctness postmaster backend per connection"
+ },
+ {
+  "t": "The architecture: processes, memory, disk",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "architecture postmaster backend checkpointer bgwriter WAL writer autovacuum shared_buffers work_mem"
+ },
+ {
+  "t": "Every log file a DBA needs to know",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "log files pg_wal postgresql-16-main.log server log error slow archive_status"
+ },
+ {
+  "t": "The parameters DBAs actually touch during outages",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "parameters outage shared_buffers work_mem max_connections wal_level max_wal_size checkpoint_timeout autovacuum"
+ },
+ {
+  "t": "shared_buffers",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "shared_buffers page cache 25 percent RAM restart pg_stat_bgwriter"
+ },
+ {
+  "t": "work_mem",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "work_mem sort hash spill per operation SET work_mem 256MB sort spill"
+ },
+ {
+  "t": "max_connections",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "max_connections backend processes pool exhausted PgBouncer"
+ },
+ {
+  "t": "wal_level",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "wal_level minimal replica logical restart replication"
+ },
+ {
+  "t": "max_wal_size",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "max_wal_size checkpoint 1 GB reload checkpoints_req checkpoint storms"
+ },
+ {
+  "t": "checkpoint_timeout",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "checkpoint_timeout 5 min reload flush recovery time"
+ },
+ {
+  "t": "autovacuum",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "autovacuum vacuum scale factor dead tuples bloat wraparound ALTER TABLE"
+ },
+ {
+  "t": "Files on disk: the data directory",
+  "u": "postgresql/index.html#files",
+  "s": "PostgreSQL",
+  "k": "files ls data directory PG_VERSION base global pg_wal pg_xact pg_control"
+ },
+ {
+  "t": "pg_wal/000000010000000000000003",
+  "u": "postgresql/index.html#files",
+  "s": "PostgreSQL",
+  "k": "pg_wal WAL segment 16 MB timeline pg_waldump pg_current_wal_lsn"
+ },
+ {
+  "t": "base/16384/16397",
+  "u": "postgresql/index.html#files",
+  "s": "PostgreSQL",
+  "k": "base 16384 16397 users table file pg_relation_filepath relfilenode"
+ },
+ {
+  "t": "16397_fsm and 16397_vm",
+  "u": "postgresql/index.html#files",
+  "s": "PostgreSQL",
+  "k": "16397_fsm free-space map 16397_vm visibility map users_pkey 16405 index file"
+ },
+ {
+  "t": "global/pg_control",
+  "u": "postgresql/index.html#files",
+  "s": "PostgreSQL",
+  "k": "global pg_control checkpoint WAL position startup pg_xact committed"
+ },
+ {
+  "t": "postgresql.conf and pg_hba.conf",
+  "u": "postgresql/index.html#files",
+  "s": "PostgreSQL",
+  "k": "postgresql.conf pg_hba.conf config etc postgresql 16 main"
+ },
+ {
+  "t": "Write-Ahead Log (WAL)",
+  "u": "postgresql/index.html#logs",
+  "s": "PostgreSQL",
+  "k": "WAL write-ahead log pg_wal fsync commit replicas point-in-time recovery pg_waldump"
+ },
+ {
+  "t": "Open a real database and check every claim on this page",
+  "u": "postgresql/index.html#commands",
+  "s": "PostgreSQL",
+  "k": "commands psql SHOW data_directory pg_relation_filepath pg_current_wal_lsn pg_stat_replication pg_stat_user_tables"
+ },
+ {
+  "t": "pg_stat_replication",
+  "u": "postgresql/index.html#commands",
+  "s": "PostgreSQL",
+  "k": "pg_stat_replication client_addr state replay_lag replica lag"
+ },
+ {
+  "t": "pg_stat_user_tables and n_dead_tup",
+  "u": "postgresql/index.html#commands",
+  "s": "PostgreSQL",
+  "k": "pg_stat_user_tables n_dead_tup dead tuples vacuum bloat last_autovacuum"
+ },
+ {
+  "t": "One incident I keep coming back to",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "incident bloat long transaction vacuum idle_in_transaction_session_timeout replica reports"
+ },
+ {
+  "t": "Before you leave, check this",
+  "u": "postgresql/index.html",
+  "s": "PostgreSQL",
+  "k": "check n_dead_tup pg_stat_user_tables vacuum cleanup"
+ },
+ {
+  "t": "MySQL - InnoDB",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "mysql innodb .ibd redo binlog buffer pool undo purge"
+ },
+ {
+  "t": "MySQL - InnoDB: in one line",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "mysql innodb table file primary-key index mysqld thread per connection"
+ },
+ {
+  "t": "The architecture: processes, memory, disk",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "architecture mysqld page cleaner purge thread buffer pool redo log buffer change buffer datadir"
+ },
+ {
+  "t": "Every log file a DBA needs to know",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "log files redo binlog error slow log ib_logfile0 mysql-bin hostname.err"
+ },
+ {
+  "t": "The parameters DBAs actually touch during outages",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "parameters innodb_buffer_pool_size innodb_redo_log_capacity max_connections innodb_flush_log_at_trx_commit"
+ },
+ {
+  "t": "innodb_buffer_pool_size",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "innodb_buffer_pool_size buffer pool 70 80 percent RAM Innodb_buffer_pool_resize_status"
+ },
+ {
+  "t": "innodb_redo_log_capacity",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "innodb_redo_log_capacity redo capacity checkpoint age dynamic 8 GB"
+ },
+ {
+  "t": "innodb_flush_log_at_trx_commit",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "innodb_flush_log_at_trx_commit durability 1 2 0 fsync commit"
+ },
+ {
+  "t": "Files on disk: the datadir",
+  "u": "mysql/index.html#files",
+  "s": "MySQL",
+  "k": "files ls datadir ibdata1 ib_logfile0 mysql-bin undo_001 shop users.ibd"
+ },
+ {
+  "t": "ib_logfile0 and ib_logfile1",
+  "u": "mysql/index.html#files",
+  "s": "MySQL",
+  "k": "ib_logfile0 ib_logfile1 redo log #innodb_redo #ib_redo crash safety"
+ },
+ {
+  "t": "mysql-bin.000001",
+  "u": "mysql/index.html#files",
+  "s": "MySQL",
+  "k": "mysql-bin mysql-bin.000001 mysql-bin.000002 mysql-bin.index binlog replicas PITR GTID"
+ },
+ {
+  "t": "undo_001 and undo_002",
+  "u": "mysql/index.html#files",
+  "s": "MySQL",
+  "k": "undo_001 undo_002 undo tablespaces old row versions purge"
+ },
+ {
+  "t": "shop/users.ibd",
+  "u": "mysql/index.html#files",
+  "s": "MySQL",
+  "k": "shop users.ibd orders.ibd table file primary-key index innodb_file_per_table"
+ },
+ {
+  "t": "ibdata1",
+  "u": "mysql/index.html#files",
+  "s": "MySQL",
+  "k": "ibdata1 system tablespace bookkeeping doublewrite buffer #ib_16384_0.dblwr torn page"
+ },
+ {
+  "t": "Redo log",
+  "u": "mysql/index.html#logs",
+  "s": "MySQL",
+  "k": "redo log ib_logfile0 ib_logfile1 physical page changes crash replay LOG section checkpoint age"
+ },
+ {
+  "t": "Binary log (binlog)",
+  "u": "mysql/index.html#logs",
+  "s": "MySQL",
+  "k": "binary log binlog mysql-bin logical committed changes replicas point-in-time recovery mysqlbinlog SHOW BINARY LOGS"
+ },
+ {
+  "t": "Open a real database and check every claim on this page",
+  "u": "mysql/index.html#commands",
+  "s": "MySQL",
+  "k": "commands datadir SHOW VARIABLES mysqlbinlog SHOW ENGINE INNODB STATUS SHOW REPLICA STATUS"
+ },
+ {
+  "t": "SHOW ENGINE INNODB STATUS",
+  "u": "mysql/index.html#commands",
+  "s": "MySQL",
+  "k": "SHOW ENGINE INNODB STATUS LOG checkpoint age history list length deadlock LATEST DETECTED DEADLOCK"
+ },
+ {
+  "t": "SHOW REPLICA STATUS",
+  "u": "mysql/index.html#commands",
+  "s": "MySQL",
+  "k": "SHOW REPLICA STATUS Seconds_Behind_Source Replica_SQL_Running replica lag GTID"
+ },
+ {
+  "t": "SHOW BINARY LOGS",
+  "u": "mysql/index.html#commands",
+  "s": "MySQL",
+  "k": "SHOW BINARY LOGS binlog retention binlog_expire_logs_seconds oldest file"
+ },
+ {
+  "t": "One incident I keep coming back to",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "incident disk full binlog cannot purge dead replica retention 70 percent"
+ },
+ {
+  "t": "Before you leave, check this",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "check checkpoint age redo log capacity SHOW ENGINE INNODB STATUS LOG"
+ },
+ {
+  "t": "MongoDB - WiredTiger",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "mongodb wiredtiger .wt journal oplog cache sharding documents"
+ },
+ {
+  "t": "MongoDB - WiredTiger: in one line",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "mongodb document JSON collections replica set mongod mongos sharded"
+ },
+ {
+  "t": "The architecture: processes, memory, disk",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "architecture mongod primary secondaries oplog WiredTiger cache 50 percent RAM dbPath"
+ },
+ {
+  "t": "Every log file a DBA needs to know",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "log files journal WiredTigerLog oplog local.oplog.rs mongod.log election slow operations"
+ },
+ {
+  "t": "The parameters DBAs actually touch during outages",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "parameters cacheSizeGB oplogSizeMB replSetResizeOplog writeConcern readConcern"
+ },
+ {
+  "t": "storage.wiredTiger.engineConfig.cacheSizeGB",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "cacheSizeGB WiredTiger cache 50 percent RAM minus 1 GB serverStatus cache dirty bytes eviction"
+ },
+ {
+  "t": "oplogSizeMB and replSetResizeOplog",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "oplogSizeMB replSetResizeOplog oplog window size write rate maintenance"
+ },
+ {
+  "t": "writeConcern and readConcern",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "writeConcern readConcern w majority j true readPreference secondary stale reads"
+ },
+ {
+  "t": "Files on disk: the dbPath",
+  "u": "mongodb/index.html#files",
+  "s": "MongoDB",
+  "k": "files ls dbPath WiredTiger.wt _mdb_catalog.wt collection index journal mongod.lock"
+ },
+ {
+  "t": "collection-2-4471.wt",
+  "u": "mongodb/index.html#files",
+  "s": "MongoDB",
+  "k": "collection-*.wt collection-2-4471 collection-5-9912 users orders compressed _mdb_catalog"
+ },
+ {
+  "t": "index-3-4471.wt",
+  "u": "mongodb/index.html#files",
+  "s": "MongoDB",
+  "k": "index-*.wt index-3-4471 _id index one file per index"
+ },
+ {
+  "t": "WiredTiger.wt",
+  "u": "mongodb/index.html#files",
+  "s": "MongoDB",
+  "k": "WiredTiger.wt metadata checkpoint WiredTiger.turtle sizeStorer.wt storage.bson diagnostic.data"
+ },
+ {
+  "t": "journal/WiredTigerLog.0000000123",
+  "u": "mongodb/index.html#files",
+  "s": "MongoDB",
+  "k": "journal WiredTigerLog.0000000123 write-ahead log j true checkpoint 60 s"
+ },
+ {
+  "t": "local.oplog.rs",
+  "u": "mongodb/index.html#files",
+  "s": "MongoDB",
+  "k": "local.oplog.rs oplog capped collection local database secondaries tail timestamp"
+ },
+ {
+  "t": "Journal",
+  "u": "mongodb/index.html#logs",
+  "s": "MongoDB",
+  "k": "journal WiredTigerLog write-ahead log checkpoint 60 s j true serverStatus wiredTiger.log"
+ },
+ {
+  "t": "Oplog: the replica set log",
+  "u": "mongodb/index.html#logs",
+  "s": "MongoDB",
+  "k": "oplog replica set log local.oplog.rs capped window rs.printReplicationInfo initial sync"
+ },
+ {
+  "t": "Open a real database and check every claim on this page",
+  "u": "mongodb/index.html#commands",
+  "s": "MongoDB",
+  "k": "commands mongosh dbPath db.users.stats wiredTiger.uri rs.printReplicationInfo rs.status serverStatus cache"
+ },
+ {
+  "t": "rs.printReplicationInfo()",
+  "u": "mongodb/index.html#commands",
+  "s": "MongoDB",
+  "k": "rs.printReplicationInfo oplog window log length start to end hours maintenance"
+ },
+ {
+  "t": "rs.status()",
+  "u": "mongodb/index.html#commands",
+  "s": "MongoDB",
+  "k": "rs.status members optime lag replica set elections primary secondary"
+ },
+ {
+  "t": "db.serverStatus().wiredTiger.cache",
+  "u": "mongodb/index.html#commands",
+  "s": "MongoDB",
+  "k": "db.serverStatus wiredTiger.cache dirty bytes app-thread evictions cache pressure"
+ },
+ {
+  "t": "One incident I keep coming back to",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "incident hot shard monotonic shard key hash-prefix whale tenant distribution"
+ },
+ {
+  "t": "Before you leave, check this",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "check rs.printReplicationInfo oplog window log length start to end"
+ },
+ {
+  "t": "1. WAL first, data file later",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql WAL first data file later pg_wal fsync commit checkpoint base/16384/16397"
+ },
+ {
+  "t": "2. An index only helps if the planner picks it",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql index planner picks EXPLAIN ANALYZE BUFFERS Seq Scan stale stats ANALYZE 1250000 pages"
+ },
+ {
+  "t": "3. Updates never overwrite: vacuum cleans up",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql updates never overwrite vacuum dead tuples bloat n_dead_tup pg_stat_user_tables"
+ },
+ {
+  "t": "4. Checkpoint distance = crash recovery time",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql checkpoint distance crash recovery max_wal_size replay 1 GB checkpoints_req pg_stat_bgwriter"
+ },
+ {
+  "t": "5. shared_buffers is ~25% of RAM: on purpose",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql shared_buffers 25 percent RAM OS page cache 16 GB 64 GB Buffers shared hit"
+ },
+ {
+  "t": "6. Index-only is only true if the visibility map is fresh",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql index-only visibility map fresh Heap Fetches stale vacuum"
+ },
+ {
+  "t": "7. One long transaction blocks vacuum for everyone",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql long transaction blocks vacuum xmin horizon idle in transaction pg_stat_activity age"
+ },
+ {
+  "t": "8. A synchronous standby makes commit wait: price it",
+  "u": "cheat-sheet/index.html#cs-pg",
+  "s": "Cheat Sheet",
+  "k": "postgresql synchronous standby commit wait synchronous_commit synchronous_standby_names failover latency"
+ },
+ {
+  "t": "1. Two logs, two different jobs",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb two logs redo binlog ib_logfile0 mysql-bin.000042 crash recovery replicas two-phase commit"
+ },
+ {
+  "t": "2. The table file IS the primary-key index",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb table file primary-key index shop/users.ibd 16 KB pages clustered secondary index"
+ },
+ {
+  "t": "3. The buffer pool is the database",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb buffer pool innodb_buffer_pool_size working set 70 80 percent RAM Innodb_buffer_pool_reads"
+ },
+ {
+  "t": "4. Checkpoint age near capacity = writes stall",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb checkpoint age capacity writes stall redo ring forced flush SHOW ENGINE INNODB STATUS LOG"
+ },
+ {
+  "t": "5. History list length is cleanup debt, in one number",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb history list length cleanup debt undo_001 undo_002 purge SHOW ENGINE INNODB STATUS millions"
+ },
+ {
+  "t": "6. The change buffer defers secondary-index writes",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb change buffer secondary index merge later write-heavy non-unique clustered unique"
+ },
+ {
+  "t": "7. Binlog retention must beat your longest outage",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb binlog retention longest outage replica down SHOW BINARY LOGS rebuild backup"
+ },
+ {
+  "t": "8. GTIDs make failover position exact",
+  "u": "cheat-sheet/index.html#cs-my",
+  "s": "Cheat Sheet",
+  "k": "mysql innodb GTID failover position exact Executed set mysql-bin position replica promotion"
+ },
+ {
+  "t": "1. Journal is durability, oplog is replication",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger journal durability oplog replication j:true WiredTigerLog local.oplog.rs resync"
+ },
+ {
+  "t": "2. ESR: Equality, Sort, Range, in that order",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger ESR Equality Sort Range compound index status createdAt amount SORT stage"
+ },
+ {
+  "t": "3. The examined-to-returned ratio is the verdict",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger examined-to-returned ratio totalDocsExamined nReturned explain executionStats COLLSCAN"
+ },
+ {
+  "t": "4. When the cache is full of dirty pages, your threads evict",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger cache full dirty pages threads evict WiredTiger cache eviction latency serverStatus"
+ },
+ {
+  "t": "5. The oplog window is your maximum allowed downtime",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger oplog window maximum allowed downtime 50 GB 2 GB per hour 25 hours rs.printReplicationInfo"
+ },
+ {
+  "t": "6. A checkpoint every ~60 s bounds the crash",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger checkpoint 60 s bounds crash collection-*.wt journal replay recovery node rejoins"
+ },
+ {
+  "t": "7. w:majority is what survives an election",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger w majority survives election writeConcern majority j true replica set 3-node primary"
+ },
+ {
+  "t": "8. A jumbo chunk cannot move, and blocks balancing",
+  "u": "cheat-sheet/index.html#cs-mo",
+  "s": "Cheat Sheet",
+  "k": "mongodb wiredtiger jumbo chunk cannot move blocks balancing 128 MB shard key balancer low-cardinality"
+ },
+ {
+  "t": "Level 1: PostgreSQL, WAL first, commit second",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level pg wal first commit second fsync"
+ },
+ {
+  "t": "Level 2: MySQL, redo + binlog must agree (two-phase commit)",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mysql redo binlog agree two-phase commit"
+ },
+ {
+  "t": "Level 3: MongoDB, journal is durability, oplog is replication",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mongodb journal durability oplog replication"
+ },
+ {
+  "t": "Level 4: PostgreSQL, shared_buffers, clock sweep, bgwriter, checkpoints",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level postgresql shared_buffers clock sweep bgwriter checkpoints"
+ },
+ {
+  "t": "Level 5: MySQL, buffer pool, redo capacity, and checkpoint age",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mysql buffer pool redo capacity checkpoint age"
+ },
+ {
+  "t": "Level 6: MongoDB, WiredTiger cache eviction",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mongodb wiredtiger cache eviction dirty bytes"
+ },
+ {
+  "t": "Level 7: PostgreSQL, index-only scans and the visibility map",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level postgresql index-only scans visibility map heap fetches"
+ },
+ {
+  "t": "Level 8: PostgreSQL, HOT updates: change a row without touching any index",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level postgresql HOT updates index heap"
+ },
+ {
+  "t": "Level 9: MySQL, change buffer and adaptive hash index",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mysql change buffer adaptive hash index"
+ },
+ {
+  "t": "Level 10: PostgreSQL, vacuum, freeze, and transaction ID wraparound",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level postgresql vacuum freeze transaction ID wraparound xmin"
+ },
+ {
+  "t": "Level 11: MySQL, undo, purge, and the history list",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mysql undo purge history list"
+ },
+ {
+  "t": "Level 12: MongoDB, WiredTiger checkpoints and snapshot timestamps",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mongodb wiredtiger checkpoints snapshot timestamps"
+ },
+ {
+  "t": "Level 13: PostgreSQL, WAL streaming and synchronous standbys",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level postgresql WAL streaming synchronous standbys replication lag"
+ },
+ {
+  "t": "Level 14: MySQL, GTID and semi-synchronous replication",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mysql GTID semi-synchronous replication failover"
+ },
+ {
+  "t": "Level 15: MongoDB, elections, write concern, read concern",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mongodb elections write concern read concern majority"
+ },
+ {
+  "t": "Level 16: PostgreSQL, WAL sizing: max_wal_size is a checkpoint budget",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level postgresql WAL sizing max_wal_size checkpoint budget replay"
+ },
+ {
+  "t": "Level 17: MongoDB, chunk migration and jumbo chunks",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mongodb chunk migration jumbo chunks balancer shard"
+ },
+ {
+  "t": "Level 18: MongoDB, the oplog window is your maximum allowed downtime",
+  "u": "staff-path/index.html#path",
+  "s": "Staff Path",
+  "k": "guided path level mongodb oplog window maximum allowed downtime resync"
+ },
+ {
+  "t": "Inside a data page",
+  "u": "staff-path/index.html#labs",
+  "s": "Staff Path",
+  "k": "data page 8 KB 16 KB postgresql innodb wiredtiger blocks layout"
+ },
+ {
+  "t": "B+ tree lookup: finding one key among millions",
+  "u": "staff-path/index.html#labs",
+  "s": "Staff Path",
+  "k": "B+ tree lookup fanout 400 depth log root internal leaf 3 page reads sequential scan"
+ },
+ {
+  "t": "MVCC: two transactions, one row, no waiting",
+  "u": "staff-path/index.html#labs",
+  "s": "Staff Path",
+  "k": "MVCC snapshot isolation transaction A B balance 100 150 vacuum purge undo"
+ },
+ {
+  "t": "Every idea on one card. One problem, one diagram, staff depth.",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference atlas cards search wal binlog vacuum oplog slow freeze purge cache shard"
+ },
+ {
+  "t": "Table files and TOAST",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference storage table files TOAST base relfilenode 8 KB heap pages"
+ },
+ {
+  "t": "VACUUM and autovacuum",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference safety vacuum autovacuum dead tuples bloat"
+ },
+ {
+  "t": "Undo log and purge",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference safety undo log purge history list mysql"
+ },
+ {
+  "t": "Oplog size and the replication window",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference safety oplog size replication window rs.printReplicationInfo"
+ },
+ {
+  "t": "Streaming vs logical replication",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference copies streaming logical replication WAL binlog oplog"
+ },
+ {
+  "t": "Binlog + GTID",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference copies binlog GTID failover replica position"
+ },
+ {
+  "t": "Shard key",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference growing shard key hot shard chunk distribution"
+ },
+ {
+  "t": "WAL and checkpoints",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference under the hood WAL checkpoints pg_wal max_wal_size"
+ },
+ {
+  "t": "Redo log and doublewrite buffer",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference under the hood redo log doublewrite buffer ib_logfile0 torn page"
+ },
+ {
+  "t": "Journal and checkpoints",
+  "u": "staff-path/index.html#reference",
+  "s": "Staff Path",
+  "k": "reference under the hood journal checkpoints WiredTigerLog 60 s"
+ },
+ {
+  "t": "Explain output, annotated line by line. Red flags named.",
+  "u": "reference/index.html#evidence",
+  "s": "Reference",
+  "k": "EXPLAIN evidence annotated red flags Seq Scan stale stats shared hit Heap Fetches"
+ },
+ {
+  "t": "PostgreSQL: EXPLAIN (ANALYZE, BUFFERS) on a lookup by email",
+  "u": "reference/index.html#evidence",
+  "s": "Reference",
+  "k": "EXPLAIN ANALYZE BUFFERS Index Scan users_email_idx Buffers shared hit=4 rows estimate"
+ },
+ {
+  "t": "MongoDB: explain(executionStats) on an orders query",
+  "u": "reference/index.html#evidence",
+  "s": "Reference",
+  "k": "explain executionStats IXSCAN status_1_createdAt_-1_amount_1 nReturned totalDocsExamined SORT COLLSCAN"
+ },
+ {
+  "t": "Derivation: why ESR is a theorem, not a convention",
+  "u": "reference/index.html#evidence",
+  "s": "Reference",
+  "k": "ESR derivation equality sort range compound index lexicographic keys SORT 100 MB"
+ },
+ {
+  "t": "The same work, done by three different file layouts",
+  "u": "reference/index.html#compare",
+  "s": "Reference",
+  "k": "compare side by side postgresql mysql mongodb page size log count old versions"
+ },
+ {
+  "t": "Five logs run everything. Know these five.",
+  "u": "reference/index.html#logs-pattern",
+  "s": "Reference",
+  "k": "five logs WAL redo binlog journal oplog pattern physical logical commit"
+ },
+ {
+  "t": "The pattern behind all five",
+  "u": "reference/index.html#logs-pattern",
+  "s": "Reference",
+  "k": "pattern log first data file later physical WAL redo journal logical binlog oplog commit disk"
+ },
+ {
+  "t": "Where the logs break: the five failure modes that page people",
+  "u": "reference/index.html#logs-pattern",
+  "s": "Reference",
+  "k": "logs break failure modes WAL cannot recycle redo wraps binlog purged journal contended oplog window"
+ },
+ {
+  "t": "WAL cannot recycle; pg_wal fills the disk",
+  "u": "reference/index.html#logs-pattern",
+  "s": "Reference",
+  "k": "WAL cannot recycle pg_wal fills disk archiving replication slot lag drop dead slots"
+ },
+ {
+  "t": "Secondary down longer than the oplog window",
+  "u": "reference/index.html#logs-pattern",
+  "s": "Reference",
+  "k": "secondary down longer oplog window initial sync full resync size write rate"
+ },
+ {
+  "t": "What to check before go-live, and in the first 5 minutes of an incident",
+  "u": "reference/index.html#checklist",
+  "s": "Reference",
+  "k": "checklist go-live incident first 5 minutes connections lag disk slow query backup restore"
+ },
+ {
+  "t": "Before go-live",
+  "u": "reference/index.html#checklist",
+  "s": "Reference",
+  "k": "before go-live pooled capped slow-query capture indexes unused replication lag disk bloat backup restore tested"
+ },
+ {
+  "t": "When something breaks, first 5 minutes, in order",
+  "u": "reference/index.html#checklist",
+  "s": "Reference",
+  "k": "first 5 minutes triage running now blocker vitals connections lag disk changed bad plan"
+ },
+ {
+  "t": "Slow-query capture is ON",
+  "u": "reference/index.html#checklist",
+  "s": "Reference",
+  "k": "slow-query capture log_min_duration_statement slow_query_log profilingLevel pg_stat_statements pt-query-digest"
+ },
+ {
+  "t": "On-prem vs cloud",
+  "u": "cloud/index.html",
+  "s": "Cloud",
+  "k": "on-prem vs cloud RDS Aurora Cloud SQL Atlas physics DBA owns"
+ },
+ {
+  "t": "On-prem vs cloud: the physics stays, the 3 AM work moves",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "cloud physics stays work moves managed provider ownership boundary"
+ },
+ {
+  "t": "RDS for PostgreSQL, Aurora PostgreSQL, Cloud SQL, Azure Database",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "RDS Aurora PostgreSQL Cloud SQL Azure Multi-AZ 60-120 s PITR 35 days 6 copies 3 AZs 128 TB"
+ },
+ {
+  "t": "RDS for MySQL, Aurora MySQL, Cloud SQL for MySQL",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "RDS Aurora MySQL Cloud SQL read replicas binlog PITR GTID buffer pool"
+ },
+ {
+  "t": "MongoDB Atlas (and compatible managed offerings)",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "MongoDB Atlas replica set sharded cluster elections balancer snapshots oplog window shard key"
+ },
+ {
+  "t": "Aurora storage: 6 copies, 3 AZs",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "Aurora storage 6 copies 3 AZs 10 GB increments 128 TB"
+ },
+ {
+  "t": "RDS Multi-AZ failover: 60-120 s",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "RDS Multi-AZ failover 60 120 seconds standby promotion DNS endpoint"
+ },
+ {
+  "t": "Automated backup retention: 35 days",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "automated backup retention 35 days RDS point-in-time recovery PITR"
+ },
+ {
+  "t": "The decision rule that survives every vendor",
+  "u": "cloud/index.html#cloud",
+  "s": "Cloud",
+  "k": "decision rule cloud removes operational work schema indexes shard keys cleanup window math pager"
+ },
+ {
+  "t": "About Dinesh",
+  "u": "about/index.html",
+  "s": "About",
+  "k": "about who wrote the site production databases ten years"
+ },
+ {
+  "t": "References",
+  "u": "references/index.html",
+  "s": "References",
+  "k": "references sources further reading depesz pgmustard rogove innodb diagram b-tree visualizer"
+ },
+ {
+  "t": "The optimizer's selectivity decision",
+  "u": "mysql/index.html",
+  "s": "MySQL",
+  "k": "optimizer selectivity index scan analyze table bookmark lookup fat primary key cardinality"
+ },
+ {
+  "t": "ESR: the index order that avoids a sort",
+  "u": "mongodb/index.html",
+  "s": "MongoDB",
+  "k": "esr equality sort range compound index sort stage plan cache planCacheClear"
+ },
+ {
+  "t": "Paste your own plan: EXPLAIN, annotated",
+  "u": "reference/index.html#explainTool",
+  "s": "Reference",
+  "k": "explain analyze paste your own plan seq scan bad estimate depesz pgmustard"
+ },
+ {
+  "t": "Try it live: a real Postgres, in your browser",
+  "u": "index.html#liveSql",
+  "s": "Home",
+  "k": "try it live pglite postgres browser insert select explain"
+ },
+ {
+  "t": "Try it live: a real Postgres, in your browser",
+  "u": "postgresql/index.html#liveSqlPg",
+  "s": "PostgreSQL",
+  "k": "try it live pglite postgres browser insert select explain"
+ },
+ {
+  "t": "Start here: pick your path",
+  "u": "index.html#paths",
+  "s": "Home",
+  "k": "start here path chooser 10 minutes 30 minutes 2 hours guided path"
+ },
+ {
+  "t": "What's new",
+  "u": "index.html#whats-new",
+  "s": "Home",
+  "k": "whats new changelog november 2026 multi-page rewrite cheat sheet"
+ },
+ {
+  "t": "seed.sql",
+  "u": "assets/seed.sql",
+  "s": "Home",
+  "k": "seed sql users table asha download reproducible examples"
+ },
+ {
+  "t": "Real stories: what broke at Uber, GitHub, Notion, Slack and Shopify",
+  "u": "stories/index.html",
+  "s": "Stories",
+  "k": "stories real incidents uber github notion slack shopify vitess orchestrator sharding failover"
+ },
+ {
+  "t": "Uber: one update became four writes",
+  "u": "stories/index.html#uber",
+  "s": "Stories",
+  "k": "uber postgres mysql schemaless write amplification WAL index replication"
+ },
+ {
+  "t": "Notion: VACUUM stalled, and the database nearly stopped writing",
+  "u": "stories/index.html#notion-sharding",
+  "s": "Stories",
+  "k": "notion postgres sharding vacuum txid wraparound workspace shards"
+ },
+ {
+  "t": "Notion again: the index existed, and the planner ignored it",
+  "u": "stories/index.html#notion-gin",
+  "s": "Stories",
+  "k": "notion gin index jsonb_path_ops planner statistics 5000ms 600ms pganalyze"
+ },
+ {
+  "t": "GitHub: the master died, and nobody woke up",
+  "u": "stories/index.html#github-orchestrator",
+  "s": "Stories",
+  "k": "github orchestrator mysql failover master replica 30 seconds flap guard"
+ },
+ {
+  "t": "GitHub: upgrading 1,200 MySQL hosts without dropping a query",
+  "u": "stories/index.html#github-mysql-8",
+  "s": "Stories",
+  "k": "github mysql 8.0 upgrade replication rollback dual chains orchestrator"
+ },
+ {
+  "t": "Slack: the shard key was the hot spot",
+  "u": "stories/index.html#slack-vitess",
+  "s": "Stories",
+  "k": "slack vitess mysql sharding channel hot shard reshard double-write"
+ },
+ {
+  "t": "Shopify: the verifiers were the project",
+  "u": "stories/index.html#shopify-vitess",
+  "s": "Stories",
+  "k": "shopify vitess mysql sharding verifiers user_id ghostferry cross-shard"
+ },
+ {
+  "t": "Hosting PostgreSQL: on-prem, EC2, Kubernetes, managed",
+  "u": "cloud/index.html#pg-hosting",
+  "s": "Cloud",
+  "k": "postgresql hosting on-prem EC2 kubernetes cloudnativepg zalando RDS aurora"
+ },
+ {
+  "t": "Hosting MySQL: on-prem, EC2, Kubernetes, managed",
+  "u": "cloud/index.html#my-hosting",
+  "s": "Cloud",
+  "k": "mysql hosting on-prem EC2 kubernetes percona oracle operator RDS aurora"
+ },
+ {
+  "t": "Hosting MongoDB: on-prem, EC2, Kubernetes, managed",
+  "u": "cloud/index.html#mo-hosting",
+  "s": "Cloud",
+  "k": "mongodb hosting on-prem EC2 kubernetes operator atlas replica set sharded"
+ }
+]
