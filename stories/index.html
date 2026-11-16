@@ -4,9 +4,9 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="color-scheme" content="light dark"/>
-<meta name="description" content="Seven real database incidents from Uber, GitHub, Notion, Slack and Shopify, each with the numbers, the fix, and the lesson. Plus a diagram per story."/>
+<meta name="description" content="Thirteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma and Dropbox, each with the numbers, the fix, and the lesson. Plus a diagram per story."/>
 <link rel="icon" href="data:,"/>
-<title>Real Stories: What Broke at Uber, GitHub, Notion, Slack and Shopify · Real Databases, Simply</title>
+<title>Real Stories: What Broke at Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma and Dropbox · Real Databases, Simply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/style.css"/>
@@ -19,13 +19,13 @@
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>Real stories</h1>
-  <p class="lede">Every page on this site explains a mechanism. This page shows what happens when the mechanism meets real traffic. Seven stories, all from companies that wrote up what broke. Each one has the numbers, the fix, and the lesson I took from it. The source is linked at the end of each story.</p>
+  <p class="lede">Every page on this site explains a mechanism. This page shows what happens when the mechanism meets real traffic. Thirteen stories, all from companies that wrote up what broke. Each one has the numbers, the fix, and the lesson I took from it. The source is linked at the end of each story.</p>
   <p class="lede">None of these are my incidents. I read them the way I read a postmortem: what broke first, what the numbers were, and what decision would have prevented it.</p>
 </div></header>
 <section id="postgresql" style="padding-top:6px"><div class="wrap">
-  <div class="kicker">PostgreSQL · three stories</div>
+  <div class="kicker">PostgreSQL · eight stories</div>
   <h2>PostgreSQL: the layout is the cost</h2>
-  <p class="sub">Two of these three stories are the same failure wearing different clothes. A physical layout decision, made early, priced later at scale. The third is a planner that had the right index and refused to use it.</p>
+  <p class="sub">Most of these are the same failure wearing different clothes: a physical layout decision, made early, priced later at scale. Adyen and Figma show it at the far end, where the partition and the shard key decide everything before the first query runs. One is a planner that had the right index and refused to use it.</p>
 
   <div class="incident" id="uber">
     <span class="tag pg">PostgreSQL</span>
@@ -76,7 +76,50 @@
     <p class="inside">The trigger was specific. VACUUM started stalling, so dead tuples stopped being reclaimed and disk space stopped coming back. Behind that sat transaction ID wraparound. Postgres stops all writes rather than overwrite old data. That is not a slowdown. That is the product stopping.</p>
     <p class="inside">The design was application-level sharding, routing by workspace ID so one workspace's data stays together. They built 480 logical shards spread across 32 physical databases. They set their own caps: 500 GB per table, 10 TB per physical database, 60K IOPS. Logical replication could not keep up with the block table's write volume during the first snapshot, so they moved to an audit-log double-write. The backfill ran 3 days on an m5.24xlarge with 96 CPUs. They used dark reads to verify, and the verification code was written by different people than the migration code. The cutover took 5 minutes of scheduled downtime.</p>
     <p class="inside">Their own lessons: shard earlier, aim for zero downtime, and use a combined primary key instead of a separate partition key. Mine: the shard key decision is the whole project. Workspace ID kept queries local. Pick the key from the query pattern, and pick it before you are forced to.</p>
+    <p class="inside">Two details from the same post. They prepared and tested a reverse audit log, so they could replay sharded writes back to the monolith if they had to roll back. They never needed it. They picked 480 shards because the number has many factors, so they could grow from 32 to 40 to 48 hosts and keep shards even; with 512 they would have had to double from 32 to 64. They used separate tables per schema, schema001.block and so on, instead of one natively partitioned table per database, so all routing stays in the application.</p>
     <p class="backlink">Source: <a href="https://www.notion.com/de/blog/sharding-postgres-at-notion">Herding elephants: Lessons learned from sharding Postgres at Notion</a>, Notion Blog, October 6, 2021.</p>
+  </div>
+
+  <div class="incident" id="notion-reshard" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Notion: the re-shard, 32 databases to 96, with zero downtime</h3>
+    <p class="inside">Part 2 of the Notion sharding story above. The 5 minute cutover and the 3 day backfill belong to the first sharding, not this one.</p>
+    <div class="hooknum">
+      <div class="hn"><b>32 to 96</b><span>Databases. Same 480 logical shards, 15 schemas each down to 5.</span></div>
+      <div class="hn"><b>3 days to 12 hours</b><span>Sync time, after skipping indexes during the copy and rebuilding them after.</span></div>
+      <div class="hn"><b>~20%</b><span>CPU and IOPS at peak after the move, down from over 90 percent on hot shards.</span></div>
+    </div>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">32 databases running hot. Some shards passed 90 percent CPU at peak. Many near full on provisioned disk bandwidth. PgBouncer hitting connection limits. A new year spike was coming. Out of headroom. The database was not broken. It was full.</p>
+    <div class="diagram"><p class="dcap">32 to 96, and the pool split first</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>Before: 32 databases</h4><b>15 schemas each.</b> Hot shards over 90 percent CPU at peak. PgBouncer hitting connection limits.</div>
+        <div class="vsbox actual"><h4>After: 96 databases</h4><b>5 schemas each.</b> Same 480 logical shards. CPU and IOPS around 20 percent at peak.</div>
+      </div>
+      <div class="dflow" style="margin-top:12px">
+        <div class="dbox"><b>PgBouncer group 1</b>24 databases</div>
+        <div class="dbox"><b>group 2</b>24 databases</div>
+        <div class="dbox"><b>group 3</b>24 databases</div>
+        <div class="dbox"><b>group 4</b>24 databases</div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="hbar-row"><span class="hbar-label">CPU on hot shards, before</span><div class="hbar-track"><i class="hbar-fill warn" style="width:90%"></i></div><b class="mono">over 90%</b></div>
+        <div class="hbar-row"><span class="hbar-label">CPU at peak, after</span><div class="hbar-track"><i class="hbar-fill" style="width:20%"></i></div><b class="mono">about 20%</b></div>
+      </div>
+      <p class="dcap" style="margin-top:10px">When you reshard, reshard the pool too. The connection math is what bites you.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">No bigger machines. Tripled the fleet, 32 to 96, same 480 logical shards, 15 schemas per database down to 5. Smaller instances and disks to hold cost down. Disk was not the bottleneck. Copy with Postgres logical replication: 3 publications per old database, 5 schemas per publication. Indexes skipped during the copy, rebuilt after. Sync time fell from 3 days to 12 hours. The pool nearly broke the plan. About 100 PgBouncer instances, up to 6 connections per shard, 600 per shard. A naive cutover would push that to 18 per old shard. Cutting connections made queries back up in testing. So PgBouncer was sharded first, into 4 groups with 24 databases each. That also limited a PgBouncer failure to 25 percent of the fleet. Failover: pause traffic in PgBouncer, let server connections finish, check replication caught up, flip the mapping, reload PgBouncer, revoke the old login, reverse replication for rollback. Checkpoints and rollback at every step. Full process in staging first, tested multiple times. Dark reads checked the copy first: parallel reads to the follower, queries returning up to 5 rows, small sample, 1 second pause for replication to catch up. Near 100 percent equivalence. Outcome: no observed user downtime. Worst case about 1 second of saving spinner. After the move, CPU and IOPS sat around 20 percent at peak.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">Notion picked tripling over bigger machines because bigger machines would hit the same wall later, and one big box cannot be tuned per shard. PgBouncer got sharded first because the connection math was the real limit.</p>
+    <div class="tlist">
+      <div>More machines to run, on smaller instances.</div>
+      <div>Hot workspaces stand out more when the load spreads. A few spaces drive outsized CPU.</div>
+      <div>The rollback plan cost extra work: reverse replication at every step.</div>
+    </div>
+    <p class="inside">The part I would copy is sharding the pool first. The connection math is what bites you.</p>
+    <p class="inside">Read this when your fleet is hot and out of headroom.</p>
+    <p class="backlink">Source: <a href="https://notion.com/blog/the-great-re-shard">The Great Re-shard: adding Postgres capacity (again) with zero downtime</a>, Notion Blog, July 17, 2023.</p>
   </div>
 
   <div class="incident" id="notion-gin" style="margin-top:14px">
@@ -100,11 +143,198 @@
     <p class="inside">Sourcing note: this one comes from a pganalyze case study, not from Notion's own blog. It quotes named Notion engineers, and the numbers line up with the sharding post's timeline. I keep it because the lesson is checkable. The index existed, the planner ignored it, and the fix was the index shape, not a bigger instance. When a query is slow, read the plan before you buy hardware.</p>
     <p class="backlink">Source: <a href="https://pganalyze.com/customers/how-notion-runs-postgres-at-scale-on-amazon-rds">How Notion Runs PostgreSQL at Scale on Amazon RDS with pganalyze</a>, pganalyze, February 27, 2025.</p>
   </div>
+  <div class="incident" id="adyen" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Adyen: one partition hit 30 TB, and the index rebuild took days</h3>
+    <div class="hooknum">
+      <div class="hn"><b>30 TB</b><span>Biggest single partition. An index rebuild there takes days.</span></div>
+      <div class="hn"><b>15 min</b><span>Total downtime to upgrade a 50 TB cluster by snapshot.</span></div>
+      <div class="hn"><b>5,000+ TPS</b><span>Transactions per second at the 2018 upgrade.</span></div>
+      <div class="hn"><b>20x</b><span>Faster queries after aligning partition boundaries across tables.</span></div>
+    </div>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">Biggest partition over 30 TB. Index rebuild takes days. xmin stays blocked, bloat grows, wraparound ticks. A normal upgrade on 50 TB would take 4 to 5 weeks of downtime, rough calculation. Payments cannot go down for a month. Each new partition added about 10 percent CPU. HOT updates stopped on one table. Its WAL doubled, about half the whole cluster's WAL.</p>
+    <div class="diagram"><p class="dcap">The 15 minute upgrade</p>
+      <div class="dflow">
+        <div class="dbox"><b>app</b>payments queue</div><span class="darrow">→</span>
+        <div class="dbox"><b>primary</b>upgrade, 3 to 5 min</div><span class="darrow">→</span>
+        <div class="dbox"><b>snapshot</b>volumes, up to 10 min</div><span class="darrow">→</span>
+        <div class="dbox good"><b>replica 1</b>online and current</div><span class="darrow">→</span>
+        <div class="dbox good"><b>replica 2</b>online and current</div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="hbar-row"><span class="hbar-label">Primary upgrade</span><div class="hbar-track"><i class="hbar-fill" style="width:27%"></i></div><b class="mono">3 to 5 min</b></div>
+        <div class="hbar-row"><span class="hbar-label">Snapshot volumes</span><div class="hbar-track"><i class="hbar-fill" style="width:67%"></i></div><b class="mono">up to 10 min</b></div>
+        <div class="hbar-row"><span class="hbar-label">Copy to replicas</span><div class="hbar-track"><i class="hbar-fill" style="width:23%"></i></div><b class="mono">2 to 5 min</b></div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Postgres itself took minutes. The infrastructure around it took the rest. One partition over 30 TB, and its index rebuild takes days.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">Index per partition first, parent index last. Only way it finishes before wraparound risk grows. Upgrade: stop traffic, queue payments. Primary in 3 to 5 minutes. Snapshot volumes in up to 10 minutes. Copy snapshot to replicas in 2 to 5 minutes. Reopen only when at least two replicas are online and current. Total: 15 minutes. 2018 scale: 5,000 plus transactions per second. Under 10 TB in 2015, 50 TB at upgrade, biggest cluster 74 TB. One primary, at least three replicas across data centers. 768 GB RAM per server, 150 plus TB raw SSD per server. CPU climb: prepared statements, custom plans. Custom plan saved a few milliseconds in execution, cost about 100 milliseconds in prepare time. Forcing generic plans fixed it. Fillfactor: 95 percent some tables, 70 percent others. Test per table, watch WAL. Aligned partition boundaries made some queries 20 times faster.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">The upgrade had two shapes. Adyen picked the snapshot method because payments cannot stop. Indexes went per partition first because one big index would never finish before wraparound risk grew. Generic plans won because prepare time cost more than execution time saved.</p>
+    <div class="tlist">
+      <div>The snapshot method needs traffic stopped and payments queued.</div>
+      <div>Generic plans give up per-query optimal plans.</div>
+      <div>Fillfactor has no fixed answer. It is set per table.</div>
+    </div>
+    <p class="inside">The part I would copy is the snapshot method. It is the fastest way to move a database you cannot stop.</p>
+    <p class="inside">Useful if your biggest partition is past 1 TB.</p>
+    <p class="backlink">Source: <a href="https://youtu.be/L6JWI296fyk">To 100TB, and beyond!</a>, Postgres.FM 100, June 7, 2024 (<a href="https://postgres.fm/episodes/to-100tb-and-beyond/transcript">full transcript</a>). <a href="https://www.adyen.com/knowledge-hub/updating-a-50-terabyte-postgresql-database">Updating a 50 terabyte PostgreSQL database</a>, Adyen, March 14, 2018.</p>
+  </div>
+
+  <div class="incident" id="notion-dms" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Notion again: the DMS copy came back three times the size</h3>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">20 TB table, 16 partitions per database, about 1 TB each. Postgres 12 to 15 via DMS. Copy moved about 1 TB in 12 to 14 hours. New tables came back about 3 times the on-disk size. Cause was bloat, not TOAST. Vacuum could not keep up. Investigation took about 2 weeks. DMS work had already taken about 4 months.</p>
+    <div class="diagram"><p class="dcap">The copy tripled</p>
+      <div class="dflow">
+        <div class="dbox"><b>DMS copy</b>about 1 TB in 12 to 14 hours</div><span class="darrow">→</span>
+        <div class="dbox hot"><b>new tables</b>about 3 times the size</div><span class="darrow">→</span>
+        <div class="dbox good"><b>full vacuum</b>size back</div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="hbar-row"><span class="hbar-label">Before copy, 1 TB per partition</span><div class="hbar-track"><i class="hbar-fill" style="width:33%"></i></div><b class="mono">1 TB</b></div>
+        <div class="hbar-row"><span class="hbar-label">After DMS copy</span><div class="hbar-track"><i class="hbar-fill warn" style="width:100%"></i></div><b class="mono">about 3 TB</b></div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Bloat, not TOAST. Check bloat before you trust the size after a logical copy.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">A full vacuum brought the size back. That is the whole fix. Vacuum is part of the migration, not cleanup after it. After a logical copy, check bloat before you trust the size.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">A logical copy with DMS moves rows, not the physical layout. The new tables land without the source's vacuum history, so bloat on arrival is part of the design, not a surprise. That is why the full vacuum belongs in the migration plan, not after it.</p>
+    <div class="tlist">
+      <div>DMS is simple, but the copy is slow.</div>
+      <div>Bloat shows up late, at the end of the copy.</div>
+    </div>
+    <p class="inside">The part I take from this is the size check. I would check bloat before trusting the size after any logical copy.</p>
+    <p class="inside">Read this before a version upgrade by logical copy.</p>
+    <p class="backlink">Source: <a href="https://youtu.be/L6JWI296fyk">To 100TB, and beyond!</a>, Postgres.FM 100, June 7, 2024 (<a href="https://postgres.fm/episodes/to-100tb-and-beyond/transcript">full transcript</a>).</p>
+  </div>
+
+  <div class="incident" id="figma" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Figma: they stayed on Postgres and built the sharding layer themselves</h3>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">One Postgres instance, 2012 to 2020. No pooler. No replicas. Stack grew almost 100 times in four years. Some tables hit several terabytes and billions of rows. Vacuum hurt reliability. Biggest write tables neared the RDS IOPS ceiling. A table is the smallest unit of vertical partitioning. That lever was done. The database was not slow. It was out of moves. CockroachDB, TiDB, Spanner, Vitess: good systems. The move meant migrating the most critical data, rebuilding all operational knowledge, in months. NoSQL meant rewriting almost the whole backend. Honest note: the post gives no QPS, latency percentiles, exact shard counts, exact table sizes, first table name, team size, or cost. Those gaps stay open.</p>
+    <div class="diagram"><p class="dcap">DBProxy routing</p>
+      <div class="dflow">
+        <div class="dbox"><b>app</b>SQL query</div><span class="darrow">→</span>
+        <div class="dbox"><b>DBProxy</b>parse, plan, route</div><span class="darrow">→</span>
+        <div class="dbox"><b>PgBouncer</b>pool</div><span class="darrow">→</span>
+        <div class="dbox good"><b>one shard</b>shard key present</div>
+      </div>
+      <div class="fanout" style="margin-top:10px">
+        <div class="dbox hot"><b>no shard key</b>scatter gather</div>
+        <span class="darrow">→</span>
+        <div class="fcol">
+          <div class="dbox"><b>shard 1</b></div>
+          <div class="dbox"><b>shard 2</b></div>
+          <div class="dbox"><b>shard 3</b></div>
+          <div class="dbox"><b>shard 4</b></div>
+        </div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Logical views first. Rollout by percentage, rollback in seconds.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">DBProxy: Go service between the app and PgBouncer. Parses SQL to an AST, pulls the shard key, routes the query. No key means scatter gather to every shard, kept rare. Same-key tables live in a colo. Joins and transactions work on that key inside a colo. Keys: UserID, FileID, OrgID. Almost every table fits one. No single key worked for all tables. Logical sharding first: logical shards as Postgres views on the same unsharded database. Rollout by percentage, rollback by config change. Views cost under 10 percent worst case. Then logical replication copy, split for real. Full dataset copied to each shard, reads and writes fenced to that shard's rows. Avoided filtered logical replication. First table: about 9 months. First cutover, September 2023: 10 seconds partial availability on primaries, nothing on replicas, no latency or availability regression after. Shadow planning on live traffic. Queries and plans logged to Snowflake. Query language covering the most common 90 percent. Range scans and point lookups in. Joins only inside one colo and on the shard key. Hash routing, since sequential or time prefixed IDs would pile onto one shard. Hashing hurts range scans on the shard key, accepted as rare. Topology updates reach DBProxy in under 1 second.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">Figma stayed on Postgres and built the sharding layer themselves. The engine was not the problem. The move was. Logical views first meant the rollout could go by percentage and roll back with a config change.</p>
+    <div class="tlist">
+      <div>No atomic cross shard transactions. A write can land on one shard and fail on another.</div>
+      <div>No foreign keys or global unique indexes across shards.</div>
+      <div>Schema changes need coordination everywhere.</div>
+      <div>Still open at March 2024: globally unique IDs, a sharding friendly ORM, one click resharding.</div>
+    </div>
+    <p class="inside">The part I would copy is the logical views first rollout. Prove the routing before moving a row.</p>
+    <p class="inside">Useful if your biggest tables are past a few terabytes and vertical partitioning is done.</p>
+    <p class="backlink">Source: <a href="https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/">How Figma's Databases Team Lived to Tell the Scale</a>, Figma Blog, Sammy Steele, March 14, 2024. Companion: <a href="https://youtu.be/P3mV3atVL2Q">How Figma built DBProxy for sharding Postgres</a>, pganalyze, 5mins of Postgres E106 (<a href="https://pganalyze.com/blog/5mins-postgres-figma-dbproxy-sharding-postgres">transcript</a>). Companion: <a href="https://youtu.be/8TH3iZgG1PE">5 Lessons from 5 Years of Building Databases at Scale</a>, Sammy Steele, Systems Distributed '24.</p>
+  </div>
+
+  <div class="incident" id="notion-hudi" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Notion: sharding fixed the live database, and the warehouse broke next</h3>
+    <div class="hooknum">
+      <div class="hn"><b>200B+</b><span>Blocks by end of 2023, up from 20 billion in early 2021.</span></div>
+      <div class="hn"><b>1 week to 2 hours</b><span>Full historical resync, after the Hudi pipeline.</span></div>
+      <div class="hn"><b>$1.25M / year</b><span>Net saving from the new pipeline.</span></div>
+    </div>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">Notion sharded Postgres and the live product got room to breathe. The warehouse did not. Every change still had to move out of 32 sharded databases into Snowflake. Fivetran ran out of memory on bursts. Closed source, few knobs. Some hourly syncs took more than an hour and ran into the next sync. Write pattern: only about 1 percent of blocks changed day over day, over 90 percent of those changes were updates. Edits random, not recent. A full reload for 1 percent of changed rows is the wrong shape. That pointed to Hudi. No query rate or latency numbers in the material. None are given here.</p>
+    <div class="diagram"><p class="dcap">The warehouse after sharding</p>
+      <div class="dflow">
+        <div class="dbox"><b>Postgres shards</b>32 databases</div><span class="darrow">→</span>
+        <div class="dbox"><b>Debezium</b>CDC</div><span class="darrow">→</span>
+        <div class="dbox"><b>Kafka</b>change stream</div><span class="darrow">→</span>
+        <div class="dbox"><b>Hudi on S3</b>upserts</div><span class="darrow">→</span>
+        <div class="dbox good"><b>Spark</b>ETL</div>
+      </div>
+      <div class="dflow" style="margin-top:10px">
+        <div class="dbox"><b>Fivetran</b>stayed, small data only</div><span class="darrow">→</span>
+        <div class="dbox"><b>Snowflake</b>small data sets, third party sources</div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="hbar-row"><span class="hbar-label">Full resync before</span><div class="hbar-track"><i class="hbar-fill warn" style="width:100%"></i></div><b class="mono">1 week</b></div>
+        <div class="hbar-row"><span class="hbar-label">Full resync after</span><div class="hbar-track"><i class="hbar-fill" style="width:8%"></i></div><b class="mono">2 hours</b></div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Pick the lake for your upsert pattern, not for the brand name.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">Postgres to Debezium CDC to Kafka to Hudi on S3, then Spark for ETL. Fivetran stayed only for small data sets and third party sources. Blocks: 20 billion early 2021, 70 billion end of 2022, over 200 billion end of 2023. Data at rest: 10 TB to about 50 TB compressed. Full resync: 1 week to 2 hours. Incremental syncs every 4 hours. Net saving: 1.25 million dollars per year. Tuning: Hudi file size about 300 MB, sort key on last_updated_at, same sharding scheme borrowed from Postgres. The lake then fed Notion AI Q and A: daily offline embedding batch plus an online Kafka catchup within a day.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">The choice followed the write pattern. Few rows changed, almost all of them updates, and the edits were random. That is the shape Hudi is built for. The tuning follows the same pattern: files sized to limit write amplification, a sort key that clusters recent changes, and the sharding scheme they already used in Postgres.</p>
+    <div class="tlist">
+      <div>A pipeline to run: Debezium, Kafka, Hudi, Spark.</div>
+      <div>Fivetran stays for small data sets, so two paths to maintain.</div>
+      <div>Incremental syncs, not real time.</div>
+    </div>
+    <p class="inside">The part I would copy is the pattern check first. Few changed rows, mostly updates, random edits. That is what picks the lake.</p>
+    <p class="inside">Read this when your warehouse syncs start missing their window.</p>
+    <p class="backlink">Source: <a href="https://youtu.be/dZbXC4mlNck">A Hudi Live Event: Notion's journey through different stages of data scale</a>, Thomas Chow and Nathan Louie, Notion Data Platform, December 13, 2023 (<a href="https://www.onehouse.ai/blog/notions-journey-through-different-stages-of-data-scale">write-up</a>).</p>
+  </div>
 </div></section>
 <section id="mysql" style="padding-top:6px"><div class="wrap">
-  <div class="kicker">MySQL · four stories</div>
+  <div class="kicker">MySQL · five stories</div>
   <h2>MySQL: failover, upgrades, and the shard key</h2>
-  <p class="sub">GitHub shows the two halves of operating MySQL at scale: the failover you automate, and the upgrade you survive. Slack and Shopify show the same lesson from the other side: the shard key decides everything, and the migration only works if you can compare both copies before you trust one.</p>
+  <p class="sub">GitHub shows the two halves of operating MySQL at scale: the failover you automate, and the upgrade you survive. Slack and Shopify show the same lesson from the other side: the shard key decides everything, and the migration only works if you can compare both copies before you trust one. Dropbox shows what happens when one tenant outgrows a shard entirely.</p>
+
+  <div class="incident" id="dropbox-panda">
+    <span class="tag my">MySQL</span>
+    <h3>Dropbox: one customer outgrew one shard, so they built a new store</h3>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">2013: metadata in sharded MySQL, 2,000 shards, thousands of servers, tens of millions of queries per second at single digit millisecond latency. Then one customer, MIT, was going to outgrow a single database. The shard key was the org, and the org was the size of a shard. No way to split one org.</p>
+    <div class="diagram"><p class="dcap">One org outgrew one shard</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>Before: 2,000 MySQL shards</h4>
+          <div class="shardgrid"><span style="background:var(--problem-bg);border-color:var(--problem-line)"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+          <p style="margin:8px 0 0;font-size:13px">One box is MIT, outgrowing its shard. The rest sit idle.</p>
+        </div>
+        <div class="vsbox actual"><h4>After: Panda ranges</h4>
+          <div class="dflow">
+            <div class="dbox"><b>range 1</b></div>
+            <div class="dbox"><b>range 2</b></div>
+            <div class="dbox"><b>range 3</b></div>
+            <div class="dbox"><b>range 4</b></div>
+          </div>
+          <p style="margin:8px 0 0;font-size:13px">One org split into many ranges. Capacity grows a range at a time.</p>
+        </div>
+      </div>
+      <p class="dcap" style="margin-top:10px">3 years, 20 engineers, zero downtime. The migration took longer than building the store.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">Panda: Spanner inspired distributed key value store, built in house. One org splits many times into smaller ranges. Sits between Edgestore and sharded MySQL. ACID transactions. Incremental capacity growth and rebalancing. Project Theseus: 3 years, 20 engineers, zero downtime. Atomic cross shard transactions, two phase commit, across MySQL and Panda. Rollout by percentage, then reads moved off the legacy system.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">No sharded design can split one tenant, so the fix had to be a store that splits ranges. Dropbox built Panda in house, Spanner inspired, instead of trying to stretch MySQL further.</p>
+    <div class="tlist">
+      <div>A second store to run, forever.</div>
+      <div>Two phase commit across MySQL and Panda.</div>
+      <div>The migration took longer than building the store.</div>
+    </div>
+    <p class="inside">The part I would copy is the rollout by percentage. That is what kept the move safe.</p>
+    <p class="inside">Read this when one tenant can outgrow a shard.</p>
+    <p class="backlink">Source: <a href="https://youtu.be/8TH3iZgG1PE">5 Lessons from 5 Years of Building Databases at Scale</a>, Sammy Steele, Systems Distributed '24. Cross-check: <a href="https://dropbox.tech/infrastructure/panda-metadata-stack-petabyte-scale-transactional-key-value-store">Panda: Metadata Stack @ Petabyte Scale</a>, Dropbox Tech, November 3, 2022.</p>
+  </div>
 
   <div class="incident" id="github-orchestrator">
     <span class="tag my">MySQL</span>
