@@ -14,7 +14,8 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>Reference</h1>
@@ -49,6 +50,16 @@ Execution Time: 0.052 ms</pre>
   <p class="evnote"><b>The ratio is the diagnostic:</b> <span class="mono">totalDocsExamined ÷ nReturned</span> = 1.0 here. At 10×, the index is scanning ten documents for every one returned. That is poor selectivity, usually a low-cardinality leading field. At 1,000×, the index is decorative. <b>A SORT stage in the winning plan</b> means the index does not cover the sort. Results are buffered and sorted in memory, and the query aborts outright at the 100 MB in-memory sort limit (<span class="mono">Sort exceeded memory limit of 104857600 bytes</span>). <b>COLLSCAN</b> as the winning stage means no usable index exists for the filter at all. At 10M documents of about 2 KB, that is ~20 GB read to return what may be a single document.</p>
 
   <div class="derive"><b class="dt">Derivation: why ESR is a theorem, not a convention</b>A compound index stores keys lexicographically. Sorted by field 1, then within equal field-1 values by field 2, then within equal (field 1, field 2) pairs by field 3. Three consequences follow mechanically. <b>Equality first:</b> an equality predicate on field 1 collapses the scan to one contiguous key range, located in O(log N). <b>Sort second:</b> within that contiguous range, field-2 keys are already stored in sort order, so the scan emits rows sorted. No SORT stage. No 100 MB abort. <b>Range last:</b> a range predicate on a field terminates the usable ordering. Every key after the range boundary must still be visited for subsequent fields, so a range field placed before the sort field destroys the sort guarantee. Reverse the order and the equality condition degrades from an O(log N) seek to a scan of every key inside the range. On a range covering 80% of the index, the index is 80% of a full scan. ESR is the only ordering that preserves all three properties simultaneously, because of how the keys are physically stored. Nothing about it is stylistic.</div>
+  <h3 style="margin:26px 0 8px;font-size:17px">Paste your own plan: EXPLAIN, annotated</h3>
+  <p class="sub">The outputs above are mine. Yours is the one that matters. Paste your EXPLAIN ANALYZE output below. Everything runs in your browser. Nothing leaves this page, and nothing is stored. If your plan has names you do not want to share, replace them before pasting. Prefer an external tool? <a href="https://explain.depesz.com/">explain.depesz.com</a> and <a href="https://www.pgmustard.com/">pgMustard</a> read the same format.</p>
+  <div class="lab" id="explainTool">
+    <textarea id="planInput" spellcheck="false" placeholder="Paste EXPLAIN (ANALYZE, BUFFERS) output here"></textarea>
+    <div class="controls" style="margin-top:10px">
+      <button class="btn primary" id="planAnalyze">Analyze this plan</button>
+      <button class="btn" id="planSample">Try a sample plan</button>
+    </div>
+    <div id="planOut"></div>
+  </div>
 </div></section>
 <section id="compare" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Side by side · the same job, three ways</div>
@@ -86,6 +97,7 @@ Execution Time: 0.052 ms</pre>
       <dt>Watch out</dt><dd>A shard key chosen badly, it is nearly permanent, and queries that must scatter to every shard because they don't include the shard key.</dd>
     </dl></div>
   </div>
+  <p style="font-size:14.5px;color:var(--muted);margin-top:14px">Sharding in the real world: Slack and Shopify both moved their MySQL to Vitess, and both stories are on the <a href="../stories/index.html#mysql">Stories page</a>.</p>
 </div></section>
 <section id="logs-pattern"><div class="wrap">
 <div class="kicker">The log files · the pattern</div>
@@ -162,6 +174,12 @@ Execution Time: 0.052 ms</pre>
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/explain-tool.js"></script>
 </body>
 </html>
