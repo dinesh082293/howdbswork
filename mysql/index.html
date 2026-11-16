@@ -4,9 +4,9 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="color-scheme" content="light dark"/>
-<meta name="description" content="MySQL and InnoDB internals: .ibd files, redo log, binlog, buffer pool, undo and purge — files on disk, log files, outage parameters and commands."/>
+<meta name="description" content="MySQL and InnoDB internals: .ibd files, redo log, binlog, buffer pool, undo and purge. Files on disk, log files, outage parameters and commands."/>
 <link rel="icon" href="data:,"/>
-<title>MySQL · InnoDB Internals — Real Databases, Simply</title>
+<title>MySQL · InnoDB Internals: Real Databases, Simply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/style.css"/>
@@ -19,37 +19,38 @@
 <header class="hero"><div class="wrap">
   <h1>MySQL · InnoDB</h1>
 </div></header>
-<section><div class="wrap"><div class="engines"><div class="ecard"><h3><span class="dot" style="background:var(--my)"></span>MySQL · InnoDB — in one line</h3>
-      <p class="plain">A relational database where each table file <i>is</i> its primary-key index.</p>
-      <p><b style="color:var(--ink)">Good at:</b> high-volume websites — lookups by ID, simple queries at huge scale, operationally simple read replicas. Two logs: redo for crashes, binlog for replicas.</p>
+<section><div class="wrap"><p class="sub" style="font-size:16px">This page is about one file per table. I show you how InnoDB stores a table as its own primary-key index, and how two logs split the jobs: redo for crashes, binlog for replicas. After it you will be able to find any table's .ibd file, read checkpoint age, check binlog retention, and tell whether undo is piling up.</p></div></section>
+<section><div class="wrap"><div class="engines"><div class="ecard"><h3><span class="dot" style="background:var(--my)"></span>MySQL · InnoDB: in one line</h3>
+      <p class="plain">A relational database. Each table file <i>is</i> its primary-key index.</p>
+      <p><b style="color:var(--ink)">Good at:</b> High-volume websites. Lookups by ID. Simple queries at huge scale. Operationally simple read replicas. Two logs: redo for crashes, binlog for replicas.</p>
       <span class="mono">Runs as: one mysqld process, a thread per connection</span></div></div></div></section>
 <section><div class="wrap">
-<h3 style="margin:6px 0 4px;font-size:19px">The architecture of each — processes, memory, disk</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Read each column top to bottom: a request enters at the process layer, is served from the memory layer when possible, and is made permanent in the disk layer. When something is slow or broken on-prem, it is slow or broken in exactly one of these three layers — naming the layer is the first diagnostic step.</p>
-  <div class="filegrid" style="margin-bottom:22px"><div class="filecard my"><header>MySQL · InnoDB — architecture</header>
+<h3 style="margin:6px 0 4px;font-size:19px">The architecture: processes, memory, disk</h3>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Read each column top to bottom. A request enters at the process layer. Memory serves it when it can. Disk makes it permanent. When something is slow or broken, it lives in exactly one of these three layers. Name the layer first. That is the first diagnostic step.</p>
+  <div class="filegrid" style="margin-bottom:22px"><div class="filecard my"><header>MySQL · InnoDB: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">Request path</p><div class="dflow">
         <div class="dbox"><b>Processes</b>one mysqld · a thread per connection · page cleaner threads · purge thread · log writer threads</div><span class="darrow">→</span>
         <div class="dbox"><b>Memory</b>InnoDB buffer pool (most of the RAM budget) + redo log buffer + change buffer inside it</div><span class="darrow">→</span>
-        <div class="dbox good"><b>Disk — the datadir</b>*.ibd per table · ib_logfile0/1 or #innodb_redo/ · mysql-bin.* · undo_001/002 · ibdata1</div>
+        <div class="dbox good"><b>Disk: the datadir</b>*.ibd per table · ib_logfile0/1 or #innodb_redo/ · mysql-bin.* · undo_001/002 · ibdata1</div>
       </div></div></div>
-      <div class="fnote"><b>Who does what:</b> connection threads execute; page cleaners flush dirty pages to the <span class="mono">.ibd</span> files; the purge thread deletes undo records no reader still needs. Threads share one process — a crash takes all of them, and redo rebuilds the state.</div>
+      <div class="fnote"><b>Who does what:</b> Connection threads run queries. Page cleaners flush dirty pages to the <span class="mono">.ibd</span> files. The purge thread deletes undo records no reader still needs. Threads share one process. A crash takes all of them. Redo rebuilds the state.</div>
     </div></div>
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">Every log file a DBA needs to know</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0">Exact names, the on-prem locations from the file trees above, the job each log does, and the one thing to check in it during an incident. The deep dive on the five data logs is in <a href="#logs">The log files</a>; this table adds the operational logs (server / error / slow) a DBA reads first.</p>
-  <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag my">MySQL</span><br>Redo log</td><td class="mono">ib_logfile0 · ib_logfile1</td><td>Datadir root; 8.0.30+: <span class="mono">#innodb_redo/</span></td><td>Physical record of page changes; replayed at startup to rebuild dirty pages after a crash.</td><td>Checkpoint age in <span class="mono">SHOW ENGINE INNODB STATUS</span> (LOG section) — age near capacity = write stalls coming.</td></tr><tr><td><span class="tag my">MySQL</span><br>Binary log</td><td class="mono">mysql-bin.000001, .000002, …</td><td>Datadir (path set by <span class="mono">log_bin</span>)</td><td>Logical record of every committed change; replicas replay it; second half of point-in-time recovery.</td><td><span class="mono">SHOW BINARY LOGS</span> — total size and oldest file: retention must exceed the longest replica outage.</td></tr><tr><td><span class="tag my">MySQL</span><br>Error + slow logs</td><td class="mono">&lt;hostname&gt;.err · *-slow.log</td><td>Datadir / <span class="mono">/var/log/mysql/</span></td><td>Error log: startup, crashes, warnings. Slow log: statements over <span class="mono">long_query_time</span>, with rows examined.</td><td>Error log at the incident start; slow log digested (<span class="mono">pt-query-digest</span>) ranked by total time, not by count.</td></tr></tbody></table>
+  <p style="font-size:14.5px;color:var(--muted);margin:0">These are the exact names. They sit in the locations from the file trees above. Each log has one job. Each log has one thing to check during an incident. The deep dive on the five data logs is in <a href="#logs">The log files</a>. This table adds the operational logs a DBA reads first: server, error, slow.</p>
+  <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag my">MySQL</span><br>Redo log</td><td class="mono">ib_logfile0 · ib_logfile1</td><td>Datadir root; 8.0.30+: <span class="mono">#innodb_redo/</span></td><td>Physical record of page changes. Replayed at startup to rebuild dirty pages after a crash.</td><td>Checkpoint age in <span class="mono">SHOW ENGINE INNODB STATUS</span> (LOG section). Age near capacity means write stalls are coming.</td></tr><tr><td><span class="tag my">MySQL</span><br>Binary log</td><td class="mono">mysql-bin.000001, .000002, …</td><td>Datadir (path set by <span class="mono">log_bin</span>)</td><td>Logical record of every committed change. Replicas replay it. It is the second half of point-in-time recovery.</td><td><span class="mono">SHOW BINARY LOGS</span>. Check total size and the oldest file. Retention must exceed the longest replica outage.</td></tr><tr><td><span class="tag my">MySQL</span><br>Error + slow logs</td><td class="mono">&lt;hostname&gt;.err · *-slow.log</td><td>Datadir / <span class="mono">/var/log/mysql/</span></td><td>Error log: startup, crashes, warnings. Slow log: statements over <span class="mono">long_query_time</span>, with rows examined.</td><td>Error log at the incident start. Slow log digested (<span class="mono">pt-query-digest</span>), ranked by total time, not by count.</td></tr></tbody></table>
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The parameters DBAs actually touch during outages</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 6px;max-width:820px">Not the full configuration reference — the short list that comes up in real incidents. Each row states what the parameter does and the outage rule for it: <b style="color:var(--ink)">safe live lever</b> (change it during the incident), <b style="color:var(--ink)">planned change</b> (needs a restart or a window — do not improvise it mid-incident), or <b style="color:var(--ink)">do not touch</b> (changing it converts the incident into data loss or a longer outage).</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 6px;max-width:820px">This is not the full configuration reference. It is the short list that comes up in real incidents. Each row states what the parameter does and the outage rule for it. <b style="color:var(--ink)">Safe live lever</b> means change it during the incident. <b style="color:var(--ink)">Planned change</b> means it needs a restart or a window. Do not improvise it mid-incident. <b style="color:var(--ink)">Do not touch</b> means changing it converts the incident into data loss or a longer outage.</p>
 
   <h4 style="margin:20px 0 6px;font-size:16px"><span class="tag my">MySQL · InnoDB</span> Outage parameters</h4>
   <table class="breaks"><thead><tr><th>Parameter</th><th>What it does</th><th>During an outage</th></tr></thead><tbody>
-    <tr><td class="mono">innodb_buffer_pool_size</td><td>Size of the page cache — the single most important MySQL setting (typically 70–80% of RAM on a dedicated server).</td><td><b>Planned change.</b> Resizable online in 8.0 (<span class="mono">SET GLOBAL</span>), but resizing under load is slow and competes with the workload; verify headroom first, and watch <span class="mono">Innodb_buffer_pool_resize_status</span>.</td></tr>
-    <tr><td class="mono">innodb_redo_log_capacity</td><td>Total redo log size (8.0.30+); bounds checkpoint age headroom.</td><td><b>Safe live lever</b> (dynamic) when checkpoint age is pinned near capacity and writes are stalling: raise it, then confirm age falls.</td></tr>
-    <tr><td class="mono">max_connections</td><td>Cap on concurrent connections; each thread costs memory.</td><td><b>Short bridge only.</b> Dynamic, so a modest raise can stop "too many connections" errors while you fix the cause — but the cause is almost always missing pooling (ProxySQL) or leaked connections, and a big raise converts a connection incident into a memory incident.</td></tr>
-    <tr><td class="mono">innodb_flush_log_at_trx_commit</td><td>The durability dial: 1 = redo fsynced at every commit (safe); 2 = written to OS, fsynced ~1/s; 0 = ~1/s entirely.</td><td><b>Do not relax mid-outage</b> to buy speed unless the business explicitly accepts losing up to ~1 s of commits per crash. You would be trading tonight's latency incident for a future data-loss incident.</td></tr>
+    <tr><td class="mono">innodb_buffer_pool_size</td><td>Size of the page cache. The single most important MySQL setting. Typically 70 to 80% of RAM on a dedicated server.</td><td><b>Planned change.</b> It is resizable online in 8.0 (<span class="mono">SET GLOBAL</span>), but resizing under load is slow and competes with the workload. Verify headroom first. Watch <span class="mono">Innodb_buffer_pool_resize_status</span>.</td></tr>
+    <tr><td class="mono">innodb_redo_log_capacity</td><td>Total redo log size (8.0.30 and later). It bounds checkpoint age headroom.</td><td><b>Safe live lever</b> (dynamic). Use it when checkpoint age is pinned near capacity and writes are stalling. Raise it, then confirm age falls.</td></tr>
+    <tr><td class="mono">max_connections</td><td>Cap on concurrent connections. Each thread costs memory.</td><td><b>Short bridge only.</b> It is dynamic, so a modest raise can stop "too many connections" errors while you fix the cause. The cause is almost always missing pooling (ProxySQL) or leaked connections. A big raise converts a connection incident into a memory incident.</td></tr>
+    <tr><td class="mono">innodb_flush_log_at_trx_commit</td><td>The durability dial. 1 means redo fsynced at every commit (safe). 2 means written to the OS, fsynced about once a second. 0 means about once a second entirely.</td><td><b>Do not relax it mid-outage</b> to buy speed, unless the business explicitly accepts losing up to about 1 s of commits per crash. You would be trading tonight's latency incident for a future data-loss incident.</td></tr>
   </tbody></table>
   <div class="lookcmd">-- check
 SHOW VARIABLES LIKE 'innodb_buffer_pool_size';
@@ -61,7 +62,7 @@ SET GLOBAL innodb_redo_log_capacity = 8589934592;  -- 8 GB</div>
 </div></section>
 <section id="files"><div class="wrap">
 <div class="kicker">Files on disk · what <span style="text-transform:none">ls</span> actually shows</div>
-<p class="sub">Situation: there is no hidden state. Every table, index, and log discussed on this page is a file in one directory, owned by one process, inspectable with <span class="mono">ls</span> and <span class="mono">du</span> while the server runs. When disk fills in production — and the failure is always a specific file class, never "the database" in the abstract — this tree is how you identify which one in under a minute. Paths below are the common Linux defaults; the command under each tree asks the server for its own.</p><div class="filegrid"><div class="filecard my"><header>MySQL — the datadir</header>
+<p class="sub">There is no hidden state. Every table, index, and log on this page is a file in one directory. One process owns it. You can inspect it with <span class="mono">ls</span> and <span class="mono">du</span> while the server runs. When disk fills in production, the failure is always a specific file class. It is never "the database" in the abstract. This tree tells you which file class in under a minute. Paths below are the common Linux defaults. The command under each tree asks the server for its own.</p><div class="filegrid"><div class="filecard my"><header>MySQL: the datadir</header>
 <pre class="term"><span class="cmd">$ ls /var/lib/mysql</span>
 <span class="f">ibdata1</span>           <span class="c"># InnoDB system tablespace:</span>
                   <span class="c"># internal bookkeeping</span>
@@ -78,19 +79,19 @@ SET GLOBAL innodb_redo_log_capacity = 8589934592;  -- 8 GB</div>
                   <span class="c">#   tree in ONE file</span>
   orders.ibd
 &lt;hostname&gt;.err    <span class="c"># the error log</span></pre>
-      <div class="fnote"><b>Ask the server where it lives:</b> <span class="mono">SHOW VARIABLES LIKE 'datadir';</span> One table = one <span class="mono">.ibd</span> file when <span class="mono">innodb_file_per_table</span> is on (the default).</div>
+      <div class="fnote"><b>Ask the server where it lives:</b> <span class="mono">SHOW VARIABLES LIKE 'datadir';</span> One table is one <span class="mono">.ibd</span> file when <span class="mono">innodb_file_per_table</span> is on. That is the default.</div>
     </div></div>
 </div></section>
 <section id="logs"><div class="wrap">
 <div class="kicker">The log files · one by one</div>
-<p class="sub">Every durability, replication, and recovery guarantee on this page reduces to one of five logs. For each: the exact file name, where it sits, the mechanism, the failure mode when it is undersized, misplaced, or allowed to fill — and the command that shows you its current state. The pattern to hold: a log's size divided by the write rate is a time window, and every operational budget on this page (recovery time, replica downtime tolerance, checkpoint headroom) is one of those windows.</p><div class="loggrid"><div class="logcard">
+<p class="sub">Every durability, replication, and recovery guarantee on this page reduces to one of five logs. For each log I give you the exact file name, where it sits, the mechanism, the failure mode when it is undersized, misplaced, or allowed to fill, and the command that shows its current state. Hold this pattern. A log's size divided by the write rate is a time window. Every operational budget on this page is one of those windows: recovery time, replica downtime tolerance, checkpoint headroom.</p><div class="loggrid"><div class="logcard">
       <span class="tag my">MySQL · InnoDB</span>
       <h3>Redo log</h3>
       <div class="fname">ib_logfile0 · ib_logfile1</div>
       <dl>
-        <dt>Where it sits</dt><dd>In the datadir, written as a circular pair of files. MySQL 8.0.30+ moved them into a <span class="mono">#innodb_redo/</span> folder as <span class="mono">#ib_redo*</span> files — same log, new home. Total size is set by <span class="mono">innodb_redo_log_capacity</span>.</dd>
-        <dt>What it does</dt><dd>InnoDB's write-ahead log: a physical record of every page change, written before the page itself. On startup after a crash, InnoDB replays it to rebuild every page that was dirty in the buffer pool.</dd>
-        <dt>What breaks without it</dt><dd>InnoDB refuses to start without a valid redo log — and with good reason: without it, a committed transaction could vanish in a crash and dirty pages would be unrecoverable.</dd>
+        <dt>Where it sits</dt><dd>In the datadir, written as a circular pair of files. MySQL 8.0.30 and later moved them into a <span class="mono">#innodb_redo/</span> folder as <span class="mono">#ib_redo*</span> files. Same log, new home. Total size is set by <span class="mono">innodb_redo_log_capacity</span>.</dd>
+        <dt>What it does</dt><dd>InnoDB's write-ahead log. A physical record of every page change, written before the page itself. On startup after a crash, InnoDB replays it to rebuild every page that was dirty in the buffer pool.</dd>
+        <dt>What breaks without it</dt><dd>InnoDB refuses to start without a valid redo log. With good reason. Without it, a committed transaction could vanish in a crash and dirty pages would be unrecoverable.</dd>
         <dt>Look at it</dt><dd><div class="lookcmd">$ ls -lh /var/lib/mysql/ib_logfile*
 -- in mysql: SHOW ENGINE INNODB STATUS\G
 -- read the "LOG" section: Log sequence number</div></dd>
@@ -100,22 +101,22 @@ SET GLOBAL innodb_redo_log_capacity = 8589934592;  -- 8 GB</div>
       <h3>Binary log (binlog)</h3>
       <div class="fname">mysql-bin.000001 · mysql-bin.index</div>
       <dl>
-        <dt>Where it sits</dt><dd>In the datadir (path set by <span class="mono">log_bin</span>). Numbered files that roll over as they fill; <span class="mono">mysql-bin.index</span> lists the ones that exist. Each event can carry a GTID — a permanent, unique ID for the transaction.</dd>
-        <dt>What it does</dt><dd>A logical record of every committed change ("insert this row", not "change these bytes"). Replicas replay it to stay identical. It is also the second half of point-in-time recovery: restore a backup, then replay the binlog up to the second before the mistake.</dd>
-        <dt>What breaks without it</dt><dd>No replication, and no point-in-time recovery — you can only restore whole backups, losing everything since the last one.</dd>
+        <dt>Where it sits</dt><dd>In the datadir (path set by <span class="mono">log_bin</span>). Numbered files that roll over as they fill. <span class="mono">mysql-bin.index</span> lists the ones that exist. Each event can carry a GTID. That is a permanent, unique ID for the transaction.</dd>
+        <dt>What it does</dt><dd>A logical record of every committed change. "Insert this row", not "change these bytes". Replicas replay it to stay identical. It is also the second half of point-in-time recovery. Restore a backup, then replay the binlog up to the second before the mistake.</dd>
+        <dt>What breaks without it</dt><dd>No replication, and no point-in-time recovery. You can only restore whole backups, losing everything since the last one.</dd>
         <dt>Look at it</dt><dd><div class="lookcmd">-- in mysql:
 SHOW BINARY LOGS;
 SHOW BINLOG EVENTS IN 'mysql-bin.000001';
 $ mysqlbinlog mysql-bin.000001 | less</div></dd>
       </dl>
     </div></div>
-<p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../postgresql/index.html#logs">PostgreSQL — WAL</a> · <a href="../mongodb/index.html#logs">MongoDB · WiredTiger — journal and oplog</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
+<p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../postgresql/index.html#logs">PostgreSQL: WAL</a> · <a href="../mongodb/index.html#logs">MongoDB · WiredTiger: journal and oplog</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
 </div></section>
 <section id="commands"><div class="wrap">
 
   <div class="kicker">See it yourself · copy-paste commands</div>
   <h2>Open a real database and check every claim on this page</h2>
-  <p class="sub">In Practice: every mechanism above is observable on a running server in under two minutes. These commands are grouped by the question they answer — where the files are, where the log position is, how far behind the copies are, and whether cleanup is keeping up. Run them against any install; the output either confirms the model on this page or identifies the specific place your system deviates from it.</p>
+  <p class="sub">Every mechanism above is observable on a running server in under two minutes. These commands are grouped by the question they answer. Where are the files. Where is the log position. How far behind are the copies. Is cleanup keeping up. Run them against any install. The output either confirms the model on this page or shows you the specific place your system deviates from it.</p>
   <div class="cmdgrid"><div class="cmdcol my"><header>MySQL · mysql client + shell</header>
 <pre class="term"><span class="c">-- where is everything?</span>
 SHOW VARIABLES LIKE 'datadir';
@@ -133,9 +134,19 @@ SHOW ENGINE INNODB STATUS\G
 <span class="c">-- replica state and lag</span>
 SHOW REPLICA STATUS\G</pre></div></div>
 </div></section>
+<section><div class="wrap">
+<h3 style="margin:6px 0 4px;font-size:19px">One incident I keep coming back to</h3>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Writes started failing. Then the database refused writes entirely.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">I broke the disk down by owner before touching anything. The binlog was the filler. It could not be purged because a replica was down.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The fix was the holder, not the files. Revive or remove the dead replica. Never rm old binlog files by hand. Set log retention by time and size, and alert at 70 percent, not 98 percent.</p>
+<h3 style="margin:18px 0 4px;font-size:19px">Before you leave, check this</h3>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One command. It tells you how close the redo log is to stalling writes.</p>
+<div class="lookcmd">SHOW ENGINE INNODB STATUS\G
+-- read the LOG section: checkpoint age vs capacity</div>
+</div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
-  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk — <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page — durability, replication, point-in-time recovery — is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL. <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL. <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page follows from that ordering: durability, replication, point-in-time recovery. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
 </div></footer><script src="../assets/js/main.js"></script>
 </body>
