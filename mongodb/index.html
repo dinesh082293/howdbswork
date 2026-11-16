@@ -14,7 +14,8 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>MongoDB · WiredTiger</h1>
@@ -133,10 +134,32 @@ rs.status()  <span class="c">// members + optime lag</span>
 db.serverStatus().wiredTiger.cache</pre></div></div>
 </div></section>
 <section><div class="wrap">
+<h3 style="margin:6px 0 4px;font-size:19px">ESR: the index order that avoids a sort</h3>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Problem.</b> My query filters, sorts, and returns. It runs slow. I run explain. It shows a SORT stage. The index exists. The sort still happens.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Mechanism.</b> A compound index stores keys in field order. Field 1 first. Field 2 inside field 1. Field 3 inside field 2. Put the equality field first. Put the sort field second. Put the range field last. That is ESR.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The equality match narrows the walk to one slice. Inside that slice, the sort field is already in order. The query reads rows in sorted order. The range field sits last. It trims the tail.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Put the fields in the wrong order and the sort breaks. A range field before the sort field breaks it. The index can no longer hand back rows in sort order. MongoDB adds a SORT stage. That stage sorts in memory. The limit is 100 MB. A sort past that limit fails unless the query allows disk use.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">MongoDB caches the winning plan for a query shape. I add an index. I drop an index. The cached plan can go stale. I check the cached shapes. Then I clear the cache for that collection. The next run picks a fresh plan.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Exact check.</b> Build the index in ESR order. Then explain the query. Then check index use and plan cache.</p>
+<div class="lookcmd">db.orders.createIndex({ region: 1, createdAt: 1, amount: 1 });
+
+db.orders.find(
+  { region: "EU", amount: { $gte: 100 } }
+).sort({ createdAt: 1 }).explain("executionStats");
+
+db.orders.aggregate([ { $indexStats: {} } ]);
+
+db.runCommand({ planCacheListQueryShapes: "orders" });
+
+db.runCommand({ planCacheClear: "orders" });</div>
+<p style="font-size:14.5px;color:var(--muted);margin:8px 0 0;max-width:820px">Read explain for SORT stage. No SORT stage means the index order did the sorting. Read totalDocsExamined next to nReturned. A wide gap means the index is not narrowing the work.</p>
+</div></section>
+<section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">One incident I keep coming back to</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One big customer's dashboard timed out. Everyone else was fast.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">I checked distribution, not totals. One node was at 100 percent and the rest were idle. A monotonic shard key was sending every new write to the same shard.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The fix was the key, not more shards. Hash-prefix a monotonic shard key, or give the whale tenant its own shard. Choose the shard key from the query pattern before launch.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">How to host MongoDB on-prem, on EC2, in Kubernetes, or on Atlas is on the <a href="../cloud/index.html#mo-hosting">Cloud page</a>.</p>
 <h3 style="margin:18px 0 4px;font-size:19px">Before you leave, check this</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One command. It tells you how long a secondary can stay down and still catch up.</p>
 <div class="lookcmd">rs.printReplicationInfo()</div>
@@ -146,6 +169,11 @@ db.serverStatus().wiredTiger.cache</pre></div></div>
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL. <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL. <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page follows from that ordering: durability, replication, point-in-time recovery. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
 </body>
 </html>
