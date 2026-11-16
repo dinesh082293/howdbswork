@@ -14,7 +14,8 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>PostgreSQL</h1>
@@ -105,6 +106,7 @@ $ pg_waldump pg_wal/000000010000000000000003
       </dl>
     </div></div>
 <p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../mysql/index.html#logs">MySQL · InnoDB: redo log and binary log</a> · <a href="../mongodb/index.html#logs">MongoDB · WiredTiger: journal and oplog</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
+<p style="font-size:14.5px;color:var(--muted)">See the real thing: <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a> by Egor Rogov, free PDF. The best single source on how Postgres actually works, and the book behind half the claims on this page.</p>
 </div></section>
 <section id="commands"><div class="wrap">
 
@@ -131,10 +133,25 @@ SELECT relname, n_dead_tup
   FROM pg_stat_user_tables;</pre></div></div>
 </div></section>
 <section><div class="wrap">
+  <div class="lab" id="liveSqlPg" style="margin-bottom:22px">
+    <h3 style="margin:0 0 6px;font-size:17px">Try it live: a real Postgres, in your browser</h3>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 12px">No install, no account. This panel runs a real PostgreSQL in your browser. It starts with the same users table as the Home walkthrough, ids 10, 25, and 87. Run the insert, then the select, then the EXPLAIN, and watch the same numbers come out of a real plan.</p>
+    <p id="liveSqlStatusPg" style="font-size:13.5px;color:var(--muted);margin:0 0 10px">Live Postgres is not started yet. Press the button below.</p>
+    <div class="controls" style="margin-top:0">
+      <button class="btn primary" id="liveSqlStartPg">Start live Postgres</button>
+      <button class="btn" data-sql="insert">Run the INSERT</button>
+      <button class="btn" data-sql="select">Run the SELECT</button>
+      <button class="btn" data-sql="explain">Run the EXPLAIN</button>
+    </div>
+    <textarea id="liveSqlInputPg" spellcheck="false">INSERT INTO users (id, name) VALUES (42, 'Asha');</textarea>
+    <div class="controls" style="margin-top:10px"><button class="btn primary" id="liveSqlRunPg">Run</button></div>
+    <pre id="liveSqlOutPg">Nothing run yet.</pre>
+  </div>
 <h3 style="margin:6px 0 4px;font-size:19px">One incident I keep coming back to</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The app slowed down over days. The file grew to 5 times its size. Live row counts did not move.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">I checked the oldest open transaction first. One long transaction was stopping VACUUM, so dead tuples piled up and the heap file bloated.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The fix was the transaction, not the space. Kill it or fix the code path, set idle_in_transaction_session_timeout, and run reports on a replica.</p>
+<p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Real versions of this story: Uber hit the same write amplification at scale, and Notion hit the same VACUUM stall. Both are on the <a href="../stories/index.html#postgresql">Stories page</a>. How to host Postgres on-prem, on EC2, in Kubernetes, or managed is on the <a href="../cloud/index.html#pg-hosting">Cloud page</a>.</p>
 <h3 style="margin:18px 0 4px;font-size:19px">Before you leave, check this</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One command. It tells you whether cleanup is keeping up.</p>
 <div class="lookcmd">SELECT relname, n_dead_tup FROM pg_stat_user_tables;</div>
@@ -144,6 +161,12 @@ SELECT relname, n_dead_tup
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL. <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL. <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page follows from that ordering: durability, replication, point-in-time recovery. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script type="module" src="../assets/js/pglite-panel.js"></script>
 </body>
 </html>
