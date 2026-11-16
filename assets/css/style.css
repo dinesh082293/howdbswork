@@ -273,7 +273,7 @@ input[type=range]{accent-color:var(--teal)}
 .checkitem .lookcmd{margin-left:30px;font-size:11.5px}
 footer{border-top:1px solid var(--line);padding:28px 0 44px;color:var(--muted);font-size:14px}
 
-/* ===== One problem, one diagram — staff pairs ===== */
+/* ===== One problem, one diagram, staff pairs ===== */
 .pairgrid{display:grid;grid-template-columns:1fr;gap:12px;margin:0 0 14px}
 .paircard{border:1px solid var(--line);border-radius:14px;background:var(--surface2);padding:14px}
 .paircard .pprob{display:flex;gap:10px;align-items:flex-start;background:var(--problem-bg);border:1px solid color-mix(in srgb,var(--problem-line) 35%,transparent);border-left:6px solid var(--problem-line);border-radius:10px;padding:10px 12px;margin:0 0 12px}
@@ -342,7 +342,7 @@ table.breaks td:first-child{font-weight:700;white-space:normal;min-width:130px}
 .owns .vsbox ul{margin:0;padding-left:17px}
 .owns .vsbox li{margin:3px 0}
 .runsteps{counter-reset:rs}
-/* ===== The cheat sheet — infographic layer (always dark, like the reference) ===== */
+/* ===== The cheat sheet, infographic layer (always dark, like the reference) ===== */
 #cheatsheet .cs-jump{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 18px}
 #cheatsheet .cs-jump a{border:1px solid #453f8a;background:#1a1840;color:#d6d2ff;text-decoration:none;font-size:13px;font-weight:600;padding:9px 14px;border-radius:999px;min-height:40px;display:inline-flex;align-items:center}
 .cs-panel{background:linear-gradient(180deg,#141231 0%,#0d0c24 100%);border:1px solid #2b2860;border-radius:20px;padding:26px 20px 14px;color:#e9e7ff;margin:0 0 22px;scroll-margin-top:80px}
@@ -382,3 +382,53 @@ table.breaks td:first-child{font-weight:700;white-space:normal;min-width:130px}
 .cs-diag tr:last-child td{border-bottom:none}
 .cs-note{font-size:12px;color:#b9b4e8;margin-top:8px;font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.5}
 .cs-note b{color:#fff}
+
+/* Added Nov 16, 2026: site search, copy buttons, EXPLAIN tool, level tags, live SQL */
+.sitesearch{position:relative;flex:0 1 230px;min-width:170px}
+.sitesearch input[type=search]{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink);font-size:13.5px;min-height:0}
+#siteSearchResults{position:absolute;top:calc(100% + 6px);right:0;width:320px;max-width:82vw;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.18);z-index:50;overflow:hidden}
+a.sitesearch-result{display:block;padding:10px 14px;text-decoration:none;color:var(--ink);font-size:13.5px;border-bottom:1px solid var(--line)}
+a.sitesearch-result:last-child{border-bottom:none}
+a.sitesearch-result:hover{background:var(--surface2)}
+.sitesearch-title{display:block}
+.sitesearch-section{display:block;font-size:11.5px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.sitesearch-empty{padding:12px 14px;font-size:13.5px;color:var(--muted);margin:0}
+.copybtn{position:absolute;top:8px;right:8px;font-family:"IBM Plex Mono",monospace;font-size:11px;padding:4px 9px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;min-height:0}
+.copybtn:hover{background:var(--surface2)}
+.lvl-meta{display:block;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted);margin-top:4px;font-weight:400}
+#planInput,#liveSqlInput,#liveSqlInputPg{width:100%;min-height:150px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:var(--term-bg);color:var(--term-ink);font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.7;resize:vertical}
+#liveSqlOut,#liveSqlOutPg{background:var(--term-bg);color:var(--term-ink);border-radius:12px;padding:14px 16px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.7;white-space:pre-wrap;min-height:60px;margin:12px 0 0}
+.plan-node{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin:10px 0;font-size:13.5px}
+.plan-node p{margin:6px 0}
+.plan-node p:first-child{font-weight:700}
+.plan-slow{border-color:#c2410c}
+.plan-med{border-color:#b45309}
+.navin{flex-wrap:wrap}
+
+/* Added Nov 16, 2026: story diagrams and hosting blocks */
+.fanout{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fcol{display:flex;flex-direction:column;gap:8px;flex:1 1 220px}
+.fcol .dbox{flex:none}
+.hbar-row{display:flex;align-items:center;gap:10px;margin:10px 0}
+.hbar-label{flex:0 0 200px;font-size:13px;font-weight:600}
+@media(max-width:640px){.hbar-label{flex-basis:130px}}
+.hbar-track{flex:1;height:20px;background:var(--surface2);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.hbar-fill{display:block;height:100%;background:var(--teal)}
+.hbar-fill.warn{background:var(--problem-line)}
+.hbar-row .mono{flex:none;font-size:12.5px;font-weight:600}
+.vbars{display:flex;align-items:flex-end;gap:8px;height:110px}
+.vbar{flex:1;border-radius:6px 6px 0 0;border:1px solid var(--line);background:var(--surface2);display:flex;align-items:flex-end;justify-content:center;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:600;padding-bottom:5px;color:var(--muted)}
+.vbar.hot{background:var(--problem-bg);border-color:var(--problem-line);color:var(--problem-ink)}
+.vbar.even{background:var(--teal-bg);border-color:var(--teal);color:var(--teal)}
+.shardgrid{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.shardgrid span{aspect-ratio:1.6;background:var(--teal-bg);border:1px solid var(--teal);border-radius:4px}
+.topo{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:640px){.topo{grid-template-columns:1fr}}
+.scheck{display:grid;gap:6px}
+.scheck>div{display:flex;gap:10px;align-items:baseline;font-size:14.5px}
+.smark{flex:none;width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;display:inline-grid;place-items:center;font-size:12px;font-weight:700;transform:translateY(4px)}
+.hostblock{border:1px solid var(--line);border-radius:14px;background:var(--surface);padding:16px 18px;margin:0 0 12px}
+.hostblock h4{margin:0 0 4px;font-size:16px}
+.hostblock p{margin:0 0 8px;font-size:14px;color:var(--muted);line-height:1.55}
+.hostblock p b{color:var(--ink)}
+.hostblock .lookcmd{margin-top:8px}
