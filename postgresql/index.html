@@ -40,7 +40,7 @@
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">Every log file a DBA needs to know</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0">These are the exact names. They sit in the locations from the file trees above. Each log has one job. Each log has one thing to check during an incident. The deep dive on the five data logs is in <a href="#logs">The log files</a>. This table adds the operational logs a DBA reads first: server, error, slow.</p>
-  <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag pg">PostgreSQL</span><br>Write-ahead log</td><td class="mono">pg_wal/000000010000000000000003</td><td><span class="mono">pg_wal/</span> inside the data directory</td><td>Every change, recorded before the data file changes. Commit means this log is fsynced. It also feeds replicas and point-in-time recovery.</td><td>Total size (<span class="mono">du -sh pg_wal</span>) and <span class="mono">archive_status/</span>. A growing pile of <span class="mono">.ready</span> files means archiving is failing.</td></tr><tr><td><span class="tag pg">PostgreSQL</span><br>Server log</td><td class="mono">postgresql-16-main.log</td><td><span class="mono">/var/log/postgresql/</span> (Debian) or <span class="mono">log/</span> in the data directory</td><td>The server's own diary. Checkpoints. Slow statements, if enabled. Errors. Crash recovery.</td><td>Checkpoint frequency. "duration:" lines for slow statements. The first error at the incident's start time.</td></tr></tbody></table>
+  <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag pg">PostgreSQL</span><br>Write-ahead log</td><td class="mono">pg_wal/000000010000000000000003</td><td><span class="mono">pg_wal/</span> inside the data directory</td><td>Every change, recorded before the data file changes. Commit means this log is fsynced. It also feeds replicas and point-in-time recovery.</td><td>Total size (<span class="mono">du -sh pg_wal</span>) and <span class="mono">archive_status/</span>. A growing pile of <span class="mono">.ready</span> files means archiving is failing.</td></tr><tr><td><span class="tag pg">PostgreSQL</span><br>Server log</td><td class="mono">postgresql-18-main.log</td><td><span class="mono">/var/log/postgresql/</span> (Debian) or <span class="mono">log/</span> in the data directory</td><td>The server's own diary. Checkpoints. Slow statements, if enabled. Errors. Crash recovery.</td><td>Checkpoint frequency. "duration:" lines for slow statements. The first error at the incident's start time.</td></tr></tbody></table>
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The parameters DBAs actually touch during outages</h3>
@@ -52,7 +52,7 @@
     <tr><td class="mono">work_mem</td><td>Memory per sort or hash operation. Per operation, not per connection. Total use is work_mem times operations times connections.</td><td><b>Safe live lever, per session:</b> <span class="mono">SET work_mem='256MB'</span> for the one reporting query that is spilling. A global raise mid-incident is an OOM risk at full concurrency.</td></tr>
     <tr><td class="mono">max_connections</td><td>Hard cap on backend processes. Each one costs memory and bookkeeping.</td><td><b>Do not raise to fix "pool exhausted"</b> It admits more load into an already overloaded server. It needs a restart anyway. The fix is a pooler (PgBouncer) and killing idle-in-transaction sessions.</td></tr>
     <tr><td class="mono">wal_level</td><td>How much information the WAL carries: minimal, replica, or logical.</td><td><b>Do not touch.</b> It needs a restart. Replicas and logical subscribers are built on the current level. Changing it mid-incident breaks the copies you may be about to fail over to.</td></tr>
-    <tr><td class="mono">max_wal_size</td><td>WAL volume that triggers a checkpoint. Default 1 GB.</td><td><b>Safe live lever</b> (reload, no restart) Use it when <span class="mono">checkpoints_req</span> shows size-triggered checkpoint storms. Raise it and reload.</td></tr>
+    <tr><td class="mono">max_wal_size</td><td>WAL volume that triggers a checkpoint. Default 1 GB.</td><td><b>Safe live lever</b> (reload, no restart) Use it when <span class="mono">num_requested</span> in <span class="mono">pg_stat_checkpointer</span> shows size-triggered checkpoint storms. Raise it and reload.</td></tr>
     <tr><td class="mono">checkpoint_timeout</td><td>Time trigger for checkpoints. Default 5 min. Whichever fires first wins, size or time.</td><td><b>Safe live lever</b> (reload) alongside max_wal_size. Lengthening it spreads the flush I/O. The price is longer crash recovery.</td></tr>
     <tr><td class="mono">autovacuum_*</td><td>Naptime, max workers, and per-table vacuum and analyze scale factors. They set how aggressively dead tuples and stale stats are cleaned.</td><td><b>Safe live lever for bloat:</b> Raise workers, lower the scale factor on the one hot table (<span class="mono">ALTER TABLE … SET</span>). <b>Never disable autovacuum</b> to "help". That is how bloat and wraparound start.</td></tr>
   </tbody></table>
@@ -69,8 +69,8 @@ ALTER TABLE orders SET (autovacuum_vacuum_scale_factor = 0.05);</div>
 <section id="files"><div class="wrap">
 <div class="kicker">Files on disk · what <span style="text-transform:none">ls</span> actually shows</div>
 <p class="sub">There is no hidden state. Every table, index, and log on this page is a file in one directory. One process owns it. You can inspect it with <span class="mono">ls</span> and <span class="mono">du</span> while the server runs. When disk fills in production, the failure is always a specific file class. It is never "the database" in the abstract. This tree tells you which file class in under a minute. Paths below are the common Linux defaults. The command under each tree asks the server for its own.</p><div class="filegrid"><div class="filecard pg"><header>PostgreSQL: the data directory</header>
-<pre class="term"><span class="cmd">$ ls /var/lib/postgresql/16/main</span>
-<span class="f">PG_VERSION</span>        <span class="c"># "16": which version owns this dir</span>
+<pre class="term"><span class="cmd">$ ls /var/lib/postgresql/18/main</span>
+<span class="f">PG_VERSION</span>        <span class="c"># "18": which version owns this dir</span>
 <span class="f">base/</span>             <span class="c"># one subfolder per database</span>
 <span class="f">global/</span>           <span class="c"># cluster-wide tables + pg_control,</span>
                   <span class="c"># the file startup reads first</span>
@@ -81,7 +81,7 @@ ALTER TABLE orders SET (autovacuum_vacuum_scale_factor = 0.05);</div>
 pg_multixact/  pg_logical/  pg_stat/
 postgresql.conf  pg_hba.conf
                   <span class="c"># (on Debian/Ubuntu the .conf files</span>
-                  <span class="c"># live in /etc/postgresql/16/main/)</span>
+                  <span class="c"># live in /etc/postgresql/18/main/)</span>
 
 <span class="cmd">$ ls base/16384/</span>   <span class="c"># database oid 16384</span>
 <span class="f">16397</span>             <span class="c"># ← table "users" is THIS file</span>
@@ -159,7 +159,7 @@ SELECT relname, n_dead_tup
 </div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
-  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL. <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL. <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page follows from that ordering: durability, replication, point-in-time recovery. Every number on this page is checkable with the commands given beside it.</p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL. <span class="mono">#innodb_redo/#ib_redo0</span> plus <span class="mono">mysql-bin</span> in MySQL. <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page follows from that ordering: durability, replication, point-in-time recovery. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
