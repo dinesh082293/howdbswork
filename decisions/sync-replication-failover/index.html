@@ -19,7 +19,7 @@ details summary:hover{color:var(--teal)}
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
@@ -30,26 +30,52 @@ details summary:hover{color:var(--teal)}
   <p class="sub"><b style="color:var(--ink)">The decision:</b> how many copies must confirm a write before the application hears "saved".</p>
   <p class="sub"><b style="color:var(--ink)">The rule of thumb:</b> if losing one second of acknowledged writes is a data-loss incident, use synchronous replication with a quorum, not a single standby. If a few seconds of lag is acceptable, async is cheaper and faster. The price of sync is one network round trip plus one standby fsync on every commit. The price of async is write rate multiplied by lag, paid all at once on failover.</p>
 </div></header>
+<div class="doctoc"><div class="wrap">
+  <p class="kicker" style="margin:0 0 6px">On this page</p>
+  <ul class="toclist">
+    <li><a href="#compare">Comparison</a></li>
+    <li><a href="#decision">Decision record</a></li>
+    <li><a href="#what">1. What</a></li>
+    <li><a href="#why">2. Why</a></li>
+    <li><a href="#how">3. How</a></li>
+    <li><a href="#when">4. When</a></li>
+    <li><a href="#breaks">5. What breaks</a></li>
+    <li><a href="#alternatives">6. Alternatives rejected</a></li>
+    <li><a href="#operating">7. Operating it</a></li>
+    <li><a href="#versions">8. Version notes</a></li>
+    <li><a href="#postmortem">Postmortem</a></li>
+    <li><a href="#anti-patterns">Anti-patterns</a></li>
+    <li><a href="#unsure">Where I am less sure</a></li>
+    <li><a href="#tested">Tested on</a></li>
+    <li><a href="#appendix">Appendix</a></li>
+  </ul>
+  <div class="seg" id="engineToggle" role="group" aria-label="Show one engine">
+    <button type="button" data-engine="" aria-pressed="true">All engines</button>
+    <button type="button" data-engine="pg" aria-pressed="false">PostgreSQL</button>
+    <button type="button" data-engine="my" aria-pressed="false">MySQL</button>
+    <button type="button" data-engine="mo" aria-pressed="false">MongoDB</button>
+  </div>
+</div></div>
 <section id="compare" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Cross-engine comparison</div>
   <h2>The same decision, three engines</h2>
   <p class="sub">Read the row for the mode you run, not the engine you like.</p>
   <table class="breaks"><thead><tr><th>Mode</th><th>COMMIT returns after</th><th>RPO for acknowledged writes</th><th>RTO, typical</th><th>Split-brain behavior</th><th>What the ACK means</th></tr></thead><tbody>
     <tr><td>PostgreSQL async</td><td>Local WAL fsync</td><td>Write rate x lag. At 2,000 commits/s and 5 s of lag, 10,000 transactions.</td><td>Promote the standby and replay its backlog. Seconds to minutes.</td><td>Nothing built in. The old primary must be fenced or two primaries accept writes.</td><td>No ACK. Nobody confirms.</td></tr>
-    <tr><td>PostgreSQL sync, <span class="mono">on</span>, <span class="mono">ANY 1 (s1, s2)</span></td><td>Local flush plus one standby flush</td><td>0. The standby has the WAL on disk before the commit returns.</td><td>Promote a standby. Seconds with Patroni, longer by hand.</td><td>Quorum survives one standby loss. The old primary still needs fencing.</td><td>The standby flushed the WAL to its disk.</td></tr>
+    <tr><td>PostgreSQL sync, <span class="mono">on</span>, <span class="mono">ANY 1 (s1, s2)</span></td><td>Local flush plus one standby flush</td><td>0 for one failure at a time. The standby has the WAL on disk before the commit returns. Either standby may hold the latest commit, so promote the one with the highest flush LSN. If the primary and that standby fail together, the acknowledged writes on it are lost.</td><td>Promote the most advanced standby by LSN. Tens of seconds with Patroni on defaults, longer by hand. See section 4 for the step by step.</td><td>Quorum survives one standby loss. The old primary still needs fencing.</td><td>The standby flushed the WAL to its disk.</td></tr>
     <tr><td>PostgreSQL sync, <span class="mono">remote_apply</span></td><td>Local flush plus one standby replay</td><td>0, and reads on that standby see the commit.</td><td>Same as sync, plus replay time on the standby.</td><td>Same as sync.</td><td>The standby replayed the commit. It is visible there.</td></tr>
     <tr><td>MySQL semi-sync, <span class="mono">AFTER_SYNC</span></td><td>Binlog sync plus one replica receipt</td><td>0 if the replica that ACKed is the one promoted. Otherwise the un-ACKed window.</td><td>Promote the most advanced replica. Seconds with Orchestrator.</td><td>GTID plus fencing, or the two sides diverge.</td><td>The replica wrote the events to its relay log. Not applied.</td></tr>
-    <tr><td>MySQL Group Replication, single-primary</td><td>A majority certifies the transaction</td><td>0 for certified transactions.</td><td>Election plus backlog apply. Seconds.</td><td>A minority partition leaves the group and stops writing. No split-brain.</td><td>A majority of the group agreed.</td></tr>
+    <tr><td>MySQL Group Replication, single-primary</td><td>A majority certifies the transaction</td><td>0 for certified transactions.</td><td>Election plus backlog apply. Seconds.</td><td>A minority partition stays in the group and its writes block. No split-brain. By default it waits forever: <span class="mono">group_replication_unreachable_majority_timeout</span> defaults to 0. <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-responses-failure-partition.html">MySQL 8.4 manual</a></td><td>A majority of the group agreed.</td></tr>
     <tr><td>MongoDB <span class="mono">w: 1</span></td><td>The primary applies it in memory</td><td>Unreplicated writes. They can roll back.</td><td>Election, median about 12 s with defaults, plus catch-up.</td><td>The old primary rolls back on rejoin.</td><td>The primary applied it. Nothing else.</td></tr>
     <tr><td>MongoDB <span class="mono">w: "majority"</span>, <span class="mono">j: true</span></td><td>A majority journals it</td><td>0 for acknowledged writes.</td><td>Same election, about 12 s median, plus catch-up.</td><td>A minority cannot elect a primary.</td><td>A majority has it durable.</td></tr>
   </tbody></table>
 </div></section>
 <section id="decision" style="padding-top:6px"><div class="wrap">
   <div class="derive"><b class="dt">Decision record</b>
-  <p><b>Context:</b> a payments ledger. A lost acknowledged payment is a data-loss incident, not a delay. Two availability zones, one region. Commit rate peaks at 800 commits/s from one service.</p>
+  <p><b>Context:</b> a payments ledger. A lost acknowledged payment is a data-loss incident, not a delay. Two availability zones, one region. Commit rate peaks at 800 commits/s from one service, spread across multiple sessions. One serial session caps at 500 commits/s cross AZ, so the 800 figure only works across sessions.</p>
   <p><b>Options considered:</b> async with a 2 s lag budget; PostgreSQL sync with one named standby; PostgreSQL sync with quorum <span class="mono">ANY 1 (s1, s2)</span>; MySQL semi-sync; MongoDB <span class="mono">w: "majority"</span>.</p>
   <p><b>Choice:</b> PostgreSQL sync, <span class="mono">synchronous_commit = on</span>, <span class="mono">synchronous_standby_names = 'ANY 1 (s1, s2)'</span>, one standby per AZ. Commit p99 rises by about 2 ms. That is the price, measured before rollout, not discovered after.</p>
-  <p><b>Consequences:</b> writes hang if both standbys are down. That is a known outage mode, and it needs an alert on <span class="mono">sync_state</span> and a written runbook step for removing a dead standby from the list. The ledger never loses an acknowledged payment to a single server failure. That was the requirement. The latency is the cost.</p>
+  <p><b>Consequences:</b> writes hang if both standbys are down. That is a known outage mode, and it needs an alert on <span class="mono">sync_state</span> and a written runbook step for removing a dead standby from the list. On failover, promote the standby with the highest flush LSN. With ANY 1, either standby may hold the latest commit, and promoting the other one loses acknowledged writes. The ledger never loses an acknowledged payment to a single server failure. That was the requirement. The latency is the cost.</p>
   </div>
 </div></section>
 <section id="what" style="padding-top:6px"><div class="wrap">
@@ -65,7 +91,7 @@ details summary:hover{color:var(--teal)}
     <li><span class="mono">on</span> (the default): the standby has flushed the WAL to its disk, and the primary has flushed locally. This is the level that gives RPO 0.</li>
     <li><span class="mono">remote_apply</span>: the standby has replayed the WAL. The commit is visible to reads on that standby.</li>
   </ul>
-  <p class="sub"><b style="color:var(--ink)">Boundary:</b> synchronous replication guarantees durability on the standby, not visibility, except at <span class="mono">remote_apply</span>. It does not guarantee the standby is caught up for reads. It does not protect against a bug that corrupts the primary and replicates the corruption. It is not a backup.</p>
+  <p class="sub"><b style="color:var(--ink)">Boundary:</b> synchronous replication guarantees durability on the standby, not visibility, except at <span class="mono">remote_apply</span>. It does not guarantee the standby is caught up for reads. It does not protect against a bug that corrupts the primary and replicates the corruption. It is not a backup. RPO 0 holds for one failure at a time. If the primary and the standby holding the latest commit fail together, the acknowledged writes that only that standby held are lost with it.</p>
   <p class="sub"><span class="mono">synchronous_standby_names</span> has three forms. A bare name, <span class="mono">s1</span>, waits for that one standby. <span class="mono">FIRST 1 (s1, s2)</span> waits for the first standby in priority order. <span class="mono">ANY 1 (s1, s2)</span> waits for any one of the two. Only the <span class="mono">ANY</span> form survives one standby going down. A bare list, <span class="mono">s1, s2</span>, means <span class="mono">FIRST 1 (s1, s2)</span>, not both.</p>
   <h3 style="margin:18px 0 8px;font-size:17px">MySQL</h3>
   <p class="sub">Semi-synchronous replication makes the source wait for one replica to acknowledge receipt before the commit returns. It is a plugin, <span class="mono">rpl_semi_sync_source</span> on the source and <span class="mono">rpl_semi_sync_replica</span> on the replica. Both sides must have it installed, or replication stays async.</p>
@@ -81,7 +107,7 @@ details summary:hover{color:var(--teal)}
 <section id="why" style="padding-top:6px"><div class="wrap">
   <div class="kicker">10-minute layer · section 2 of 8</div>
   <h2>2. Why</h2>
-  <p class="sub">Async replication has a loss window, and the window is exactly write rate multiplied by lag. The site already states the number: at 2,000 commits/s and 5 s of lag, a failover loses 10,000 acknowledged transactions. The lag is not a constant. It is milliseconds at idle and seconds at peak, because lag is set by standby apply throughput, not by the network. The loss window is largest at the moment the primary is busiest, which is the moment it is most likely to die.</p>
+  <p class="sub">Async replication has a loss window, and the window is exactly write rate multiplied by lag. At 2,000 commits/s and 5 s of lag, a failover loses 10,000 acknowledged transactions. The lag is not a constant. It is milliseconds at idle and seconds at peak, because lag is set by standby apply throughput, not by the network. The loss window is largest at the moment the primary is busiest, which is the moment it is most likely to die.</p>
   <p class="sub">Before synchronous replication, the options were a smaller window or a faster failover. Neither closes the window. A faster failover loses fewer transactions. It still loses some. Synchronous replication is the only mechanism in this list that makes the window zero, and the price is latency on every commit.</p>
   <p class="sub">The price is paid in a specific place: the commit path. Nothing else slows down. Reads are unaffected. A single long transaction pays the wait once, at commit. A chatty application that commits once per row pays it once per row.</p>
   <p class="sub">What came before it: file-based log shipping, where WAL files moved after commit and the window was minutes. Streaming replication shrank the window to milliseconds. Synchronous replication closed it. Each step cost latency and complexity, and each step was worth it only for data where the loss window was unacceptable.</p>
@@ -107,14 +133,14 @@ details summary:hover{color:var(--teal)}
  |                      |                      |  write + fsync (0.5 ms)
  |                      | &lt;-- ACK flush LSN --- |  t = 2.0 ms
  | &lt;-- COMMIT ok ------- |                     |</pre>
-  <p class="sub">Captured output. This is the site's own output from the staff path, level 4. <span class="mono">sync_state</span> is the column that tells the truth.</p>
+  <p class="sub">Captured output. <span class="mono">sync_state</span> is the column that tells the truth.</p>
   <div class="lookcmd">SELECT client_addr, state, sync_state, replay_lag FROM pg_stat_replication;
  10.0.1.52 | streaming | sync  | 00:00:00.003
  10.0.1.53 | streaming | async | 00:00:41.208
 
 SHOW synchronous_standby_names;
 -- empty means nobody is synchronous, whatever the runbook says</div>
-  <p class="sub"><span class="mono">pg_waldump</span> shows what the standby received. One commit record, in the tool's output format:</p>
+  <p class="sub">Illustrative sample: <span class="mono">pg_waldump</span> shows what the standby received. One commit record, in the tool's output format:</p>
 <pre class="term">rmgr: Transaction len (rec/tot): 34/ 34, tx: 1234, lsn: 0/03000028, prev 0/03000000, desc: COMMIT 2026-11-16 10:00:00.000000 UTC</pre>
   <h3 style="margin:18px 0 8px;font-size:17px">MySQL</h3>
   <p class="sub">The semi-sync commit path, <span class="mono">AFTER_SYNC</span>:</p>
@@ -131,7 +157,7 @@ SHOW synchronous_standby_names;
 
 SELECT @@gtid_executed;
 -- run on source and replica; the difference is the failover gap</div>
-  <p class="sub"><span class="mono">mysqlbinlog</span> shows what the replica received. One transaction, in the tool's output format:</p>
+  <p class="sub">Illustrative sample: <span class="mono">mysqlbinlog</span> shows what the replica received. One transaction, in the tool's output format:</p>
 <pre class="term">#261116 10:00:00 server id 1 end_log_pos 456 CRC32 0x1a2b3c4d BEGIN
 # at 456
 #261116 10:00:00 server id 1 end_log_pos 512 CRC32 0x5e6f7a8b Table_map: `shop`.`users` mapped to number 89
@@ -179,7 +205,7 @@ SELECT @@gtid_executed;
   <p class="sub">Use synchronous replication if:</p>
   <ul style="font-size:15px;line-height:1.7;max-width:820px">
     <li>The RPO is 0. Losing acknowledged writes is a data-loss incident, not a delay. Payments, ledgers, anything auditable.</li>
-    <li>The commit rate per session is under the cap above, or the application can batch commits. 800 commits/s from one service fits cross-AZ sync. 5,000 commits/s from one session does not.</li>
+    <li>The commit rate per session is under the cap above, or the application can batch commits. 800 commits/s from one service, across several sessions, fits cross-AZ sync. 5,000 commits/s from one session does not.</li>
     <li>There are at least two standbys in different failure domains, so one standby loss does not stop writes.</li>
   </ul>
   <p class="sub">Avoid it if:</p>
@@ -190,11 +216,20 @@ SELECT @@gtid_executed;
   </ul>
   <p class="sub">RTO and RPO, stated together:</p>
   <ul style="font-size:15px;line-height:1.7;max-width:820px">
-    <li>PostgreSQL sync: RPO 0, RTO is promotion time. Seconds with Patroni, minutes by hand.</li>
+    <li>PostgreSQL sync: RPO 0 for one failure at a time, RTO is the five steps below. Tens of seconds with Patroni on defaults, minutes by hand.</li>
     <li>MySQL semi-sync: RPO 0 only if the ACKing replica is promoted. RTO is promotion time with Orchestrator, seconds.</li>
     <li>MySQL Group Replication: RPO 0 for certified transactions, RTO is election plus backlog apply, seconds.</li>
     <li>MongoDB majority: RPO 0 for acknowledged writes, RTO is election, median about 12 s with defaults, plus catch-up.</li>
   </ul>
+  <p class="sub">RTO for PostgreSQL with Patroni, step by step, on defaults. Patroni documents <span class="mono">ttl</span> 30 s, <span class="mono">loop_wait</span> 10 s, and <span class="mono">retry_timeout</span> 10 s. <a href="https://patroni.readthedocs.io/en/latest/dynamic_configuration.html">Patroni docs</a></p>
+  <ul style="font-size:15px;line-height:1.7;max-width:820px">
+    <li>Detect: 20 to 30 s. The primary renews its leader key every <span class="mono">loop_wait</span>, 10 s, and the key lives for <span class="mono">ttl</span>, 30 s, so it expires 20 to 30 s after the primary stops renewing it. Derived from the documented defaults, not measured.</li>
+    <li>Decide: a few seconds, one Patroni loop. Assumption, to measure.</li>
+    <li>Promote: seconds, plus the time to replay the standby backlog. Depends on backlog size, to measure.</li>
+    <li>Redirect: seconds for the proxy or DNS to move traffic to the new primary. Depends on health check settings, to measure.</li>
+    <li>App reconnect: depends on the connection pool and retry settings. To measure.</li>
+  </ul>
+  <p class="sub">Total on defaults is tens of seconds, dominated by detection. One more documented default can stretch it: <span class="mono">primary_start_timeout</span> is 300 s by default, and the Patroni docs give the worst case as <span class="mono">loop_wait</span> plus <span class="mono">primary_start_timeout</span> plus <span class="mono">loop_wait</span>. The 20 to 30 s figure above is the leader key expiry alone, not that worst case.</p>
 </div></section>
 <section id="breaks" style="padding-top:6px"><div class="wrap">
   <div class="kicker">10-minute layer · section 5 of 8</div>
@@ -204,11 +239,14 @@ SELECT @@gtid_executed;
   <p class="sub"><b style="color:var(--ink)">Failure 2: the standby is up but slow.</b> A saturated disk makes the standby fsync take 50 ms instead of 0.5 ms. Blast radius: commit p99 rises by the same 50 ms on every session. Detection: <span class="mono">flush_lag</span> and <span class="mono">replay_lag</span> in <span class="mono">pg_stat_replication</span> grow. First metric to move: commit p99 latency. Mitigation: the standby needs the same disk performance as the primary. A slow standby is a slow primary.</p>
   <p class="sub"><b style="color:var(--ink)">Failure 3: <span class="mono">synchronous_standby_names</span> is empty.</b> The commit returns after local flush only. Blast radius: the deployment believes it has RPO 0 and has RPO equal to the async window. Detection: <span class="mono">SHOW synchronous_standby_names</span> returns empty, and no row in <span class="mono">pg_stat_replication</span> has <span class="mono">sync_state = 'sync'</span>. First metric to move: none. That is the danger. Mitigation: check the setting and the view in the deploy checklist, not the config file.</p>
   <p class="sub"><b style="color:var(--ink)">Failure 4: the old primary comes back after failover and accepts writes.</b> Blast radius: two primaries, divergent data, a manual merge. Detection: two servers both report <span class="mono">pg_is_in_recovery() = false</span>. Mitigation: fence the old primary. Patroni does this through the distributed consensus store. By hand, it means stopping the old primary and confirming it is stopped before promoting the new one.</p>
+  <p class="sub"><b style="color:var(--ink)">Failure 5: failover promotes the wrong standby.</b> Blast radius: acknowledged writes the other standby held are lost, even though the deployment runs sync with RPO 0. With <span class="mono">ANY 1 (s1, s2)</span>, either standby may be the one that ACKed the latest commit. Detection: compare <span class="mono">flush_lsn</span> across standbys before promoting. The standby with the highest flush LSN is the most advanced. First metric to move: the LSN gap between standbys. Mitigation: promote the most advanced standby by LSN. Patroni picks from the synchronous set. By hand, it means comparing LSNs before promoting, not picking the standby that answers first.</p>
+  <p class="sub"><b style="color:var(--ink)">Failure 6: the old primary comes back and needs to rejoin as a standby.</b> Blast radius: it cannot just follow the new primary, because its timeline forked at promotion. Any writes it took after the fork sit on a timeline the new primary does not have. Detection: the old primary reports a timeline the new primary has moved past. Mitigation: <span class="mono">pg_rewind</span>. Stop the old primary, run <span class="mono">pg_rewind</span> against the new primary, and it copies back only the blocks that changed since the timelines diverged, then the old primary restarts as a standby. That is far faster than a fresh base backup on a large database. It needs <span class="mono">wal_log_hints</span> on or data checksums set at <span class="mono">initdb</span>, and <span class="mono">full_page_writes</span> on, and WAL back to the divergence point, or the <span class="mono">-c</span> flag to fetch it from the archive. If the rewind fails halfway, the data directory may not be recoverable, so rebuild it from a fresh backup. Patroni runs <span class="mono">pg_rewind</span> for a rejoining old primary when <span class="mono">use_pg_rewind</span> is set. <a href="https://www.postgresql.org/docs/18/app-pgrewind.html">PostgreSQL 18 pg_rewind docs</a></p>
   <h3 style="margin:18px 0 8px;font-size:17px">MySQL</h3>
   <p class="sub"><b style="color:var(--ink)">Failure 1: semi-sync times out.</b> Blast radius: the source reverts to async for the whole server. Every dashboard still says semi-sync is enabled, because the enabled variable is still ON. The protection is gone and nothing pages. Detection: <span class="mono">Rpl_semi_sync_source_status</span> reads OFF. First metric to move: that status variable. Mitigation: alert on the status variable, not the enabled variable.</p>
   <p class="sub"><b style="color:var(--ink)">Failure 2: failover promotes a replica that is not the one that ACKed.</b> Blast radius: the transactions the ACKing replica held are missing on the new source. Detection: compare <span class="mono">gtid_executed</span> on the old source and the new source. The difference is the gap. First metric to move: the GTID set difference. Mitigation: promote the most advanced replica. Orchestrator does this by GTID. By hand, it means comparing sets before promoting.</p>
-  <p class="sub"><b style="color:var(--ink)">Failure 3: a minority partition in Group Replication.</b> Blast radius: the minority members leave the group and stop accepting writes. That is the design, not a bug. Detection: members report <span class="mono">ERROR</span> state in <span class="mono">performance_schema.replication_group_members</span>. First metric to move: group size. Mitigation: odd member counts, three or five, so a majority is always clear. Two members cannot form a quorum when one dies.</p>
+  <p class="sub"><b style="color:var(--ink)">Failure 3: a minority partition in Group Replication.</b> Blast radius: the minority members stay in the group and their writes block. They do not leave on their own, and they do not enter the <span class="mono">ERROR</span> state on their own. Transactions the minority accepts sit blocked because the group cannot reach quorum, until an operator stops Group Replication on those members or the unreachable majority timeout fires. Detection: members report <span class="mono">UNREACHABLE</span> in <span class="mono">performance_schema.replication_group_members</span>. First metric to move: group size. Mitigation: odd member counts, three or five, so a majority is always clear. Set <span class="mono">group_replication_unreachable_majority_timeout</span> to a value the team can live with. It defaults to 0, which means wait forever. When it fires, the pending transactions on the minority roll back and the members move to <span class="mono">ERROR</span>, then auto-rejoin tries to bring them back. <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-responses-failure-partition.html">MySQL 8.4 manual</a></p>
   <p class="sub"><b style="color:var(--ink)">Failure 4: <span class="mono">AFTER_COMMIT</span> is set instead of <span class="mono">AFTER_SYNC</span>.</b> Blast radius: other sessions can read data that a failover loses. Detection: <span class="mono">SHOW VARIABLES LIKE 'rpl_semi_sync_source_wait_point'</span>. Mitigation: keep the default. Verify it at deploy time.</p>
+  <p class="sub"><b style="color:var(--ink)">Failure 5: errant GTIDs block a replica from rejoining.</b> An errant GTID is a transaction in a replica's <span class="mono">gtid_executed</span> set that the source never ran. It gets there when someone writes directly to the replica, when a replica is briefly promoted during a failed failover and takes writes, or when maintenance runs on the replica without disabling the binlog. Blast radius: the replica cannot rejoin cleanly, because the source has no binlog for those GTIDs and cannot send them, and the other replicas cannot take them from the promoted replica either. In Group Replication the same shape shows up as a member that cannot rejoin because it has more executed transactions than the group. Detection: <span class="mono">GTID_SUBTRACT</span> of the replica set minus the source set returns a non-empty set. That is the errant set. First metric to move: the GTID set difference. Mitigation: if the errant writes are few and harmless, commit an empty transaction on the source for each errant GTID so the sets line up again. If the writes mattered or the set is large, rebuild the replica from a fresh copy of the source. <span class="mono">RESET MASTER</span> wipes the GTID history and the binlogs, so use it only on a server with no replicas, never as a shortcut on a live one.</p>
   <h3 style="margin:18px 0 8px;font-size:17px">MongoDB</h3>
   <p class="sub"><b style="color:var(--ink)">Failure 1: the primary loses its majority.</b> Blast radius: it steps down. Writes stop until a new primary is elected. Reads from the primary stop too. Detection: the logs show an election, and <span class="mono">rs.status()</span> shows no PRIMARY. First metric to move: election count in the logs. Mitigation: three voting members, in different failure domains, so one loss leaves a majority.</p>
   <p class="sub"><b style="color:var(--ink)">Failure 2: a <span class="mono">w: 1</span> write is rolled back.</b> Blast radius: the write disappears from the new primary and lands in <span class="mono">rollback/</span> files on the old primary as BSON. Inserts and updates are saved there. Deletes and drops are not. Detection: the old primary enters ROLLBACK state on rejoin, and files appear in the rollback directory. First metric to move: rollback files on disk. Mitigation: <span class="mono">w: "majority"</span> for anything that cannot be lost.</p>
@@ -218,7 +256,7 @@ SELECT @@gtid_executed;
   <div class="kicker">10-minute layer · section 6 of 8</div>
   <h2>6. Alternatives rejected</h2>
   <p class="sub"><b style="color:var(--ink)">Async replication.</b> Rejected where RPO is 0. It is the right choice where a few seconds of lag is acceptable, and it is the cheapest choice in latency. The break point is the loss budget: if the business accepts losing up to 5 s of writes, async with a 2 s lag alert is the simpler system.</p>
-  <p class="sub"><b style="color:var(--ink)">MySQL semi-sync.</b> Rejected as the primary mechanism for PostgreSQL, obviously, and rejected for MySQL where the timeout fallback is unacceptable. Semi-sync bounds loss only while it is active. After a 10 s timeout it is async, silently. Pick it when one ACK is enough and the team alerts on the status variable. Pick Group Replication when the fallback itself is the risk.</p>
+  <p class="sub"><b style="color:var(--ink)">MySQL semi-sync.</b> Rejected for MySQL where the timeout fallback is unacceptable. Semi-sync bounds loss only while it is active. After a 10 s timeout it is async, silently. Pick it when one ACK is enough and the team alerts on the status variable. Pick Group Replication when the fallback itself is the risk.</p>
   <p class="sub"><b style="color:var(--ink)">MySQL Group Replication.</b> Rejected where the team does not want the operational weight of a group: certification, quorum management, and the consistency level to tune. Pick it when failover must be automatic and split-brain must be impossible by construction, not by runbook.</p>
   <p class="sub"><b style="color:var(--ink)">MongoDB <span class="mono">w: "majority"</span>.</b> Rejected for high-volume telemetry and click events, where losing two seconds of events in a rare failover is a fair trade for throughput. Pick <span class="mono">w: 1</span> there, and say so in writing. Pick majority for payments, ledgers, and anything auditable.</p>
   <p class="sub"><b style="color:var(--ink)">Two-phase commit across databases.</b> Rejected. It makes every commit wait for every participant and turns one slow participant into a global outage. Use the outbox pattern instead: write the event to a local table in the same transaction as the business row, then relay it. The local commit is the atomic unit. The relay is async and retryable.</p>
@@ -271,6 +309,8 @@ SELECT @@gtid_executed;
     <li>Fix the slow member or the network, not the election settings first. Lowering the timeout makes elections faster and more frequent. It does not fix the cause.</li>
     <li>Check for rollback files on the old primary after it rejoins. Any file there is a write the new primary never saw.</li>
   </ol>
+  <h3 style="margin:18px 0 8px;font-size:17px">Topology: sync inside the region, async to a remote region</h3>
+  <p class="sub">The common shape is a sync quorum in one region, two standbys in different AZs, plus an async replica in a remote region for disaster recovery. The remote replica hangs off a sync standby by cascading replication, or off the primary as a plain async standby. In PostgreSQL, cascading replication is async: the primary's sync settings do not wait for a cascaded standby, so the remote replica adds no commit latency. The tradeoff is the RPO split. A failover inside the region is RPO 0. A failover to the remote region loses whatever the async lag was at the time, and the remote region then has to rebuild the in-region quorum before sync protection is back. Treat the remote replica as disaster recovery, not high availability: it saves the data when the whole region is gone, and it is not the failover target for a single dead server.</p>
   <p class="sub"><b style="color:var(--ink)">Capacity formula.</b> The sync standby must keep up with the primary's WAL rate, or lag grows without bound. Required standby apply throughput is greater than the primary's peak WAL generation rate, with headroom. In numbers: if the primary generates 50 MB/s of WAL at peak, the standby must apply more than 50 MB/s, sustained, on its own disk. The formula for the serial commit cap is in section 4: 1 / (RTT + fsync) per session. The formula for aggregate throughput is sessions multiplied by that cap, bounded by the WAL writer's batching and the standby's apply rate. Measure both before rollout: commit p99 with sync off, then with sync on, at the same load. The difference is the price. The standby's disk throughput is the ceiling.</p>
 </div></section>
 <section id="versions" style="padding-top:6px"><div class="wrap">
@@ -282,14 +322,15 @@ SELECT @@gtid_executed;
 </div></section>
 <section id="postmortem" style="padding-top:6px"><div class="wrap">
   <div class="kicker">2 AM story · as a postmortem</div>
-  <h2>Postmortem: the binlog that could not be purged</h2>
-  <p class="sub">Reformatted from the site's MySQL page incident, "One incident I keep coming back to". No new incident is invented here. The timeline is in phases because the site does not record clock times for it.</p>
+  <h2>Postmortem: the binlog that filled the disk</h2>
+  <p class="sub">The timeline is in phases because the site does not record clock times for it.</p>
   <p class="sub"><b style="color:var(--ink)">Detection:</b> writes started failing. Then the database refused writes entirely. The disk was full.</p>
-  <p class="sub"><b style="color:var(--ink)">Diagnosis:</b> the disk was broken down by owner before anything was touched. The binlog was the filler. It could not be purged because a replica was down. MySQL keeps binlog files a replica still needs. The dead replica pinned the whole binlog history.</p>
-  <p class="sub"><b style="color:var(--ink)">Root cause:</b> binlog retention had no bound that accounted for a dead replica. Purge is blocked while a replica needs the files, so one dead replica turns retention into unbounded growth.</p>
-  <p class="sub"><b style="color:var(--ink)">Contributing factors:</b> no alert on replica health, so the replica had been down unnoticed. No alert on disk growth rate, so the fill was discovered at 100 percent, not at 70. Retention was set by size alone, with no time bound.</p>
-  <p class="sub"><b style="color:var(--ink)">What changed:</b> revive or remove a dead replica as a runbook step, not a cleanup task. Set log retention by time and size. Alert at 70 percent disk, not 98 percent. Never remove binlog files by hand.</p>
-  <p class="sub"><b style="color:var(--ink)">Why this postmortem is on this page:</b> the dead replica is the same state that silently degrades semi-sync to async and that a single synchronous standby would have turned into hung writes. One dead replica, three different failure modes, depending on the replication mode. The fix is the same in all three: watch the replica, and have a written step for removing a dead one.</p>
+  <p class="sub"><b style="color:var(--ink)">Diagnosis:</b> the disk was broken down by owner before anything was touched. The binlog was the filler. The purge had not kept up, and the reason was not a dead replica. MySQL purges binlogs by time: <span class="mono">binlog_expire_logs_seconds</span> sets the age, 2592000 seconds (30 days) by default, auto-purge is on by default, and expired files go at startup and when the binlog is flushed. A replica that is disconnected holds nothing back. Only a connected replica that has not yet read a file keeps that one file. The dead replica did not pin the binlog history. That is PostgreSQL replication-slot behavior, not MySQL.</p>
+  <p class="sub"><b style="color:var(--ink)">Root cause:</b> binlog retention times write rate outgrew the disk, with no bound sized to either. The site does not record the retention value, the write rate, or how long the fill took, so it does not record which of the three usual causes it was: retention set too long for the disk, retention set to 0 or auto-purge off, or a write burst that filled the disk faster than purge could keep up. Check <span class="mono">SHOW BINARY LOGS</span>, <span class="mono">SHOW VARIABLES LIKE 'binlog_expire_logs_seconds'</span>, and the disk usage by owner before naming the cause.</p>
+  <p class="sub"><b style="color:var(--ink)">Contributing factors:</b> no alert on disk growth rate, so the fill was discovered at 100 percent, not at 70. Retention was never sized against write rate and disk size, so nobody knew how many days of binlogs the disk could hold. No runbook step for checking replica positions before purging, so a manual purge would have risked error 1236 on any replica that still needed a purged file.</p>
+  <p class="sub"><b style="color:var(--ink)">What changed:</b> check every replica position with <span class="mono">SHOW REPLICA STATUS</span>, then free space with <span class="mono">PURGE BINARY LOGS</span>. Set <span class="mono">binlog_expire_logs_seconds</span> to a value the write rate and the disk can actually hold. Alert at 70 percent disk and on disk growth rate, not at 98 percent. Never remove binlog files by hand. A replica that still needs a purged file fails with error 1236 and must be rebuilt from a backup.</p>
+  <p class="sub"><b style="color:var(--ink)">Numbers to check:</b> the site records no disk size, no retention value, and no durations for this incident, so none are stated here. Fill them in from the incident record: total disk size and how full the binlog directory was, the <span class="mono">binlog_expire_logs_seconds</span> value at the time, the write rate in binlog bytes per day, the age of the oldest binlog file, and how long the fill took from the last healthy disk reading to 100 percent.</p>
+  <p class="sub"><b style="color:var(--ink)">Why this postmortem is on this page:</b> a dead replica is not what blocked the purge, and that distinction is the point. The dead replica still matters on this page for a different reason: it is the state that silently degrades semi-sync to async, and a single synchronous standby that dies turns into hung writes. One dead replica, two different failure modes in the replication modes, plus a disk fill with a separate cause. Watch replica health for the replication modes, and size retention against write rate for the disk. The two fixes are different, so keep them in separate runbook steps.</p>
 </div></section>
 <section id="anti-patterns" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Anti-patterns · and the way out</div>
@@ -309,12 +350,13 @@ SELECT @@gtid_executed;
   <h2>Where I am less sure</h2>
   <p class="sub">The fsync and round-trip numbers in section 4 are assumptions, not measurements. Fsync latency on a small WAL record varies from 0.1 ms to 2 ms depending on the disk, and shared cloud disks are worse under contention. Cross-region round trips depend on the region pair. The mechanisms in this page do not depend on those numbers. The serial caps do. Measure them on the actual hardware before quoting them.</p>
   <p class="sub">Aurora is not covered here. Aurora ships redo to a storage quorum instead of WAL files, so there are no WAL files to fill the disk and the classic checkpoint model does not apply. The sync standby model in this page is the on-prem and RDS model. Aurora deserves its own page.</p>
-  <p class="sub">Patroni promotion time is stated as seconds. The exact time depends on the distributed consensus store, the failure detection settings, and how much backlog the standby must replay. I have not measured it on this site's hardware.</p>
+  <p class="sub">Patroni failover time is stated as tens of seconds on defaults, dominated by the 30 s leader key expiry. The exact time depends on the distributed consensus store, the failure detection settings, and how much backlog the standby must replay. I have not measured it on this site's hardware.</p>
 </div></section>
 <section id="tested" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Proof · what was measured, and how</div>
   <h2>Tested on</h2>
-  <p class="sub">Versions: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0. That is the site's version stamp, November 2026.</p>
+  <p class="sub">Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="sub">Measured on: nothing measured yet.</p>
   <p class="sub">Hardware and dataset: not yet fixed. The benchmark method below names what to run. No measured numbers are published on this page yet. The numbers in section 4 are derived from the stated assumptions, not measured. That distinction is the point of this box.</p>
   <p class="sub"><b style="color:var(--ink)">Method, PostgreSQL:</b> pgbench with one client doing serial single-row commits, <span class="mono">synchronous_commit</span> off, then on, then <span class="mono">remote_apply</span>. Record commit p99 and transactions per second at each level. Then repeat with 16 clients to show group commit. Compare p99 before and after. The scripts will live in the repo under <span class="mono">benchmarks/</span>.</p>
   <p class="sub"><b style="color:var(--ink)">Method, MySQL:</b> the same shape with sysbench, semi-sync off, then on with <span class="mono">AFTER_SYNC</span>, then Group Replication in single-primary mode. Record commit p99 and the <span class="mono">Rpl_semi_sync_source_status</span> value during a replica kill.</p>
@@ -339,9 +381,9 @@ cross region:  1 / 40.5 ms = about 24 commits/s</pre>
 <pre class="term">lost transactions = write rate x replay lag
 2,000 commits/s x 5 s = 10,000 transactions</pre>
   <h3 style="margin:18px 0 8px;font-size:17px">Raw output</h3>
-  <p class="sub"><span class="mono">pg_waldump</span> on the primary, one commit record, in the tool's output format:</p>
+  <p class="sub">Illustrative sample: <span class="mono">pg_waldump</span> on the primary, one commit record, in the tool's output format:</p>
 <pre class="term">rmgr: Transaction len (rec/tot): 34/ 34, tx: 1234, lsn: 0/03000028, prev 0/03000000, desc: COMMIT 2026-11-16 10:00:00.000000 UTC</pre>
-  <p class="sub"><span class="mono">mysqlbinlog</span> on the source, one transaction, in the tool's output format:</p>
+  <p class="sub">Illustrative sample: <span class="mono">mysqlbinlog</span> on the source, one transaction, in the tool's output format:</p>
 <pre class="term">#261116 10:00:00 server id 1 end_log_pos 456 CRC32 0x1a2b3c4d BEGIN
 # at 456
 #261116 10:00:00 server id 1 end_log_pos 512 CRC32 0x5e6f7a8b Table_map: `shop`.`users` mapped to number 89
@@ -363,6 +405,10 @@ cross region:  1 / 40.5 ms = about 24 commits/s</pre>
     <li>MySQL 8.4 Reference Manual, semisynchronous replication interface: <a href="https://dev.mysql.com/doc/refman/8.4/en/replication-semisync-interface.html">dev.mysql.com/doc/refman/8.4/en/replication-semisync-interface.html</a></li>
     <li>MySQL 8.4 Reference Manual, Group Replication: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication.html">dev.mysql.com/doc/refman/8.4/en/group-replication.html</a></li>
     <li>MySQL 8.4 Reference Manual, Group Replication system variables (consistency levels): <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-system-variables.html">dev.mysql.com/doc/refman/8.4/en/group-replication-system-variables.html</a></li>
+    <li>MySQL 8.4 Reference Manual, Unreachable Majority Timeout: <a href="https://dev.mysql.com/doc/refman/8.4/en/group-replication-responses-failure-partition.html">dev.mysql.com/doc/refman/8.4/en/group-replication-responses-failure-partition.html</a></li>
+    <li>PostgreSQL 18 documentation, pg_rewind: <a href="https://www.postgresql.org/docs/18/app-pgrewind.html">postgresql.org/docs/18/app-pgrewind.html</a></li>
+    <li>Patroni documentation, Dynamic Configuration Settings: <a href="https://patroni.readthedocs.io/en/latest/dynamic_configuration.html">patroni.readthedocs.io/en/latest/dynamic_configuration.html</a></li>
+    <li>Percona blog, Fixing Errant GTID With Orchestrator: <a href="https://www.percona.com/blog/fixing-errant-gtid-with-orchestrator-the-easy-way-out/">percona.com/blog/fixing-errant-gtid-with-orchestrator-the-easy-way-out/</a></li>
     <li>MySQL source, semi-sync plugin: <span class="mono">plugin/semisync/semisync_source.cc</span></li>
     <li>MongoDB Manual, Write Concern for Replica Sets: <a href="https://www.mongodb.com/docs/manual/core/replica-set-write-concern/">mongodb.com/docs/manual/core/replica-set-write-concern/</a></li>
     <li>MongoDB Manual, Read Concern: <a href="https://www.mongodb.com/docs/manual/core/replica-set-read-concern/">mongodb.com/docs/manual/core/replica-set-read-concern/</a></li>
@@ -372,16 +418,56 @@ cross region:  1 / 40.5 ms = about 24 commits/s</pre>
   </ul>
 </details>
 </div></section>
+<section style="padding-top:6px"><div class="wrap">
+  <p class="sub pagenav"><span>Previous: <a href="../index.html">Decisions</a></span><span>Next: <a href="../index.html#decision-3">Decision 3, Backup, PITR, and restore time (planned)</a></span></p>
+</div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
-  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
   <p><a href="../../references/index.html">References</a></p>
 </div></footer><script src="../../assets/js/main.js"></script>
 <script src="../../assets/js/copy-buttons.js"></script>
 <script src="../../assets/js/search.js"></script>
 <script src="../../assets/js/explain-tool.js"></script>
+<script>
+(function(){
+  var toggle = document.getElementById('engineToggle');
+  if(!toggle) return;
+  var buttons = toggle.querySelectorAll('button');
+  function engineOf(h){
+    var text = h.textContent.trim();
+    if(text === 'PostgreSQL') return 'pg';
+    if(text === 'MySQL') return 'my';
+    if(text === 'MongoDB') return 'mo';
+    return '';
+  }
+  function apply(engine){
+    document.querySelectorAll('section h3').forEach(function(h){
+      var e = engineOf(h);
+      if(!e) return;
+      var show = !engine || e === engine;
+      var nodes = [h];
+      var n = h.nextElementSibling;
+      while(n && n.tagName !== 'H3'){ nodes.push(n); n = n.nextElementSibling; }
+      nodes.forEach(function(el){ el.style.display = show ? '' : 'none'; });
+    });
+    buttons.forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-engine') === engine ? 'true' : 'false');
+    });
+  }
+  buttons.forEach(function(b){
+    b.addEventListener('click', function(){ apply(b.getAttribute('data-engine')); });
+  });
+  document.querySelectorAll('.toclist a[href="#appendix"]').forEach(function(a){
+    a.addEventListener('click', function(){
+      var d = document.querySelector('#appendix details');
+      if(d) d.open = true;
+    });
+  });
+})();
+</script>
 </body>
 </html>

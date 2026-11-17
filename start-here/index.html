@@ -14,7 +14,7 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/sync-replication-failover/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <section><div class="wrap">
@@ -381,7 +381,7 @@ SHOW ENGINE INNODB STATUS\G
       <span class="tag all">All 3</span>
       <h3>6 · Disk full: writes fail, database goes read-only</h3>
       <p class="appsees"><b>App sees:</b> Inserts start failing, then the DB refuses writes entirely. Often at 2 AM, always “suddenly”. It never is.</p>
-      <p class="inside"><b>Inside the DB:</b> Three usual fillers. Logs that cannot be purged (WAL or binlog kept because a replica is down or archiving is failing), bloat (card 5), or a genuinely unbounded table (events, audit, sessions never deleted). Deleting log files by hand corrupts recovery. The engine must release them.</p>
+      <p class="inside"><b>Inside the DB:</b> Three usual fillers. Logs that pile up, bloat (card 5), or a genuinely unbounded table (events, audit, sessions never deleted). The log rules differ by engine. In PostgreSQL a dead standby or a replication slot can hold WAL past every checkpoint. In MySQL the binlog is purged by time, not by replica: <span class="mono">binlog_expire_logs_seconds</span> sets the age, 2592000 seconds (30 days) by default, auto-purge is on by default, and expired files go at startup and when the binlog is flushed. A replica that is disconnected holds nothing back. Only a connected replica that has not yet read a file keeps that one file. So a MySQL disk full of binlogs means retention times write rate outgrew the disk, or retention was set to 0, or auto-purge was off, or a write burst filled it faster than purge could keep up. Deleting log files by hand corrupts recovery. The engine must release them.</p>
       <div class="vsgrid">
         <div class="vsbox usual"><h4>DBAs usually suggest</h4>“<span class="mono">rm</span> the old WAL / binlog files to free space now.” Never do this. You can destroy crash recovery and replication in one command.</div>
         <div class="vsbox actual"><h4>What to actually check</h4>Break the disk down by owner before touching anything: data, WAL/binlog, temp, bloat.<div class="lookcmd">$ du -sh $PGDATA/pg_wal $PGDATA/base
@@ -389,17 +389,19 @@ SHOW ENGINE INNODB STATUS\G
 SELECT pg_size_pretty(pg_total_relation_size(relid))
   FROM pg_catalog.pg_statio_user_tables
   ORDER BY pg_total_relation_size(relid) DESC LIMIT 10;
-SELECT * FROM pg_stat_replication; -- dead replica?
+SELECT * FROM pg_stat_replication; -- which standbys are connected?
+SELECT * FROM pg_replication_slots; -- dead slot holding WAL?
 
 -- MySQL
 SHOW BINARY LOGS;  -- how far back, how big?
-SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
+SHOW VARIABLES LIKE 'binlog_expire_logs_seconds'; -- default 2592000 seconds (30 days)
+SHOW REPLICA STATUS\G  -- which replicas are connected, and how far behind?
 
 -- MongoDB
 db.stats()  // per-db storageSize
 rs.printReplicationInfo()  // oplog size</div></div>
       </div>
-      <p class="fix"><b>Fix that lasts:</b> Fix the holder. Revive or remove the dead replica, repair WAL archiving. Set log retention by time and size. Partition time-series tables so old months drop as files. Alert at 70 percent, not 98 percent. <b>Prevent:</b> a disk growth-rate alert. “Full in 3 days at this rate” beats “full now.”</p>
+      <p class="fix"><b>Fix that lasts:</b> PostgreSQL: drop a dead replication slot and repair WAL archiving, that is what releases held WAL. MySQL: check every replica position first, then free space with <span class="mono">PURGE BINARY LOGS</span>, then set <span class="mono">binlog_expire_logs_seconds</span> to a value your write rate and disk can actually hold. A replica that still needs a purged file fails with error 1236 and must be rebuilt from a backup, so check positions before you purge. Set log retention by time and size. Partition time-series tables so old months drop as files. Alert at 70 percent, not 98 percent. <b>Prevent:</b> a disk growth-rate alert. “Full in 3 days at this rate” beats “full now.”</p>
       <p class="backlink">Why it happens → <a href="../postgresql/index.html#files">Files on disk</a> · <a href="../reference/index.html#logs-pattern">The five log files</a></p>
     </div>
 
@@ -511,10 +513,11 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
   <p style="font-size:14px;color:var(--muted);margin:16px 0 0"><b style="color:var(--ink)">Before you leave, check this:</b> pick your slowest query, run <span class="mono">EXPLAIN (ANALYZE, BUFFERS)</span> on it, and count the pages it reads. That number tells you whether you have an index problem or a volume problem.</p>
 </div></section>
 <footer><div class="wrap">
-  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> plus <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering. Every number on this page is checkable with the commands given beside it.</p>
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
-  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
   <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>

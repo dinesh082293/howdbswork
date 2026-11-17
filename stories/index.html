@@ -4,9 +4,9 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="color-scheme" content="light dark"/>
-<meta name="description" content="Thirteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma and Dropbox, each with the numbers, the fix, and the lesson. Plus a diagram per story."/>
+<meta name="description" content="Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story."/>
 <link rel="icon" href="data:,"/>
-<title>Real Stories: What Broke at Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma and Dropbox · Real Databases, Simply</title>
+<title>Real Stories: What Broke at Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart · Real Databases, Simply</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../assets/css/style.css"/>
@@ -14,18 +14,18 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/sync-replication-failover/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>Real stories</h1>
-  <p class="lede">Every page on this site explains a mechanism. This page shows what happens when the mechanism meets real traffic. Thirteen stories, all from companies that wrote up what broke. Each one has the numbers, the fix, and the lesson I took from it. The source is linked at the end of each story.</p>
+  <p class="lede">Every page on this site explains a mechanism. This page shows what happens when the mechanism meets real traffic. Sixteen stories, all from companies that wrote up what broke. Each one has the numbers, the fix, and the lesson I took from it. The source is linked at the end of each story.</p>
   <p class="lede">None of these are my incidents. I read them the way I read a postmortem: what broke first, what the numbers were, and what decision would have prevented it.</p>
 </div></header>
 <section id="postgresql" style="padding-top:6px"><div class="wrap">
-  <div class="kicker">PostgreSQL · eight stories</div>
+  <div class="kicker">PostgreSQL · ten stories</div>
   <h2>PostgreSQL: the layout is the cost</h2>
-  <p class="sub">Most of these are the same failure wearing different clothes: a physical layout decision, made early, priced later at scale. Adyen and Figma show it at the far end, where the partition and the shard key decide everything before the first query runs. One is a planner that had the right index and refused to use it.</p>
+  <p class="sub">Most of these are the same failure wearing different clothes: a physical layout decision, made early, priced later at scale. Adyen and Figma show it at the far end, where the partition and the shard key decide everything before the first query runs. One is a planner that had the right index and refused to use it. GitLab and Instacart are the exceptions: a backup nobody tested, and a split by domain instead of by shard key.</p>
 
   <div class="incident" id="uber">
     <span class="tag pg">PostgreSQL</span>
@@ -113,9 +113,9 @@
     <h4 class="subhead">Let's talk about the design</h4>
     <p class="inside">Notion picked tripling over bigger machines because bigger machines would hit the same wall later, and one big box cannot be tuned per shard. PgBouncer got sharded first because the connection math was the real limit.</p>
     <div class="tlist">
-      <div>More machines to run, on smaller instances.</div>
-      <div>Hot workspaces stand out more when the load spreads. A few spaces drive outsized CPU.</div>
-      <div>The rollback plan cost extra work: reverse replication at every step.</div>
+      <div>Cost: more machines to run, on smaller instances.</div>
+      <div>Cost: hot workspaces stand out more when the load spreads. A few spaces drive outsized CPU.</div>
+      <div>Cost: the rollback plan cost extra work, reverse replication at every step.</div>
     </div>
     <p class="inside">The part I would copy is sharding the pool first. The connection math is what bites you.</p>
     <p class="inside">Read this when your fleet is hot and out of headroom.</p>
@@ -174,13 +174,13 @@
     <h4 class="subhead">Let's talk about the design</h4>
     <p class="inside">The upgrade had two shapes. Adyen picked the snapshot method because payments cannot stop. Indexes went per partition first because one big index would never finish before wraparound risk grew. Generic plans won because prepare time cost more than execution time saved.</p>
     <div class="tlist">
-      <div>The snapshot method needs traffic stopped and payments queued.</div>
-      <div>Generic plans give up per-query optimal plans.</div>
-      <div>Fillfactor has no fixed answer. It is set per table.</div>
+      <div>Cost: the snapshot method needs traffic stopped and payments queued.</div>
+      <div>Gives up: per-query optimal plans, in exchange for cheaper prepare time.</div>
+      <div>Cost: fillfactor has no fixed answer. It is set per table.</div>
     </div>
     <p class="inside">The part I would copy is the snapshot method. It is the fastest way to move a database you cannot stop.</p>
     <p class="inside">Useful if your biggest partition is past 1 TB.</p>
-    <p class="backlink">Source: <a href="https://youtu.be/L6JWI296fyk">To 100TB, and beyond!</a>, Postgres.FM 100, June 7, 2024 (<a href="https://postgres.fm/episodes/to-100tb-and-beyond/transcript">full transcript</a>). <a href="https://www.adyen.com/knowledge-hub/updating-a-50-terabyte-postgresql-database">Updating a 50 terabyte PostgreSQL database</a>, Adyen, March 14, 2018.</p>
+    <p class="backlink">Source: <a href="https://www.adyen.com/knowledge-hub/updating-a-50-terabyte-postgresql-database">Updating a 50 terabyte PostgreSQL database</a>, Adyen, March 14, 2018. Companion: <a href="https://youtu.be/L6JWI296fyk">To 100TB, and beyond!</a>, Postgres.FM 100, June 7, 2024 (<a href="https://postgres.fm/episodes/to-100tb-and-beyond/transcript">full transcript</a>).</p>
   </div>
 
   <div class="incident" id="notion-dms" style="margin-top:14px">
@@ -205,8 +205,8 @@
     <h4 class="subhead">Let's talk about the design</h4>
     <p class="inside">A logical copy with DMS moves rows, not the physical layout. The new tables land without the source's vacuum history, so bloat on arrival is part of the design, not a surprise. That is why the full vacuum belongs in the migration plan, not after it.</p>
     <div class="tlist">
-      <div>DMS is simple, but the copy is slow.</div>
-      <div>Bloat shows up late, at the end of the copy.</div>
+      <div>Cost: DMS is simple, but the copy is slow.</div>
+      <div>Cost: bloat shows up late, at the end of the copy.</div>
     </div>
     <p class="inside">The part I take from this is the size check. I would check bloat before trusting the size after any logical copy.</p>
     <p class="inside">Read this before a version upgrade by logical copy.</p>
@@ -242,10 +242,10 @@
     <h4 class="subhead">Let's talk about the design</h4>
     <p class="inside">Figma stayed on Postgres and built the sharding layer themselves. The engine was not the problem. The move was. Logical views first meant the rollout could go by percentage and roll back with a config change.</p>
     <div class="tlist">
-      <div>No atomic cross shard transactions. A write can land on one shard and fail on another.</div>
-      <div>No foreign keys or global unique indexes across shards.</div>
-      <div>Schema changes need coordination everywhere.</div>
-      <div>Still open at March 2024: globally unique IDs, a sharding friendly ORM, one click resharding.</div>
+      <div>Gives up: atomic cross shard transactions. A write can land on one shard and fail on another.</div>
+      <div>Gives up: foreign keys and global unique indexes across shards.</div>
+      <div>Cost: schema changes need coordination everywhere.</div>
+      <div>Gives up: globally unique IDs, a sharding friendly ORM, and one click resharding, all still open at March 2024.</div>
     </div>
     <p class="inside">The part I would copy is the logical views first rollout. Prove the routing before moving a row.</p>
     <p class="inside">Useful if your biggest tables are past a few terabytes and vertical partitioning is done.</p>
@@ -256,9 +256,9 @@
     <span class="tag pg">PostgreSQL</span>
     <h3>Notion: sharding fixed the live database, and the warehouse broke next</h3>
     <div class="hooknum">
-      <div class="hn"><b>200B+</b><span>Blocks by end of 2023, up from 20 billion in early 2021.</span></div>
+      <div class="hn"><b>200B+</b><span>Blocks by 2024, up from 20 billion in early 2021.</span></div>
       <div class="hn"><b>1 week to 2 hours</b><span>Full historical resync, after the Hudi pipeline.</span></div>
-      <div class="hn"><b>$1.25M / year</b><span>Net saving from the new pipeline.</span></div>
+      <div class="hn"><b>More than $1M</b><span>Net saving in 2022, higher in 2023 and 2024.</span></div>
     </div>
     <h4 class="subhead">The problem</h4>
     <p class="inside">Notion sharded Postgres and the live product got room to breathe. The warehouse did not. Every change still had to move out of the sharded Postgres databases into Snowflake. Fivetran ran out of memory on bursts. Closed source, few knobs. Some hourly syncs took more than an hour and ran into the next sync. Write pattern: only about 1 percent of blocks changed. Edits random, not recent. A full reload for 1 percent of changed rows is the wrong shape. That pointed to Hudi. No query rate or latency numbers in the material. None are given here.</p>
@@ -281,17 +281,92 @@
       <p class="dcap" style="margin-top:10px">Pick the lake for your upsert pattern, not for the brand name.</p>
     </div>
     <h4 class="subhead">The solution</h4>
-    <p class="inside">Postgres to Debezium CDC to Kafka to Hudi on S3, then Spark for ETL. Fivetran stayed only for small data sets and third party sources. Blocks: a few tens of billions, grown 10x in three years. Data at rest: tens of terabytes compressed. Full resync: 1 week to 2 hours. Incremental syncs every 4 hours. Net saving: more than a million dollars per year. The lake then fed Notion AI Q and A: an offline embedding batch, run once per workspace to bootstrap the vector database, plus an online Kafka catchup within a day.</p>
+    <p class="inside">Postgres to Debezium CDC to Kafka to Hudi on S3, then Spark for ETL. Fivetran stayed only for small data sets and third party sources. Blocks: more than 200 billion, up from 20 billion in early 2021. Data at rest: hundreds of terabytes, even compressed. Full resync: 1 week to 2 hours. Incremental syncs every 4 hours. Net saving: over a million dollars in 2022, and more in 2023 and 2024. The lake then fed Notion AI Q and A: an offline embedding batch, run once per workspace to bootstrap the vector database, plus an online Kafka catchup within a day.</p>
     <h4 class="subhead">Let's talk about the design</h4>
     <p class="inside">The choice followed the write pattern. Few rows changed, and the edits were random. That is the shape Hudi is built for. The tuning follows the same pattern: files sized to limit write amplification, a sort key that clusters recent changes, and partitioning that fits the sharded Postgres layout they already had.</p>
     <div class="tlist">
-      <div>A pipeline to run: Debezium, Kafka, Hudi, Spark.</div>
-      <div>Fivetran stays for small data sets, so two paths to maintain.</div>
-      <div>Incremental syncs, not real time.</div>
+      <div>Cost: a pipeline to run: Debezium, Kafka, Hudi, Spark.</div>
+      <div>Cost: Fivetran stays for small data sets, so two paths to maintain.</div>
+      <div>Gives up: real time syncs. Incremental syncs only.</div>
     </div>
     <p class="inside">The part I would copy is the pattern check first. Few changed rows, mostly updates, random edits. That is what picks the lake.</p>
     <p class="inside">Read this when your warehouse syncs start missing their window.</p>
-    <p class="backlink">Source: <a href="https://youtu.be/dZbXC4mlNck">A Hudi Live Event: Notion's journey through different stages of data scale</a>, Thomas Chow and Nathan Louie, Notion Data Platform, December 13, 2023 (<a href="https://www.onehouse.ai/blog/notions-journey-through-different-stages-of-data-scale">write-up</a>).</p>
+    <p class="backlink">Source: <a href="https://www.notion.com/blog/building-and-scaling-notions-data-lake">Building and scaling Notion's data lake</a>, Notion Blog, July 1, 2024. Companion: <a href="https://www.onehouse.ai/blog/notions-journey-through-different-stages-of-data-scale">Notion's Journey Through Different Stages of Data Scale</a>, Onehouse. Talk: <a href="https://youtu.be/dZbXC4mlNck">A Hudi Live Event: Notion's journey through different stages of data scale</a>, Thomas Chow and Nathan Louie, Notion Data Platform, December 13, 2023.</p>
+  </div>
+
+  <div class="incident" id="gitlab" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>GitLab: five backups, none of them worked</h3>
+    <div class="hooknum">
+      <div class="hn"><b>300 GB</b><span>Production data deleted in seconds. About 4.5 GB left.</span></div>
+      <div class="hn"><b>18 hours</b><span>Downtime while they rebuilt from a staging copy.</span></div>
+      <div class="hn"><b>6 hours</b><span>Of writes lost for good: 5,000 projects, 5,000 comments, about 700 users.</span></div>
+    </div>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">On January 31, 2017, spam accounts and a background job that was deleting an employee's data loaded GitLab's Postgres primary. The secondary fell so far behind that it could no longer catch up. GitLab was not running WAL archiving, so the old WAL segments the secondary still needed were already gone. The only fix was to wipe the secondary and copy the whole database again with pg_basebackup.</p>
+    <div class="diagram"><p class="dcap">Each safety net failed in its own quiet way</p>
+      <div class="scheck">
+        <div><span class="smark">✗</span>pg_dump to S3, every 24 hours: the bucket was empty</div>
+        <div><span class="smark">✗</span>Azure disk snapshots: on the file server, not the database servers</div>
+        <div><span class="smark">✗</span>the replica: wiped an hour earlier for the re-sync</div>
+        <div><span class="smark">✗</span>WAL archiving: never turned on</div>
+      </div>
+      <div class="dflow" style="margin-top:12px">
+        <div class="dbox good"><b>staging copy, 6 hours old</b>the one that worked, and it was never meant to be a backup</div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Late at night, tired, the engineer ran the wipe in the wrong terminal. The command was meant for db2, the replica. It ran on db1, the primary. The two hostnames differ by one character.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">He stopped the command within seconds, but of around 300 GB only about 4.5 GB was left. Then they went to the backups. The pg_dump job had been running a 9.2 client against a 9.6 server, so it errored out and made nothing. Its failure emails bounced, because DMARC was not enabled for them. The disk snapshots covered the file server, not the database. The replica was already wiped. The copy that saved them was a staging copy taken about six hours earlier for a load test. They copied it back, rebuilt Postgres, and brought GitLab.com up against it. The site was down about 18 hours, and about six hours of writes were lost for good. They live-streamed the whole recovery.</p>
+    <p class="inside">Their postmortem, published February 10, 2017, put it in one line: out of five backup and replication techniques deployed, none were working reliably or set up in the first place. The root cause was not the wrong terminal. It was that nobody was responsible for testing the restore.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">The setup had five safety nets and no owner. WAL archiving was off, so a lagging replica could only be rebuilt from scratch. The backup job failed silently for years, and the alert emails bounced. Each mechanism failed in a different quiet way, so no single check would have caught all of them. The fix was not a sixth backup. It was an owner and a restore test.</p>
+    <div class="tlist">
+      <div>Cost: five safety nets to maintain, and no one owned testing any of them.</div>
+      <div>Gives up: WAL archiving was off, so a lagging replica could only be rebuilt by wiping it.</div>
+      <div>Gives up: the only good copy was six hours old, so recovery cost six hours of writes.</div>
+    </div>
+    <p class="inside">The part I would copy is the restore test. A backup you have never restored is a guess.</p>
+    <p class="inside">Read this before you trust a backup you have never restored.</p>
+    <p class="backlink">Source: <a href="https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/">Postmortem of database outage of January 31</a>, GitLab Blog, February 10, 2017.</p>
+  </div>
+
+  <div class="incident" id="instacart" style="margin-top:14px">
+    <span class="tag pg">PostgreSQL</span>
+    <h3>Instacart: they split the database by domain, not by shard key</h3>
+    <div class="hooknum">
+      <div class="hn"><b>6 TB</b><span>RDS limit they were about to hit, raised to 12 TB before they finished.</span></div>
+      <div class="hn"><b>A few dozen</b><span>Tables needed by more than one domain, out of hundreds.</span></div>
+      <div class="hn"><b>2 databases</b><span>Customers and Fulfillment, one app talking to both.</span></div>
+    </div>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">Instacart ran its marketplace on two databases, a primary and an item catalog, and they were running out of space. The RDS limit was 6 TB, raised to 12 TB before they finished. Replicas already handled most of the reads, and the write load was manageable. Space was the urgent problem, and isolation was the other one. Instacart is a four-sided marketplace: customers, shoppers, retailers, and consumer packaged goods companies. If the fulfillment systems went down, shoppers could not work, and the company could not deliver orders.</p>
+    <div class="diagram"><p class="dcap">One database, two domains, then two databases</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>Before: one primary</h4><b>Hundreds of tables.</b> Four domains reading and writing the same tables. One outage hits everyone.</div>
+        <div class="vsbox actual"><h4>After: two databases</h4><b>Customers and Fulfillment.</b> Each domain owns its tables. Shared tables are copied one way.</div>
+      </div>
+      <div class="dflow" style="margin-top:12px">
+        <div class="dbox"><b>owning domain writes</b>one writer per table</div><span class="darrow">→</span>
+        <div class="dbox"><b>data pump publishes the change</b>after the write commits</div><span class="darrow">→</span>
+        <div class="dbox good"><b>copied table on the other side</b>read-only, checked by a sweeper</div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Only a few dozen tables crossed domains. That is what made the domain split possible.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">They examined their hundreds of tables and found only a few dozen were needed by more than one domain. They created a dedicated Fulfillment database to hold everything needed to complete an order. For each shared table they picked one owning domain, where the table and its writes live. Other domains got a copied table, read-only at the Postgres user level and in the app. They tried foreign data wrappers with materialized views first. The experiment was not a failure, but refreshing the views looked problematic at scale. So they built an application-level data pump: after a write commits, the model publishes the change over their pub/sub, and a consumer applies it to the copied table.</p>
+    <p class="inside">Moving a table took a fixed sequence: consolidate all writes into the owning domain, build the model in the new database, backfill the data with their pgsync tool, dual-write to both databases, then cut over in a single pull request. A sweeper job re-checks every copied model on a schedule, comparing rows by updated_at and id. Before cutover they compared both sides with a simple count and average id check on rows older than ten seconds.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">The split followed the domain boundary, not a shard key, because only a few dozen tables crossed domains. Sharding by key would have split tables that belonged together. Microservices would have meant the same split with more services to run. The data pump won over foreign data wrappers because the app controls exactly which changes each domain receives, and a domain can ignore updates it does not care about.</p>
+    <div class="tlist">
+      <div>Cost: eventual consistency. The copied table lags the master, so a read can be stale.</div>
+      <div>Cost: a sweeper to run forever, re-checking every copied model for drift.</div>
+      <div>Gives up: joins across the two databases. A query can no longer join a customers table to a fulfillment table in one place.</div>
+      <div>Cost: every table move is a project: consolidate writes, backfill, dual-write, cut over.</div>
+    </div>
+    <p class="inside">The part I would copy is the owning domain rule. One writer per table makes the copy simple, and the copy is the whole design.</p>
+    <p class="inside">Read this when one database holds two domains and you are running out of room.</p>
+    <p class="backlink">Source: <a href="https://tech.instacart.com/scaling-at-instacart-distributing-data-across-multiple-postgres-databases-with-rails-13b1e4eba202">Scaling at Instacart: Distributing Data Across Multiple Postgres Databases with Rails</a>, Instacart Engineering, 2018.</p>
   </div>
 </div></section>
 <section id="mysql" style="padding-top:6px"><div class="wrap">
@@ -301,14 +376,14 @@
 
   <div class="incident" id="dropbox-panda">
     <span class="tag my">MySQL</span>
-    <h3>Dropbox: one customer outgrew one shard, so they built a new store</h3>
+    <h3>Dropbox: one shard outgrew one machine, so they built a new store</h3>
     <h4 class="subhead">The problem</h4>
-    <p class="inside">Metadata lived in sharded MySQL: thousands of servers, tens of millions of queries per second at single digit millisecond latency. Then one tenant was going to outgrow a single shard. The shard key was the tenant, and the tenant was the size of a shard. No way to split one tenant.</p>
+    <p class="inside">Metadata lived in sharded MySQL: thousands of servers, tens of millions of queries per second at single digit millisecond latency. Then one shard was going to outgrow a single machine. The shard could not be split, and the machine could not grow. Expanding meant splitting every machine in two, doubling the fleet for a fraction more data.</p>
     <div class="diagram"><p class="dcap">One tenant outgrew one shard</p>
       <div class="vsgrid">
         <div class="vsbox usual"><h4>Before: sharded MySQL</h4>
           <div class="shardgrid"><span style="background:var(--problem-bg);border-color:var(--problem-line)"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          <p style="margin:8px 0 0;font-size:13px">One box is the big tenant, outgrowing its shard. The rest sit idle.</p>
+          <p style="margin:8px 0 0;font-size:13px">One shard is the outlier, outgrowing its machine. The rest sit idle.</p>
         </div>
         <div class="vsbox actual"><h4>After: Panda ranges</h4>
           <div class="dflow">
@@ -317,21 +392,21 @@
             <div class="dbox"><b>range 3</b></div>
             <div class="dbox"><b>range 4</b></div>
           </div>
-          <p style="margin:8px 0 0;font-size:13px">One tenant split into many ranges. Capacity grows a range at a time.</p>
+          <p style="margin:8px 0 0;font-size:13px">One shard split into many ranges. Capacity grows a range at a time.</p>
         </div>
       </div>
     </div>
     <h4 class="subhead">The solution</h4>
-    <p class="inside">Panda: a distributed key value store, built in house. One tenant splits many times into smaller ranges. Sits between Edgestore and sharded MySQL. ACID transactions, including atomic cross shard transactions through two phase commit. Incremental capacity growth and rebalancing.</p>
+    <p class="inside">Panda: a distributed key value store, built in house. The key space splits many times into smaller ranges. Sits between Edgestore and sharded MySQL. ACID transactions, including atomic cross shard transactions through two phase commit. Incremental capacity growth and rebalancing.</p>
     <h4 class="subhead">Let's talk about the design</h4>
-    <p class="inside">No sharded design can split one tenant, so the fix had to be a store that splits ranges. Dropbox built Panda in house instead of trying to stretch MySQL further.</p>
+    <p class="inside">No sharded design can split one shard, so the fix had to be a store that splits ranges. Dropbox built Panda in house instead of trying to stretch MySQL further.</p>
     <div class="tlist">
-      <div>A second store to run, forever.</div>
-      <div>Two phase commit across shards, for atomic cross shard writes.</div>
+      <div>Cost: a second store to run, forever.</div>
+      <div>Cost: two phase commit across shards, for atomic cross shard writes.</div>
     </div>
     <p class="inside">The part I would copy is splitting by range. That is what kept the move safe.</p>
-    <p class="inside">Read this when one tenant can outgrow a shard.</p>
-    <p class="backlink">Source: <a href="https://youtu.be/8TH3iZgG1PE">5 Lessons from 5 Years of Building Databases at Scale</a>, Sammy Steele, Systems Distributed '24. Cross-check: <a href="https://dropbox.tech/infrastructure/panda-metadata-stack-petabyte-scale-transactional-key-value-store">Panda: Metadata Stack @ Petabyte Scale</a>, Dropbox Tech, November 3, 2022.</p>
+    <p class="inside">Read this when one shard can outgrow a machine.</p>
+    <p class="backlink">Source: <a href="https://dropbox.tech/infrastructure/panda-metadata-stack-petabyte-scale-transactional-key-value-store">Future-proofing our metadata stack with Panda, a scalable key-value store</a>, Dropbox Tech, November 3, 2022. Companion: <a href="https://youtu.be/8TH3iZgG1PE">5 Lessons from 5 Years of Building Databases at Scale</a>, Sammy Steele, Systems Distributed '24.</p>
   </div>
 
   <div class="incident" id="github-orchestrator">
@@ -437,6 +512,50 @@
     <p class="backlink">Source: <a href="https://shopify.engineering/horizontally-scaling-the-rails-backend-of-shop-app-with-vitess">Horizontally scaling the Rails backend of Shop app with Vitess</a>, Shopify Engineering, January 17, 2024.</p>
   </div>
 </div></section>
+<section id="mongodb" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">MongoDB · one story</div>
+  <h2>MongoDB: the cache is the database</h2>
+  <p class="sub">One story so far, and it is the classic MongoDB failure: the working set outgrows RAM, the cache stalls, and the connection storm finishes the job. The fix is timeouts, throttling, and reads off the primary, not a bigger instance.</p>
+
+  <div class="incident" id="fortnite">
+    <span class="tag mo">MongoDB</span>
+    <h3>Fortnite: a release changed the call pattern, and the cache ran out</h3>
+    <div class="hooknum">
+      <div class="hn"><b>20:44 to 14:30 UTC</b><span>Account service down, April 11 to 12, 2018.</span></div>
+      <div class="hn"><b>7 attempts</b><span>To bring services back online over the next 17 hours.</span></div>
+      <div class="hn"><b>4.5x</b><span>Page evictions on the primary above baseline before issues started.</span></div>
+      <div class="hn"><b>29 GB</b><span>Dirty cache on the primary when mongod started having communication issues.</span></div>
+    </div>
+    <h4 class="subhead">The problem</h4>
+    <p class="inside">On April 11, 2018, Fortnite shipped version 3.5, and logins stopped working for all players. The MongoDB database behind the account service had degraded until the account service was unavailable, from 20:44 UTC on April 11 to 14:30 UTC on April 12. A change in call patterns in 3.5 slowly pushed cache reads up over hours. The dataset no longer fit in RAM, so pages were evicted and read back from disk faster and faster, until evictions ran 4.5 times above baseline. Dirty cache, data written to RAM and not yet to disk, built up to about 29 GB, and the primary could no longer keep up with both request load and replication load. The cache pressure was enough to overload the primary and trigger leader elections.</p>
+    <div class="diagram"><p class="dcap">The cascade: slow queries became a connection storm</p>
+      <div class="dflow">
+        <div class="dbox"><b>3.5 call pattern</b>cache reads climb for hours</div><span class="darrow">→</span>
+        <div class="dbox"><b>cache pressure</b>evictions 4.5x baseline</div><span class="darrow">→</span>
+        <div class="dbox"><b>slow queries</b>clients open new connections</div><span class="darrow">→</span>
+        <div class="dbox hot"><b>connection storm</b>max connections hit, nodes drop</div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="hbar-row"><span class="hbar-label">Page evictions, baseline</span><div class="hbar-track"><i class="hbar-fill" style="width:22%"></i></div><b class="mono">1x</b></div>
+        <div class="hbar-row"><span class="hbar-label">Page evictions, at the tipping point</span><div class="hbar-track"><i class="hbar-fill warn" style="width:100%"></i></div><b class="mono">4.5x</b></div>
+      </div>
+      <p class="dcap" style="margin-top:10px">Short timeouts turned slow queries into new connections. New connections turned a slow database into an unreachable one.</p>
+    </div>
+    <h4 class="subhead">The solution</h4>
+    <p class="inside">They tried to bring services back seven times over 17 hours, and each attempt ran into the same cascade. The fixes that stuck: the socket timeout went from 200 ms to 30 seconds, so the app stopped closing connections at the first slow query and churning new ones. Queries got a 500 ms maxTimeMS instead, so the database kills a slow operation and keeps the connection open. The app moved behind mongos, the shard router, which has more connection controls than the driver, plus a throttle on opening new connections to the database, about 50 at a time. A code path that pinned specific reads to the primary was changed to read from secondaries.</p>
+    <p class="inside">The Friend Suggestions bug, re-querying the list on every friends list refresh, had pushed one API call to 300 times its normal load, and the hotfix tunables meant to control it were broken. Version 3.5.1 fixed both. Ephemeral data, short-lived single-use OAuth authorization codes, moved out of MongoDB into Redis. Better caching of account data cut database lookups at least in half. Recovery meant removing traffic and adding clients back a little at a time from a cold start. Two replica set members were never explained: their CPU hit 100 percent, almost all of it in kernel time, logging stopped, and the process looked hung. Those two were isolated and replaced.</p>
+    <h4 class="subhead">Let's talk about the design</h4>
+    <p class="inside">The storm was the killer, not the data size. A bigger instance would have held more cache, but the connection churn would still have knocked nodes offline once the database slowed. Throttling connections at mongos protected the replica set's own communication, which is what kept members from dropping out.</p>
+    <div class="tlist">
+      <div>Cost: mongos in the path, another hop between the app and the database.</div>
+      <div>Cost: a 30 second socket timeout means a slow query holds its connection longer before the client gives up.</div>
+      <div>Gives up: reads moved to secondaries can be stale, so anything that needs the freshest account data stays on the primary.</div>
+    </div>
+    <p class="inside">The part I would copy is the connection throttle. When the database slows down, the client must not be allowed to make it worse.</p>
+    <p class="inside">Read this when your timeouts are short and your connections spike under load.</p>
+    <p class="backlink">Source: <a href="https://www.fortnite.com/news/postmortem-of-service-outage-4-12">Postmortem of Service Outage 4/11/2018 - 4/12/2018</a>, Fortnite (Epic Games), April 26, 2018.</p>
+  </div>
+</div></section>
 <section style="padding-top:6px"><div class="wrap">
   <p class="sub"><b style="color:var(--ink)">Before you leave, check this:</b> pick the story closest to your own system, and name the one decision in it you have not made yet. The shard key, the failover guardrail, the rollback path, the index shape. That decision is the incident you have not had yet. The hosting side of the same question, on-prem, EC2, Kubernetes, or managed, is on the <a href="../cloud/index.html">Cloud page</a>.</p>
 </div></section>
@@ -445,7 +564,7 @@
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
-  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
   <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>

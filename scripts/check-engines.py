@@ -2,8 +2,11 @@
 """Check the site stays consistent with assets/data/engines.json.
 
 Verifies three things, and nothing else:
-1. Every HTML page's footer "Checked against" stamp matches the versions
-   and month in engines.json.
+1. Every HTML page's footer "Checked against docs" stamp matches the
+   versions and month in engines.json. (The "Measured on" claim lives
+   only on the Decisions page, where it is true for that page's
+   benchmarks; the shared footer makes no site-wide measured claim,
+   because other pages carry numbers of unverified provenance.)
 2. Each shared number in engines.json appears verbatim on its page.
 3. Each engine page names its own version from engines.json.
 
@@ -25,13 +28,17 @@ def main():
     data = json.loads((root / "assets/data/engines.json").read_text())
     versions = data["versions"]
     stamp = (
-        f"Checked against PostgreSQL {versions['postgresql']}, "
+        f"Checked against docs: PostgreSQL {versions['postgresql']}, "
         f"MySQL {versions['mysql']}, MongoDB {versions['mongodb']}, "
         f"{data['stamp_month']}."
     )
     errors = []
 
-    pages = sorted(root.rglob("*.html"))
+    # The template holds placeholders, not a rendered stamp: skip it.
+    pages = sorted(
+        p for p in root.rglob("*.html")
+        if p.relative_to(root).parts[:2] != ("assets", "templates")
+    )
     for page in pages:
         text = page.read_text()
         m = re.search(r"Checked against [^<]*\.", text)

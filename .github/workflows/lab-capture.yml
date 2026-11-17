@@ -1,0 +1,73 @@
+name: Lab capture
+
+# Manual only. Starts the same three engines as the verify-commands
+# workflow, seeds the same demo schema, then runs pg_waldump on a real
+# commit, mysqlbinlog on a real binlog, and a real oplog read, and
+# uploads the captured output as an artifact. Nothing here commits or
+# pushes. After it runs, paste the captured output into the Decisions
+# page samples by hand in a later round, replacing the illustrative
+# samples that are labelled as such on the page.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lab-capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start PostgreSQL 18
+        run: |
+          docker run -d --name ci-pg \
+            -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=shop \
+            postgres:18 -c shared_preload_libraries=pg_stat_statements
+          until docker exec ci-pg pg_isready -U postgres -d shop; do sleep 2; done
+
+      - name: Start MySQL 8.4
+        run: |
+          docker run -d --name ci-my \
+            -e MYSQL_ROOT_PASSWORD=rootpass -e MYSQL_DATABASE=shop \
+            mysql:8.4 --server-id=1 --log-bin=mysql-bin \
+            --gtid-mode=ON --enforce-gtid-consistency=ON --binlog-format=ROW
+          until docker exec ci-my mysqladmin ping -uroot -prootpass --silent; do sleep 2; done
+
+      - name: Start MongoDB 8 (single-node replica set)
+        run: |
+          docker run -d --name ci-mo mongo:8.0 mongod --replSet rs0 --bind_ip_all
+          until docker exec ci-mo mongosh --quiet --eval 'db.runCommand({ping: 1}).ok'; do sleep 2; done
+          docker exec ci-mo mongosh --quiet --eval 'rs.initiate()'
+          until docker exec ci-mo mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; do sleep 2; done
+
+      - name: Seed the demo schema
+        run: |
+          docker exec -i ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 < scripts/ci-seed.sql
+          docker exec -i ci-my mysql -uroot -prootpass shop < scripts/ci-seed-mysql.sql
+          docker cp scripts/ci-seed-mongo.js ci-mo:/tmp/ci-seed-mongo.js
+          docker exec ci-mo mongosh --quiet /tmp/ci-seed-mongo.js
+
+      - name: Capture pg_waldump on a real commit
+        run: |
+          mkdir -p lab-output
+          docker exec ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 -c "INSERT INTO users (name, email, status, amount) VALUES ('Lab', 'lab@example.com', 'active', 1.00);"
+          docker exec ci-pg bash -c "ls /var/lib/postgresql/data/pg_wal/00000001000000000000000* | tail -1 | xargs -I{} pg_waldump {} > /tmp/pg_waldump.txt"
+          docker cp ci-pg:/tmp/pg_waldump.txt lab-output/pg_waldump.txt
+
+      - name: Capture mysqlbinlog on a real binlog
+        run: |
+          docker exec ci-my mysql -uroot -prootpass shop -e "INSERT INTO users (name, email, status, amount) VALUES ('Lab', 'lab@example.com', 'active', 1.00);"
+          docker exec ci-my bash -c "ls /var/lib/mysql/mysql-bin.00000* | tail -1 | xargs -I{} mysqlbinlog {} > /tmp/mysqlbinlog.txt"
+          docker cp ci-my:/tmp/mysqlbinlog.txt lab-output/mysqlbinlog.txt
+
+      - name: Capture a real oplog read
+        run: |
+          docker exec ci-mo mongosh --quiet shop --eval 'db.users.insertOne({ _id: 999, name: "Lab", email: "lab@example.com", status: "active", amount: 1 })'
+          docker exec ci-mo mongosh --quiet local --eval 'printjson(db.oplog.rs.find({ns: "shop.users"}).sort({$natural: -1}).limit(3).toArray())' > lab-output/oplog.txt
+
+      - name: Upload captured lab output
+        uses: actions/upload-artifact@v4
+        with:
+          name: lab-capture
+          path: lab-output/

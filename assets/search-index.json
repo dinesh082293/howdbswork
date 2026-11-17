@@ -507,7 +507,7 @@
   "t": "One incident I keep coming back to",
   "u": "mysql/index.html",
   "s": "MySQL",
-  "k": "incident disk full binlog cannot purge dead replica retention 70 percent"
+  "k": "incident disk full binlog retention purge write rate 70 percent"
  },
  {
   "t": "Before you leave, check this",
@@ -1170,10 +1170,10 @@
   "k": "start here path chooser 10 minutes 30 minutes 2 hours guided path"
  },
  {
-  "t": "Thirteen times a real database broke",
+  "t": "Sixteen times a real database broke",
   "u": "index.html#stories-strip",
   "s": "Home",
-  "k": "stories real incidents uber notion adyen figma dropbox github slack shopify"
+  "k": "stories real incidents uber notion adyen figma dropbox github slack shopify epic fortnite gitlab instacart mongodb"
  },
  {
   "t": "What's new",
@@ -1188,10 +1188,10 @@
   "k": "seed sql users table asha download reproducible examples"
  },
  {
-  "t": "Real stories: what broke at Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma and Dropbox",
+  "t": "Real stories: what broke at Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart",
   "u": "stories/index.html",
   "s": "Stories",
-  "k": "stories real incidents uber github notion slack shopify adyen figma dropbox vitess orchestrator sharding failover dbproxy panda reshard"
+  "k": "stories real incidents uber github notion slack shopify adyen figma dropbox epic fortnite gitlab instacart mongodb vitess orchestrator sharding failover dbproxy panda reshard"
  },
  {
   "t": "Uber: one update became four writes",
@@ -1254,10 +1254,10 @@
   "k": "figma postgres sharding dbproxy pgbouncer shard key colo scatter gather"
  },
  {
-  "t": "Dropbox: one customer outgrew one shard",
+  "t": "Dropbox: one shard outgrew one machine",
   "u": "stories/index.html#dropbox-panda",
   "s": "Stories",
-  "k": "dropbox panda mysql sharding tenant mit spanner key value store"
+  "k": "dropbox panda mysql sharding ranges mit spanner key value store"
  },
  {
   "t": "Notion: the re-shard, 32 databases to 96, with zero downtime",
@@ -1270,6 +1270,24 @@
   "u": "stories/index.html#notion-hudi",
   "s": "Stories",
   "k": "notion hudi debezium kafka spark warehouse CDC fivetran snowflake upsert"
+ },
+ {
+  "t": "GitLab: five backups, none of them worked",
+  "u": "stories/index.html#gitlab",
+  "s": "Stories",
+  "k": "gitlab postgres backup pg_dump restore rm wal archiving 300GB"
+ },
+ {
+  "t": "Instacart: they split the database by domain, not by shard key",
+  "u": "stories/index.html#instacart",
+  "s": "Stories",
+  "k": "instacart postgres sharding domain data pump copied tables dual-write pgsync"
+ },
+ {
+  "t": "Fortnite: a release changed the call pattern, and the cache ran out",
+  "u": "stories/index.html#fortnite",
+  "s": "Stories",
+  "k": "fortnite mongodb epic cache connection storm mongos socketTimeoutMS maxTimeMS replica set"
  },
  {
   "t": "Hosting PostgreSQL: on-prem, EC2, Kubernetes, managed",
@@ -1288,6 +1306,66 @@
   "u": "cloud/index.html#mo-hosting",
   "s": "Cloud",
   "k": "mongodb hosting on-prem EC2 kubernetes operator atlas replica set sharded"
+ },
+ {
+  "t": "Decisions",
+  "u": "decisions/index.html",
+  "s": "Decisions",
+  "k": "decisions commit path durability synchronous replication failover backup PITR restore online schema change capacity multi-region multi-tenancy pooling observability cost"
+ },
+ {
+  "t": "Decision 1, Commit path and durability (planned)",
+  "u": "decisions/index.html#decision-1",
+  "s": "Decisions",
+  "k": "commit path durability log fsync WAL redo journal"
+ },
+ {
+  "t": "Decision 3, Backup, PITR, and restore time (planned)",
+  "u": "decisions/index.html#decision-3",
+  "s": "Decisions",
+  "k": "backup PITR point-in-time recovery restore time"
+ },
+ {
+  "t": "Decision 4, Online schema change (planned)",
+  "u": "decisions/index.html#decision-4",
+  "s": "Decisions",
+  "k": "online schema change migration zero downtime"
+ },
+ {
+  "t": "Decision 5, Capacity planning and growth curves (planned)",
+  "u": "decisions/index.html#decision-5",
+  "s": "Decisions",
+  "k": "capacity planning growth curves sizing"
+ },
+ {
+  "t": "Decision 6, Multi-region and latency budgets (planned)",
+  "u": "decisions/index.html#decision-6",
+  "s": "Decisions",
+  "k": "multi-region latency budgets cross-region"
+ },
+ {
+  "t": "Decision 7, Multi-tenancy and the noisy neighbor (planned)",
+  "u": "decisions/index.html#decision-7",
+  "s": "Decisions",
+  "k": "multi-tenancy noisy neighbor tenant isolation"
+ },
+ {
+  "t": "Decision 8, Connection management and pooling (planned)",
+  "u": "decisions/index.html#decision-8",
+  "s": "Decisions",
+  "k": "connection management pooling pgbouncer"
+ },
+ {
+  "t": "Decision 9, Observability (planned)",
+  "u": "decisions/index.html#decision-9",
+  "s": "Decisions",
+  "k": "observability metrics logs traces monitoring"
+ },
+ {
+  "t": "Decision 10, Cost model (planned)",
+  "u": "decisions/index.html#decision-10",
+  "s": "Decisions",
+  "k": "cost model pricing spend"
  },
  {
   "t": "Synchronous replication and failover",
