@@ -29,6 +29,7 @@
     <div class="hn"><b>1,250,000 pages</b><span>The same lookup with no index: a sequential scan of a 10 GB table file at 8 KB per page. At 3 GB/s of NVMe throughput that is 3.3 seconds of pure I/O before a single row is evaluated.</span></div>
     <div class="hn"><b>1 fsync</b><span>What a commit actually costs: one sequential write of the log record, forced to disk. Not the data page. The log. <span class="mono">pg_wal</span>, <span class="mono">#innodb_redo/#ib_redo0</span>, <span class="mono">WiredTigerLog.*</span>. Everything else is deferred.</span></div>
   </div>
+  <div class="diagram"><p class="dcap">The whole subject of this page, to scale</p><div class="hbar-row"><span class="hbar-label">Index lookup, 10M rows</span><div class="hbar-track"><i class="hbar-fill" style="width:1%"></i></div><b class="mono">4 buffers</b></div><div class="hbar-row"><span class="hbar-label">Full scan, 10 GB table</span><div class="hbar-track"><i class="hbar-fill warn" style="width:100%"></i></div><b class="mono">1,250,000 pages, 3.3 s</b></div><p class="dcap" style="margin-top:10px">The 4-buffer bar is drawn at 1% so you can see it. At true scale it is 0.0003% as wide as the scan bar. Tree depth grows logarithmically. Scan cost grows linearly.</p></div>
   <h2 id="rules">Three rules that run every database on this site</h2>
   <div class="jobs">
     <div class="job"><div class="num">1</div><h3>Durability is an ordering rule, not a feature</h3><p>The log record reaches disk before the data page is required to. That one ordering rule is why a commit survives a power cut that kills everything in memory. Recovery is replay, and replay needs only the log.</p><div class="real">PG: pg_wal/ · MySQL: #innodb_redo/#ib_redo0 (redo) · MongoDB: journal/WiredTigerLog.*</div></div>
@@ -52,6 +53,7 @@
   <div class="kicker">Start here · for the beginner</div>
   <h2>What each database actually is</h2>
   <p class="sub">Three programs, one job: keep data in files on disk, serve it from memory, and prove that a commit survived. They differ in exactly three physical choices: how the data file is organized, how many logs there are, and where old row versions live. Every behavior difference in the rest of this page follows from those three choices. Start with the one plain line per engine. The architecture, the log files, the people, and the outage parameters follow.</p>
+  <table class="breaks"><thead><tr><th>Engine</th><th>Data file</th><th>Logs</th><th>Old versions live</th></tr></thead><tbody><tr><td>PostgreSQL</td><td>Heap files in <span class="mono">base/</span>, 8 KB pages</td><td>WAL, <span class="mono">pg_wal/</span></td><td>Old tuples in the heap, removed by VACUUM</td></tr><tr><td>MySQL · InnoDB</td><td><span class="mono">users.ibd</span>, 16 KB pages, clustered</td><td>Redo plus binlog</td><td>Undo records, removed by purge</td></tr><tr><td>MongoDB · WiredTiger</td><td><span class="mono">collection-*.wt</span>, compressed blocks</td><td>Journal plus oplog</td><td>Timestamped versions in cache, removed by reconciliation</td></tr></tbody></table>
 
   <div class="herocta" style="margin-bottom:22px"><a class="btn primary" href="../postgresql/index.html">PostgreSQL, in one line →</a><a class="btn" href="../mysql/index.html">MySQL · InnoDB →</a><a class="btn" href="../mongodb/index.html">MongoDB · WiredTiger →</a></div>
 <h3 style="margin:26px 0 4px;font-size:19px">Who manages what, on-prem</h3>
@@ -78,6 +80,7 @@
       <li>Latency evidence when the DBA says "the disk is slow": device-level stats to prove or disprove it</li></ul></div>
   </div>
   <p style="font-size:14px;color:var(--muted);margin:0 0 22px"><b style="color:var(--ink)">The seams, where incidents actually live:</b> a full disk is a storage problem until the cause turns out to be WAL the DBA's archiving failed to move. A "slow database" is a DBA problem until device latency shows the volume is saturated. Run the check in your layer first, with numbers, before you escalate across the seam.</p>
+  <table class="breaks"><thead><tr><th>Symptom</th><th>Looks like</th><th>Check first</th></tr></thead><tbody><tr><td>Full disk</td><td>A storage problem</td><td>WAL archiving, the DBA side, before blaming the volume</td></tr><tr><td>"Slow database"</td><td>A DBA problem</td><td>Device latency, the storage side, before blaming the queries</td></tr></tbody></table>
 
   <h3 style="margin:26px 0 4px;font-size:19px">The standard outage runbook: same steps, every engine</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Engines differ. The order of operations does not. These eight steps are the checklist triage, expanded into the full incident arc. The step most often skipped is step 7. That is why emergency parameter values are still in production years later.</p>
@@ -164,6 +167,10 @@
   <div class="kicker">Every operation · end to end, like the insert</div>
   <h2>The other three journeys: read, update, delete, and a crash</h2>
   <p class="sub">Same path as the insert. Parse, index, page, log. Writes append to the log before they modify any page. Reads append to no log at all. Crash recovery is a function of exactly one input, the log written since the last checkpoint. The default max_wal_size of 1 GB caps that log: at 50 MB/s of WAL, the budget fills in about 20 seconds, so a checkpoint fires about every 20 seconds and at most 1 GB replays. How long that replay takes is 1 GB divided by your replay speed, and the server log tells you the speed: during recovery PostgreSQL logs a "redo starts at" line and a "redo done at" line, each timestamped, and the difference between their LSNs is the bytes replayed. Bytes divided by seconds is your replay speed. That number, not the crash itself, sets your recovery time.</p>
+  <div class="diagram"><p class="dcap">Checkpoint math, from the defaults</p><div class="dflow">
+    <div class="dbox"><b>Log budget</b>1 GB, max_wal_size</div><span class="darrow">÷</span>    <div class="dbox"><b>WAL rate</b>50 MB/s</div><span class="darrow">=</span>    <div class="dbox good"><b>Checkpoint</b>about every 20 s</div>
+  </div></div>
+  <div class="fnote"><b>Replay time:</b> 1 GB divided by your replay speed. The server log prints a "redo starts at" line and a "redo done at" line, each timestamped. Bytes between the two LSNs, divided by seconds between the two lines, is your replay speed.</div>
   <div class="opgrid">
     <div class="opcard">
       <h3>SELECT: reading one row</h3>
@@ -191,6 +198,9 @@
         <div class="opstep"><div class="dotline"><div class="odot">6</div><div class="oline"></div></div><p><b>COMMIT, log forced to disk, visible.</b> The old version stays until no snapshot needs it, then VACUUM / purge removes it. The replica replays the same change from the WAL / binlog / oplog.</p></div>
       </div>
       <div class="opnote">Compare to INSERT: same road, one extra idea. The old version must survive until old readers finish.</div>
+  <div class="diagram"><p class="dcap">UPDATE: the old version is not gone yet</p><div class="dflow">
+    <div class="dbox"><b>UPDATE</b>writes a new version</div><span class="darrow">→</span>    <div class="dbox"><b>Old version</b>stays, old readers still see it</div><span class="darrow">→</span>    <div class="dbox"><b>No snapshot needs it</b>cleanup horizon passes</div><span class="darrow">→</span>    <div class="dbox good"><b>Removed</b>VACUUM / purge</div>
+  </div></div>
     </div>
     <div class="opcard">
       <h3>DELETE: removing row 42</h3>
@@ -205,6 +215,9 @@
         <div class="opstep"><div class="dotline"><div class="odot">6</div><div class="oline"></div></div><p><b>Much later: real erasure.</b> When no snapshot can still see it, VACUUM / purge / the next WiredTiger checkpoint removes the row bytes and its index entries.</p></div>
       </div>
       <div class="opnote">This is why a DELETE of 10 million rows returns in seconds and the file does not shrink by one byte. Step 3 writes one stamp per row. Step 6, the physical removal, is deferred to a background process. Its throughput decides when the space comes back. A table that is deleted from heavily and never vacuumed or purged grows forever while its live row count stays flat.</div>
+  <div class="diagram"><p class="dcap">DELETE: marked, not erased</p><div class="dflow">
+    <div class="dbox"><b>DELETE</b>stamps the row: xmax / delete flag</div><span class="darrow">→</span>    <div class="dbox"><b>New readers</b>see nothing</div><span class="darrow">→</span>    <div class="dbox"><b>Bytes</b>still in the file</div><span class="darrow">→</span>    <div class="dbox good"><b>Later</b>VACUUM / purge / checkpoint removes them</div>
+  </div></div>
     </div>
     <div class="opcard">
       <h3>CRASH + RESTART: the log files earn their keep</h3>
@@ -219,6 +232,9 @@
         <div class="opstep"><div class="dotline"><div class="odot">6</div><div class="oline"></div></div><p><b>Replicas re-sync</b> from wherever they stopped: WAL LSN (PostgreSQL), GTID (MySQL), oplog timestamp (MongoDB).</p></div>
       </div>
       <div class="opnote">The rule that makes all of this work is INSERT step 5. The log reaches disk before the data page ever needs to. Measure your own replay speed after a real crash: the server log prints a "redo starts at" line and a "redo done at" line, each timestamped, and the "redo done at" line prints its own elapsed time. Bytes between the two LSNs, divided by seconds between the two lines, is your replay speed.</div>
+  <div class="diagram"><p class="dcap">Measure your own replay speed</p><div class="dflow">
+    <div class="dbox"><b>"redo starts at"</b>LSN and time</div><span class="darrow">→</span>    <div class="dbox"><b>"redo done at"</b>LSN and time</div><span class="darrow">→</span>    <div class="dbox good"><b>Replay speed</b>bytes between LSNs ÷ seconds between lines</div>
+  </div></div>
     </div>
   </div>
 </div></section>
@@ -226,6 +242,7 @@
   <div class="kicker">Real examples</div>
   <h2>3 real problems, 3 different answers</h2>
   <p class="sub">Each workload has a dominant cost. Correctness under concurrency, read volume, or write distribution. Each engine's layout prices those costs differently. The settings named are the ones that move the number.</p>
+  <table class="breaks"><thead><tr><th>Workload</th><th>Dominant cost</th><th>Answer</th></tr></thead><tbody><tr><td>Payments: handling money</td><td>Correctness under concurrency</td><td>PostgreSQL</td></tr><tr><td>Product catalogue: lots of browsing</td><td>Read volume, almost nobody buying</td><td>MySQL plus read replicas, or MongoDB</td></tr><tr><td>User profiles: users in 40 countries</td><td>Write distribution, data close to each user</td><td>MongoDB, sharded by region</td></tr></tbody></table>
   <div class="scen">
     <div class="scencard"><h4>Payments: handling money</h4>
       <p class="prob">Problem: Never lose or double-count a single payment.</p>
@@ -453,6 +470,9 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
 
   </div>
   <p style="font-size:14px;color:var(--muted);margin:16px 0 0"><b style="color:var(--ink)">The pattern in all eight:</b> the usual suggestion treats the loudest symptom. Add hardware, raise a limit, restart. The check that works measures first. <span class="mono">pg_stat_activity</span>, <span class="mono">SHOW PROCESSLIST</span>, <span class="mono">db.currentOp()</span> for what is running right now. The slow log and <span class="mono">pg_stat_statements</span> for what is slow in total. <span class="mono">EXPLAIN ANALYZE</span> for why this one query. Run them in that order.</p>
+  <div class="diagram"><p class="dcap">The three checks, in order</p><div class="dflow">
+    <div class="dbox"><b>1 · What is running</b>pg_stat_activity / SHOW PROCESSLIST / db.currentOp()</div><span class="darrow">→</span>    <div class="dbox"><b>2 · What is slow in total</b>pg_stat_statements / slow log / profiler</div><span class="darrow">→</span>    <div class="dbox good"><b>3 · Why this one query</b>EXPLAIN ANALYZE / explain("executionStats")</div>
+  </div></div>
 </div></section>
 <section id="design" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Design doc · which app sits where</div>
@@ -460,6 +480,9 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
   <p class="sub">"Which database?" is the wrong question. "Which workload, at what volume, with what correctness requirement?" is the one you can answer. Each workload below is stated with the property that decides it: access pattern, consistency requirement, retention shape. When two workloads with incompatible properties share one engine, the failure does not appear at launch. It appears in the incident cards above, at the volume where the properties start to conflict.</p>
 
   <div class="problem"><b class="label">Problem</b><div><p>One database forced to serve OLTP, analytics, search, and cache workloads degrades all four. Measurably, and in a predictable order.</p><small>The analytical scan evicts the OLTP working set first (incident #1), then its long snapshot pins cleanup (incident #5), then its result set pressures the pool (incident #2). Match each workload to its natural home first. Argue about vendors second.</small></div></div>
+  <div class="diagram"><p class="dcap">One database, four workloads: the predictable order</p><div class="dflow">
+    <div class="dbox"><b>1</b>analytical scan evicts the OLTP working set (incident 1)</div><span class="darrow">→</span>    <div class="dbox"><b>2</b>long snapshot pins cleanup (incident 5)</div><span class="darrow">→</span>    <div class="dbox good"><b>3</b>result set pressures the pool (incident 2)</div>
+  </div></div>
 
   <div class="workgrid">
     <div class="workcard"><h4>OLTP: orders, payments, bookings, accounts</h4><p class="fit">→ PostgreSQL or MySQL (relational, ACID)</p><p>Many small reads and writes, strict correctness, joins across entities, constraints that must hold under concurrency. This is the home workload of everything above.</p><p class="ex">Real examples: checkout &amp; ledger, airline reservations, SaaS billing. Start here for almost every product.</p></div>
@@ -491,6 +514,9 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
 
   <h2 style="margin-top:36px;font-size:26px">When to split across two databases</h2>
   <p class="sub">Splitting is not failure. Forcing one engine to do a job it is shaped wrong for is. The rule that keeps splits safe: <b style="color:var(--ink)">one source of truth. Every other copy is derived and rebuildable.</b></p>
+  <div class="diagram"><p class="dcap">One source of truth</p><div class="dflow">
+    <div class="dbox"><b>Source of truth</b>OLTP database</div><span class="darrow">→</span>    <div class="dbox"><b>Derived copies</b>search index, warehouse, cache</div><span class="darrow">→</span>    <div class="dbox good"><b>Rebuildable</b>lag is fine, loss is not</div>
+  </div></div>
   <div class="splitgrid">
     <div class="splitcard"><h4>OLTP + Search</h4><p>Postgres/MySQL holds orders and products (truth). Elasticsearch holds the search index, fed by WAL/binlog change capture. Search can lag seconds and can be rebuilt from the source at any time.</p><p><b style="color:var(--ink)">Split when:</b> search needs ranking, facets, typo tolerance beyond FTS.</p></div>
     <div class="splitcard"><h4>OLTP + Analytics</h4><p>Transactions on the primary; a replica or warehouse takes dashboards and reports. Analysts can run a 10-minute scan without causing incident #1 on checkout.</p><p><b style="color:var(--ink)">Split when:</b> the first dashboard query slows a customer-facing page. Not before.</p></div>
