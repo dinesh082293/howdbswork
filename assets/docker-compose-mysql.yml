@@ -1,0 +1,24 @@
+# MySQL 8.4 for the commands on the MySQL page.
+# Starts a shop database on port 3306. The command flags match the site:
+# binlog on (SHOW BINLOG EVENTS needs it) and GTID on (SELECT @@gtid_executed needs it).
+# Run: docker compose -f docker-compose-mysql.yml up -d
+# Stop: docker compose -f docker-compose-mysql.yml down
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: howdbswork-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: shop
+      MYSQL_DATABASE: shop
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    command:
+      - --server-id=1
+      - --log-bin=mysql-bin
+      - --gtid-mode=ON
+      - --enforce-gtid-consistency=ON
+      - --binlog-format=ROW
+volumes:
+  mysql-data:

@@ -30,7 +30,7 @@
   <div class="incident" id="uber">
     <span class="tag pg">PostgreSQL</span>
     <h3>Uber: one update became four writes, and the WAL crossed an ocean</h3>
-    <p class="inside">Uber kept its trip data on one Postgres instance in early 2014. Trip growth ate disk so fast that the team expected to run out of room before the end of the year. The database would stop, not slow down.</p>
+    <p class="inside">Uber started on Postgres. One monolithic backend, one database holding the trip data. As the company grew, the database became the constraint. The post names five limitations: inefficient writes, inefficient replication, table corruption, poor replica MVCC, and hard upgrades. The first two are the expensive ones, and they share one root cause.</p>
     <div class="diagram"><p class="dcap">One logical update, four physical writes</p>
       <div class="fanout">
         <div class="dbox"><b>1 logical UPDATE</b>one row changes</div>
@@ -125,7 +125,7 @@
   <div class="incident" id="notion-gin" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Notion again: the index existed, and the planner ignored it</h3>
-    <p class="inside">Same company, different week. Notion ran one large Postgres database on RDS from 2015 to 2020. A new feature was already 20 percent of the application's query load before it shipped to everyone. One of its queries filtered JSON on space_id and permission.</p>
+    <p class="inside">Same company, a different problem. Notion ran one large Postgres database on RDS from 2015 to 2020. A new feature was already 20 percent of the application's query load before it shipped to everyone. One of its queries filtered JSON on space_id and permission.</p>
     <div class="diagram"><p class="dcap">Same query, two index shapes</p>
       <div class="dflow">
         <div class="dbox"><b>GIN index existed</b>on space_id and permission</div><span class="darrow">→</span>
@@ -140,7 +140,7 @@
     </div>
     <p class="inside">The check showed a GIN index already existed on those columns. The planner was not using it on the development database. Poor cardinality and stale statistics made the planner skip it. The fix was a different index shape. A GIN index with jsonb_path_ops fits containment queries on JSON better than the default GIN shape.</p>
     <p class="inside">The query went from about 5000 ms to about 600 ms. That is more than 8 times faster. Staging comparisons showed no mismatches, so it went to production cleanly.</p>
-    <p class="inside">Sourcing note: this one comes from a pganalyze case study, not from Notion's own blog. It quotes named Notion engineers, and the numbers line up with the sharding post's timeline. I keep it because the lesson is checkable. The index existed, the planner ignored it, and the fix was the index shape, not a bigger instance. When a query is slow, read the plan before you buy hardware.</p>
+    <p class="inside">Sourcing note: this one comes from a pganalyze case study, not from Notion's own blog. It quotes named Notion engineers. I keep it because the lesson is checkable. The index existed, the planner ignored it, and the fix was the index shape, not a bigger instance. When a query is slow, read the plan before you buy hardware.</p>
     <p class="backlink">Source: <a href="https://pganalyze.com/customers/how-notion-runs-postgres-at-scale-on-amazon-rds">How Notion Runs PostgreSQL at Scale on Amazon RDS with pganalyze</a>, pganalyze, February 27, 2025.</p>
   </div>
   <div class="incident" id="adyen" style="margin-top:14px">
@@ -217,7 +217,7 @@
     <span class="tag pg">PostgreSQL</span>
     <h3>Figma: they stayed on Postgres and built the sharding layer themselves</h3>
     <h4 class="subhead">The problem</h4>
-    <p class="inside">One Postgres instance, 2012 to 2020. No pooler. No replicas. Stack grew almost 100 times in four years. Some tables hit several terabytes and billions of rows. Vacuum hurt reliability. Biggest write tables neared the RDS IOPS ceiling. A table is the smallest unit of vertical partitioning. That lever was done. The database was not slow. It was out of moves. CockroachDB, TiDB, Spanner, Vitess: good systems. The move meant migrating the most critical data, rebuilding all operational knowledge, in months. NoSQL meant rewriting almost the whole backend. Honest note: the post gives no QPS, latency percentiles, exact shard counts, exact table sizes, first table name, team size, or cost. Those gaps stay open.</p>
+    <p class="inside">One Postgres instance. In 2020, Figma ran a single Postgres database on AWS's largest physical instance. Stack grew almost 100 times in four years. Some tables hit several terabytes and billions of rows. Vacuum hurt reliability. Biggest write tables neared the RDS IOPS ceiling. A table is the smallest unit of vertical partitioning. That lever was done. The database was not slow. It was out of moves. CockroachDB, TiDB, Spanner, Vitess: good systems. The move meant migrating the most critical data and rebuilding all operational knowledge. NoSQL meant rewriting almost the whole backend. Honest note: the post gives no QPS, latency percentiles, exact shard counts, exact table sizes, first table name, team size, or cost. Those gaps stay open.</p>
     <div class="diagram"><p class="dcap">DBProxy routing</p>
       <div class="dflow">
         <div class="dbox"><b>app</b>SQL query</div><span class="darrow">→</span>
@@ -238,7 +238,7 @@
       <p class="dcap" style="margin-top:10px">Logical views first. Rollout by percentage, rollback in seconds.</p>
     </div>
     <h4 class="subhead">The solution</h4>
-    <p class="inside">DBProxy: Go service between the app and PgBouncer. Parses SQL to an AST, pulls the shard key, routes the query. No key means scatter gather to every shard, kept rare. Same-key tables live in a colo. Joins and transactions work on that key inside a colo. Keys: UserID, FileID, OrgID. Almost every table fits one. No single key worked for all tables. Logical sharding first: logical shards as Postgres views on the same unsharded database. Rollout by percentage, rollback by config change. Views cost under 10 percent worst case. Then logical replication copy, split for real. Full dataset copied to each shard, reads and writes fenced to that shard's rows. Avoided filtered logical replication. First table: about 9 months. First cutover, September 2023: 10 seconds partial availability on primaries, nothing on replicas, no latency or availability regression after. Shadow planning on live traffic. Queries and plans logged to Snowflake. Query language covering the most common 90 percent. Range scans and point lookups in. Joins only inside one colo and on the shard key. Hash routing, since sequential or time prefixed IDs would pile onto one shard. Hashing hurts range scans on the shard key, accepted as rare. Topology updates reach DBProxy in under 1 second.</p>
+    <p class="inside">DBProxy: Go service between the app and PgBouncer. Parses SQL to an AST, pulls the shard key, routes the query. No key means scatter gather to every shard. Same-key tables live in a colo. Joins and transactions work on that key inside a colo. Keys: UserID, FileID, OrgID. Almost every table fits one. No single key worked for all tables. Logical sharding first: logical shards as Postgres views on the same unsharded database. Rollout by percentage, rollback by config change. Views cost under 10 percent worst case. Then logical replication copy, split for real. Full dataset copied to each shard, reads and writes fenced to that shard's rows. Avoided filtered logical replication. First table: about 9 months. First cutover, September 2023: 10 seconds partial availability on primaries, nothing on replicas, no latency or availability regression after. Shadow planning on live traffic. Queries and plans logged to Snowflake. Query language covering the most common 90 percent. Range scans and point lookups in. Joins only inside one colo and on the shard key. Hash routing, since sequential or time prefixed IDs would pile onto one shard. Hashing hurts range scans on the shard key, accepted as rare. Topology updates reach DBProxy in under 1 second.</p>
     <h4 class="subhead">Let's talk about the design</h4>
     <p class="inside">Figma stayed on Postgres and built the sharding layer themselves. The engine was not the problem. The move was. Logical views first meant the rollout could go by percentage and roll back with a config change.</p>
     <div class="tlist">
@@ -261,7 +261,7 @@
       <div class="hn"><b>$1.25M / year</b><span>Net saving from the new pipeline.</span></div>
     </div>
     <h4 class="subhead">The problem</h4>
-    <p class="inside">Notion sharded Postgres and the live product got room to breathe. The warehouse did not. Every change still had to move out of 32 sharded databases into Snowflake. Fivetran ran out of memory on bursts. Closed source, few knobs. Some hourly syncs took more than an hour and ran into the next sync. Write pattern: only about 1 percent of blocks changed day over day, over 90 percent of those changes were updates. Edits random, not recent. A full reload for 1 percent of changed rows is the wrong shape. That pointed to Hudi. No query rate or latency numbers in the material. None are given here.</p>
+    <p class="inside">Notion sharded Postgres and the live product got room to breathe. The warehouse did not. Every change still had to move out of the sharded Postgres databases into Snowflake. Fivetran ran out of memory on bursts. Closed source, few knobs. Some hourly syncs took more than an hour and ran into the next sync. Write pattern: only about 1 percent of blocks changed. Edits random, not recent. A full reload for 1 percent of changed rows is the wrong shape. That pointed to Hudi. No query rate or latency numbers in the material. None are given here.</p>
     <div class="diagram"><p class="dcap">The warehouse after sharding</p>
       <div class="dflow">
         <div class="dbox"><b>Postgres shards</b>32 databases</div><span class="darrow">→</span>
@@ -281,9 +281,9 @@
       <p class="dcap" style="margin-top:10px">Pick the lake for your upsert pattern, not for the brand name.</p>
     </div>
     <h4 class="subhead">The solution</h4>
-    <p class="inside">Postgres to Debezium CDC to Kafka to Hudi on S3, then Spark for ETL. Fivetran stayed only for small data sets and third party sources. Blocks: 20 billion early 2021, 70 billion end of 2022, over 200 billion end of 2023. Data at rest: 10 TB to about 50 TB compressed. Full resync: 1 week to 2 hours. Incremental syncs every 4 hours. Net saving: 1.25 million dollars per year. Tuning: Hudi file size about 300 MB, sort key on last_updated_at, same sharding scheme borrowed from Postgres. The lake then fed Notion AI Q and A: daily offline embedding batch plus an online Kafka catchup within a day.</p>
+    <p class="inside">Postgres to Debezium CDC to Kafka to Hudi on S3, then Spark for ETL. Fivetran stayed only for small data sets and third party sources. Blocks: a few tens of billions, grown 10x in three years. Data at rest: tens of terabytes compressed. Full resync: 1 week to 2 hours. Incremental syncs every 4 hours. Net saving: more than a million dollars per year. The lake then fed Notion AI Q and A: an offline embedding batch, run once per workspace to bootstrap the vector database, plus an online Kafka catchup within a day.</p>
     <h4 class="subhead">Let's talk about the design</h4>
-    <p class="inside">The choice followed the write pattern. Few rows changed, almost all of them updates, and the edits were random. That is the shape Hudi is built for. The tuning follows the same pattern: files sized to limit write amplification, a sort key that clusters recent changes, and the sharding scheme they already used in Postgres.</p>
+    <p class="inside">The choice followed the write pattern. Few rows changed, and the edits were random. That is the shape Hudi is built for. The tuning follows the same pattern: files sized to limit write amplification, a sort key that clusters recent changes, and partitioning that fits the sharded Postgres layout they already had.</p>
     <div class="tlist">
       <div>A pipeline to run: Debezium, Kafka, Hudi, Spark.</div>
       <div>Fivetran stays for small data sets, so two paths to maintain.</div>
@@ -303,12 +303,12 @@
     <span class="tag my">MySQL</span>
     <h3>Dropbox: one customer outgrew one shard, so they built a new store</h3>
     <h4 class="subhead">The problem</h4>
-    <p class="inside">2013: metadata in sharded MySQL, 2,000 shards, thousands of servers, tens of millions of queries per second at single digit millisecond latency. Then one customer, MIT, was going to outgrow a single database. The shard key was the org, and the org was the size of a shard. No way to split one org.</p>
-    <div class="diagram"><p class="dcap">One org outgrew one shard</p>
+    <p class="inside">Metadata lived in sharded MySQL: thousands of servers, tens of millions of queries per second at single digit millisecond latency. Then one tenant was going to outgrow a single shard. The shard key was the tenant, and the tenant was the size of a shard. No way to split one tenant.</p>
+    <div class="diagram"><p class="dcap">One tenant outgrew one shard</p>
       <div class="vsgrid">
-        <div class="vsbox usual"><h4>Before: 2,000 MySQL shards</h4>
+        <div class="vsbox usual"><h4>Before: sharded MySQL</h4>
           <div class="shardgrid"><span style="background:var(--problem-bg);border-color:var(--problem-line)"></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
-          <p style="margin:8px 0 0;font-size:13px">One box is MIT, outgrowing its shard. The rest sit idle.</p>
+          <p style="margin:8px 0 0;font-size:13px">One box is the big tenant, outgrowing its shard. The rest sit idle.</p>
         </div>
         <div class="vsbox actual"><h4>After: Panda ranges</h4>
           <div class="dflow">
@@ -317,21 +317,19 @@
             <div class="dbox"><b>range 3</b></div>
             <div class="dbox"><b>range 4</b></div>
           </div>
-          <p style="margin:8px 0 0;font-size:13px">One org split into many ranges. Capacity grows a range at a time.</p>
+          <p style="margin:8px 0 0;font-size:13px">One tenant split into many ranges. Capacity grows a range at a time.</p>
         </div>
       </div>
-      <p class="dcap" style="margin-top:10px">3 years, 20 engineers, zero downtime. The migration took longer than building the store.</p>
     </div>
     <h4 class="subhead">The solution</h4>
-    <p class="inside">Panda: Spanner inspired distributed key value store, built in house. One org splits many times into smaller ranges. Sits between Edgestore and sharded MySQL. ACID transactions. Incremental capacity growth and rebalancing. Project Theseus: 3 years, 20 engineers, zero downtime. Atomic cross shard transactions, two phase commit, across MySQL and Panda. Rollout by percentage, then reads moved off the legacy system.</p>
+    <p class="inside">Panda: a distributed key value store, built in house. One tenant splits many times into smaller ranges. Sits between Edgestore and sharded MySQL. ACID transactions, including atomic cross shard transactions through two phase commit. Incremental capacity growth and rebalancing.</p>
     <h4 class="subhead">Let's talk about the design</h4>
-    <p class="inside">No sharded design can split one tenant, so the fix had to be a store that splits ranges. Dropbox built Panda in house, Spanner inspired, instead of trying to stretch MySQL further.</p>
+    <p class="inside">No sharded design can split one tenant, so the fix had to be a store that splits ranges. Dropbox built Panda in house instead of trying to stretch MySQL further.</p>
     <div class="tlist">
       <div>A second store to run, forever.</div>
-      <div>Two phase commit across MySQL and Panda.</div>
-      <div>The migration took longer than building the store.</div>
+      <div>Two phase commit across shards, for atomic cross shard writes.</div>
     </div>
-    <p class="inside">The part I would copy is the rollout by percentage. That is what kept the move safe.</p>
+    <p class="inside">The part I would copy is splitting by range. That is what kept the move safe.</p>
     <p class="inside">Read this when one tenant can outgrow a shard.</p>
     <p class="backlink">Source: <a href="https://youtu.be/8TH3iZgG1PE">5 Lessons from 5 Years of Building Databases at Scale</a>, Sammy Steele, Systems Distributed '24. Cross-check: <a href="https://dropbox.tech/infrastructure/panda-metadata-stack-petabyte-scale-transactional-key-value-store">Panda: Metadata Stack @ Petabyte Scale</a>, Dropbox Tech, November 3, 2022.</p>
   </div>
@@ -340,7 +338,7 @@
     <span class="tag my">MySQL</span>
     <h3>GitHub: the master died, and nobody woke up</h3>
     <p class="inside">GitHub stores its metadata in MySQL. Issues, pull requests, comments, organizations, notifications. One master takes the writes. Replicas serve the reads. A dead master used to mean a human waking up and running a failover by hand. That was too slow for the availability they wanted.</p>
-    <div class="diagram"><p class="dcap">One master, three replicas, one watcher</p>
+    <div class="diagram"><p class="dcap">One master, replicas, one watcher</p>
       <div class="topo">
         <div class="dbox good"><b>master</b>takes writes</div>
         <div class="dbox"><b>Orchestrator</b>watches the cluster, asks the replicas what happened</div>
@@ -349,7 +347,7 @@
       <div class="dflow" style="margin-top:10px">
         <div class="dbox"><b>replica 1</b>serves reads</div>
         <div class="dbox"><b>replica 2</b>serves reads</div>
-        <div class="dbox good"><b>replica 3, promoted</b>master in 30 seconds or less</div>
+        <div class="dbox good"><b>a replica, promoted</b>master in 30 seconds or less</div>
       </div>
       <p class="dcap" style="margin-top:10px">Detection plus a flap guard, not just a tool. Automation without a guardrail is a second outage waiting to happen.</p>
     </div>

@@ -380,6 +380,7 @@ table.breaks td:first-child{font-weight:700;white-space:normal;min-width:130px}
 .cs-diag th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#8f89c9;text-align:left;padding:4px 8px;border-bottom:1px solid #2e2a63}
 .cs-diag td{padding:5px 8px;border-bottom:1px solid #211e47;color:#d6d2ff}
 .cs-diag tr:last-child td{border-bottom:none}
+@media(max-width:600px){.cs-diag table,.cs-diag table tbody,.cs-diag table tr,.cs-diag table td{display:block}.cs-diag table thead{display:none}.cs-diag table td{border-bottom:none;padding:4px 0}.cs-diag table tr{border-bottom:1px solid #2e2a63;padding:6px 0}}
 .cs-note{font-size:12px;color:#b9b4e8;margin-top:8px;font-family:"IBM Plex Sans",system-ui,sans-serif;line-height:1.5}
 .cs-note b{color:#fff}
 

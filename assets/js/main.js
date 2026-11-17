@@ -404,7 +404,7 @@ function renderPair(P){
 }
 
 var LEVEL_MINS=[15,20,20,25,20,20];
-if(levelsEl){LEVELS.forEach(function(L,i){
+if(levelsEl){if(!levelsEl.children.length){LEVELS.forEach(function(L,i){
   var d=document.createElement('div'); d.className='level'+(i===0?' open':''); d.id='lvl'+i;
   d.innerHTML='<button class="level-head" aria-expanded="'+(i===0)+'"><span class="lvl-num">'+i+'</span><span><h3>'+L.t+'</h3><p>Problem: '+L.problem+'</p><span class="lvl-meta">Level '+i+' · about '+LEVEL_MINS[i]+' minutes</span></span></button>'+
   '<div class="level-body"><div class="problem"><b class="label">Problem</b><p>'+L.problem+'</p></div>'+
@@ -412,7 +412,7 @@ if(levelsEl){LEVELS.forEach(function(L,i){
   '<div class="takeaway">Remember: '+L.take+'</div>'+
   '<button class="markbtn" data-lvl="'+i+'">Mark as understood ✓</button></div>';
   levelsEl.appendChild(d);
-});
+});}
 levelsEl.addEventListener('click',function(e){
   var head=e.target.closest('.level-head');
   if(head){var lv=head.parentElement; lv.classList.toggle('open'); head.setAttribute('aria-expanded',lv.classList.contains('open')); return;}

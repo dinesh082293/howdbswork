@@ -25,7 +25,7 @@
       <p class="plain">A relational database. Rows in tables. One data directory. Correctness first.</p>
       <p><b style="color:var(--ink)">Good at:</b> Money, orders, bookings. Anything with joins, constraints, and questions nobody has thought of yet. One log does both jobs. The WAL handles crash recovery and replication.</p>
       <span class="mono">Runs as: one postmaster + a backend process per connection</span></div></div></div></section>
-<section><div class="wrap">
+<section id="architecture"><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The architecture: processes, memory, disk</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Read each column top to bottom. A request enters at the process layer. Memory serves it when it can. Disk makes it permanent. When something is slow or broken, it lives in exactly one of these three layers. Name the layer first. That is the first diagnostic step.</p>
   <div class="filegrid" style="margin-bottom:22px"><div class="filecard pg"><header>PostgreSQL: architecture</header>
@@ -37,12 +37,12 @@
       <div class="fnote"><b>Who does what:</b> Backends run queries. The checkpointer flushes dirty pages. The WAL writer fsyncs the log. Autovacuum removes dead row versions. One process dying is survivable. The postmaster restarts it.</div>
     </div></div>
 </div></section>
-<section><div class="wrap">
+<section id="log-files"><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">Every log file a DBA needs to know</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0">These are the exact names. They sit in the locations from the file trees above. Each log has one job. Each log has one thing to check during an incident. The deep dive on the five data logs is in <a href="#logs">The log files</a>. This table adds the operational logs a DBA reads first: server, error, slow.</p>
   <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag pg">PostgreSQL</span><br>Write-ahead log</td><td class="mono">pg_wal/000000010000000000000003</td><td><span class="mono">pg_wal/</span> inside the data directory</td><td>Every change, recorded before the data file changes. Commit means this log is fsynced. It also feeds replicas and point-in-time recovery.</td><td>Total size (<span class="mono">du -sh pg_wal</span>) and <span class="mono">archive_status/</span>. A growing pile of <span class="mono">.ready</span> files means archiving is failing.</td></tr><tr><td><span class="tag pg">PostgreSQL</span><br>Server log</td><td class="mono">postgresql-18-main.log</td><td><span class="mono">/var/log/postgresql/</span> (Debian) or <span class="mono">log/</span> in the data directory</td><td>The server's own diary. Checkpoints. Slow statements, if enabled. Errors. Crash recovery.</td><td>Checkpoint frequency. "duration:" lines for slow statements. The first error at the incident's start time.</td></tr></tbody></table>
 </div></section>
-<section><div class="wrap">
+<section id="parameters"><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The parameters DBAs actually touch during outages</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 6px;max-width:820px">This is not the full configuration reference. It is the short list that comes up in real incidents. Each row states what the parameter does and the outage rule for it. <b style="color:var(--ink)">Safe live lever</b> means change it during the incident. <b style="color:var(--ink)">Planned change</b> means it needs a restart or a window. Do not improvise it mid-incident. <b style="color:var(--ink)">Do not touch</b> means changing it converts the incident into data loss or a longer outage.</p>
 

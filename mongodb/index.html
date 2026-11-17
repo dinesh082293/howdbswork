@@ -27,7 +27,7 @@
       <span class="mono">Runs as: mongod processes in a replica set; mongos routers when sharded</span></div></div></div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The architecture: processes, memory, disk</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Read each column top to bottom. A request enters at the process layer. Memory serves it when it can. Disk makes it permanent. When something is slow or broken, it lives in exactly one of these three layers. Name the layer first. That is the first diagnostic step.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Same three layers as every engine: process, memory, disk. The layer rule is written once on the <a href="../postgresql/index.html#architecture">PostgreSQL page</a>: name the layer first, then diagnose inside it.</p>
   <div class="filegrid" style="margin-bottom:22px"><div class="filecard mo"><header>MongoDB · WiredTiger: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">Request path</p><div class="dflow">
         <div class="dbox"><b>Processes</b>mongod per member · the primary accepts writes, secondaries apply the oplog · mongos routers when sharded</div><span class="darrow">→</span>
@@ -39,12 +39,12 @@
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">Every log file a DBA needs to know</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0">These are the exact names. They sit in the locations from the file trees above. Each log has one job. Each log has one thing to check during an incident. The deep dive on the five data logs is in <a href="#logs">The log files</a>. This table adds the operational logs a DBA reads first: server, error, slow.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0">Same idea as PostgreSQL: exact names, one job per log, one check per incident. The rule is written once on the <a href="../postgresql/index.html#log-files">PostgreSQL page</a>. This table adds the operational logs a DBA reads first: server, error, slow.</p>
   <table class="breaks"><thead><tr><th>Log</th><th>Exact file name</th><th>Where it sits (on-prem)</th><th>What it does</th><th>What to check in it</th></tr></thead><tbody><tr><td><span class="tag mo">MongoDB</span><br>Journal</td><td class="mono">journal/WiredTigerLog.0000000123</td><td><span class="mono">journal/</span> inside the dbPath</td><td>WiredTiger's write-ahead log. It covers the gap between checkpoints (about 60 s). <span class="mono">j:true</span> waits for this.</td><td>Check that the files exist and turn over. Check journal commit latency in <span class="mono">db.serverStatus().wiredTiger.log</span>.</td></tr><tr><td><span class="tag mo">MongoDB</span><br>Oplog</td><td class="mono">local.oplog.rs</td><td>A capped collection in the <span class="mono">local</span> database. Not a file</td><td>Ordered record of every write on the primary. Secondaries tail it. Its size divided by write rate is the catch-up window.</td><td><span class="mono">rs.printReplicationInfo()</span>. "log length start to end" is the window in hours. Compare it to your longest maintenance.</td></tr><tr><td><span class="tag mo">MongoDB</span><br>mongod log</td><td class="mono">mongod.log</td><td><span class="mono">/var/log/mongodb/mongod.log</span></td><td>The server's diary. Elections. Slow operations (over the profiler threshold). Connection events.</td><td>Election events and slow-operation lines around the incident start. Stepdown and stepup pairs mark every failover.</td></tr></tbody></table>
 </div></section>
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The parameters DBAs actually touch during outages</h3>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 6px;max-width:820px">This is not the full configuration reference. It is the short list that comes up in real incidents. Each row states what the parameter does and the outage rule for it. <b style="color:var(--ink)">Safe live lever</b> means change it during the incident. <b style="color:var(--ink)">Planned change</b> means it needs a restart or a window. Do not improvise it mid-incident. <b style="color:var(--ink)">Do not touch</b> means changing it converts the incident into data loss or a longer outage.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 6px;max-width:820px">Same three outage rules as PostgreSQL: <b style="color:var(--ink)">Safe live lever</b>, <b style="color:var(--ink)">Planned change</b>, <b style="color:var(--ink)">Do not touch</b>. What each one means is written once on the <a href="../postgresql/index.html#parameters">PostgreSQL page</a>.</p>
 
   <h4 style="margin:20px 0 6px;font-size:16px"><span class="tag mo">MongoDB · WiredTiger</span> Outage parameters</h4>
   <table class="breaks"><thead><tr><th>Parameter</th><th>What it does</th><th>During an outage</th></tr></thead><tbody>
@@ -60,7 +60,7 @@ db.adminCommand({replSetResizeOplog: 1, size: 20480})  // MB</div>
 </div></section>
 <section id="files"><div class="wrap">
 <div class="kicker">Files on disk · what <span style="text-transform:none">ls</span> actually shows</div>
-<p class="sub">There is no hidden state. Every table, index, and log on this page is a file in one directory. One process owns it. You can inspect it with <span class="mono">ls</span> and <span class="mono">du</span> while the server runs. When disk fills in production, the failure is always a specific file class. It is never "the database" in the abstract. This tree tells you which file class in under a minute. Paths below are the common Linux defaults. The command under each tree asks the server for its own.</p><div class="filegrid"><div class="filecard mo"><header>MongoDB: the dbPath</header>
+<p class="sub">Same rule as PostgreSQL: there is no hidden state. Every file here is inspectable with <span class="mono">ls</span> and <span class="mono">du</span> while the server runs. The full version is on the <a href="../postgresql/index.html#files">PostgreSQL page</a>.</p><div class="filegrid"><div class="filecard mo"><header>MongoDB: the dbPath</header>
 <pre class="term"><span class="cmd">$ ls /var/lib/mongo</span>
 <span class="f">WiredTiger</span>        <span class="c"># WiredTiger version marker</span>
 <span class="f">WiredTiger.wt</span>     <span class="c"># WT's own metadata: where the</span>
@@ -82,7 +82,7 @@ diagnostic.data/   <span class="c"># metrics mongod records on itself</span></pr
 </div></section>
 <section id="logs"><div class="wrap">
 <div class="kicker">The log files · one by one</div>
-<p class="sub">Every durability, replication, and recovery guarantee on this page reduces to one of five logs. For each log I give you the exact file name, where it sits, the mechanism, the failure mode when it is undersized, misplaced, or allowed to fill, and the command that shows its current state. Hold this pattern. A log's size divided by the write rate is a time window. Every operational budget on this page is one of those windows: recovery time, replica downtime tolerance, checkpoint headroom.</p><div class="loggrid"><div class="logcard">
+<p class="sub">Same pattern as PostgreSQL: five logs, one job each, and every operational budget is a time window. The full version is on the <a href="../postgresql/index.html#logs">PostgreSQL page</a>.</p><div class="loggrid"><div class="logcard">
       <span class="tag mo">MongoDB · WiredTiger</span>
       <h3>Journal</h3>
       <div class="fname">journal/WiredTigerLog.0000000123</div>
@@ -93,8 +93,8 @@ diagnostic.data/   <span class="c"># metrics mongod records on itself</span></pr
         <dt>Look at it</dt><dd><div class="lookcmd">$ ls /var/lib/mongo/journal/
 -- in mongosh:
 db.serverStatus().storageEngine
-db.adminCommand({getParameter: 1,
-  storageGlobalArgs: 1})</div></dd>
+db.adminCommand({getCmdLineOpts: 1})
+-- parsed.storage.journal shows the journal settings</div></dd>
       </dl>
     </div><div class="logcard">
       <span class="tag mo">MongoDB</span>
@@ -116,7 +116,8 @@ db.getSiblingDB('local').oplog.rs
 
   <div class="kicker">See it yourself · copy-paste commands</div>
   <h2>Open a real database and check every claim on this page</h2>
-  <p class="sub">Every mechanism above is observable on a running server in under two minutes. These commands are grouped by the question they answer. Where are the files. Where is the log position. How far behind are the copies. Is cleanup keeping up. Run them against any install. The output either confirms the model on this page or shows you the specific place your system deviates from it.</p>
+  <p class="sub">Same rule as PostgreSQL: every mechanism above is observable on a running server in under two minutes. The full version is on the <a href="../postgresql/index.html#commands">PostgreSQL page</a>.</p>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:820px">Run it locally: <a href="../assets/docker-compose-mongo.yml" download>docker-compose-mongo.yml</a> starts MongoDB 8.0 on port 27017 with a shop database. <span class="mono">docker compose -f docker-compose-mongo.yml up -d</span>, then run the commands below against it.</p>
   <div class="cmdgrid"><div class="cmdcol mo"><header>MongoDB · mongosh + shell</header>
 <pre class="term"><span class="c">// where is everything?</span>
 db.adminCommand({getCmdLineOpts: 1})

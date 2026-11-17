@@ -1,0 +1,18 @@
+# MongoDB 8.0 for the commands on the MongoDB page.
+# Starts a single mongod on port 27017 with a shop database.
+# Run: docker compose -f docker-compose-mongo.yml up -d
+# Stop: docker compose -f docker-compose-mongo.yml down
+# The rs.* commands (rs.status, rs.printReplicationInfo) need a replica set.
+# For those, start a single-node replica set instead:
+#   mongod --replSet rs0 --bind_ip_all
+# then run rs.initiate() once in mongosh.
+services:
+  mongo:
+    image: mongo:8.0
+    container_name: howdbswork-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+volumes:
+  mongo-data:

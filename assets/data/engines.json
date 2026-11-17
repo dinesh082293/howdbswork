@@ -1,0 +1,30 @@
+{
+  "engine_pages": {
+    "mongodb/index.html": "MongoDB 8.0",
+    "mysql/index.html": "MySQL 8.4",
+    "postgresql/index.html": "PostgreSQL 18"
+  },
+  "shared_numbers": [
+    {
+      "label": "single-row lookup time",
+      "page": "reference/index.html",
+      "text": "Execution Time: 0.052 ms"
+    },
+    {
+      "label": "single-row lookup buffers",
+      "page": "reference/index.html",
+      "text": "Buffers: shared hit=4"
+    },
+    {
+      "label": "single-row lookup pages",
+      "page": "reference/index.html",
+      "text": "4 pages, all from cache"
+    }
+  ],
+  "stamp_month": "Nov 2026",
+  "versions": {
+    "mongodb": "8.0",
+    "mysql": "8.4 LTS",
+    "postgresql": "18"
+  }
+}

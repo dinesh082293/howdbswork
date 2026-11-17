@@ -26,7 +26,7 @@
   <p class="sub">I wrote this page because the cloud changes who does the work, not how the database works. A managed database does not repeal anything on this site. A commit on Aurora still waits for log writes. An Atlas oplog window is still <b style="color:var(--ink)">size ÷ write rate</b>. Autovacuum still runs on RDS, and it still falls behind. What changes is the ownership boundary. The provider absorbs the sysadmin and storage layers wholesale, part of the DBA layer, and none of the query layer. After this page you will price that boundary per engine, and you will know which checks stay yours.</p>
 
   <div class="hooknum">
-    <div class="hn"><b>6 copies, 3 AZs</b><span>Aurora's storage layer keeps six copies of every log record and data page across three availability zones, and grows in 10 GB increments up to 256 TiB. Storage provisioning was a storage-team job on-prem. Here it simply stops existing as a task.</span></div>
+    <div class="hn"><b>6 copies, 3 AZs</b><span>Aurora ships redo records to a storage quorum: six copies across three availability zones, growing in 10 GB increments up to 256 TiB. The compute node holds no WAL files and no data pages of its own. Storage applies the redo and keeps the pages, so there is no classic checkpoint and no torn page to repair. Storage provisioning was a storage-team job on-prem. Here it simply stops existing as a task.</span></div>
     <div class="hn"><b>~60-120 s</b><span>Typical RDS Multi-AZ failover time. The standby is promoted and the endpoint's DNS flips. On-prem, the same failover is your script, your monitoring, and your pager. It is measured in minutes if it is rehearsed, hours if it is not.</span></div>
     <div class="hn"><b>35 days</b><span>Maximum automated-backup retention on RDS. Point-in-time recovery to any second inside that window, with no archive scripting. The on-prem equivalent is a base backup plus a WAL/binlog archive you built, monitored, and restore-tested yourself.</span></div>
   </div>
@@ -47,7 +47,7 @@
       <li>Connection pooling (RDS Proxy or your own PgBouncer) and lag monitoring</li>
       <li>Restore tests: the button is theirs, the verification is yours</li></ul></div>
   </div>
-  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no superuser and no host. You cannot read <span class="mono">pg_wal</span> files, run <span class="mono">pg_waldump</span>, install an unlisted extension, or set parameters the provider locks. Failover timing and maintenance windows are the provider's schedule. Cost is a per-hour instance plus per-GB plus per-I/O rent that beats on-prem at small scale and can exceed it at large, steady scale.</p>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no superuser and no host. On RDS you cannot read <span class="mono">pg_wal</span> files or run <span class="mono">pg_waldump</span>. On Aurora there are no WAL files at all: the compute node ships redo to the storage layer, so there is nothing to read and no checkpoint to watch. You cannot install an unlisted extension, or set parameters the provider locks. Failover timing and maintenance windows are the provider's schedule. Cost is a per-hour instance plus per-GB plus per-I/O rent that beats on-prem at small scale and can exceed it at large, steady scale.</p>
   <table class="breaks"><thead><tr><th>Concern</th><th>On-prem PostgreSQL</th><th>Managed (RDS / Aurora / Cloud SQL)</th></tr></thead><tbody>
     <tr><td>Provisioning &amp; patching</td><td>Your team: install, minor/major upgrades, OS patches</td><td>Provider: console/API provisioning; upgrades scheduled, major versions still planned by you</td></tr>
     <tr><td>Backups &amp; PITR</td><td>Base backups + WAL archiving you build and restore-test</td><td>Automated; PITR to any second within retention (≤ 35 days on RDS)</td></tr>
@@ -71,7 +71,7 @@
   </div>
   <div class="hostblock"><h4>Kubernetes</h4>
     <p><b>The problem it solves:</b> your apps already run in Kubernetes, and you want the database declared in YAML like everything else.</p>
-    <p>Two operators I verified. CloudNativePG runs a Cluster resource, apiVersion postgresql.cnpg.io/v1, with instances 3, native streaming replication, and automated failover. The Barman Cloud plugin handles backups and point-in-time recovery. A Pooler resource runs PgBouncer in front. The Zalando Postgres Operator runs apiVersion acid.zalan.do/v1, with Patroni underneath and the Spilo image. It builds standby clusters from S3 or Google Cloud Storage WAL archives, or from a remote primary. Passwords are hashed with scram-sha-256.</p>
+    <p>Two operators I verified, as of Nov 2026. CloudNativePG runs a Cluster resource, apiVersion postgresql.cnpg.io/v1, with instances 3, native streaming replication, and automated failover. The Barman Cloud plugin handles backups and point-in-time recovery. A Pooler resource runs PgBouncer in front. The Zalando Postgres Operator runs apiVersion acid.zalan.do/v1, with Patroni underneath and the Spilo image. It builds standby clusters from S3 or Google Cloud Storage WAL archives, or from a remote primary. Passwords are hashed with scram-sha-256.</p>
     <p><b>What you still own:</b> the cluster definition, the storage class, the backup destination, version upgrades, and the same Postgres tuning: shared_buffers, autovacuum, max_wal_size. The Zalando operator states plainly that monitoring and tuning are out of scope.</p>
     <div class="lookcmd">apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
@@ -91,15 +91,26 @@ spec:
       <div class="dbox good"><b>managed cloud</b>the provider's control plane, no host at all</div>
     </div>
   </div>
-  <table class="breaks"><thead><tr><th></th><th>On-prem</th><th>EC2</th><th>Kubernetes</th><th>Managed cloud</th></tr></thead><tbody>
-    <tr><td>Problem it solves</td><td>Full control, no per-hour rent</td><td>Same control, no hardware</td><td>Database declared in YAML like everything else</td><td>Provisioning, patching, backups, failover handled</td></tr>
-    <tr><td>Who patches</td><td>You</td><td>You, OS and engine</td><td>The operator provisions; you own version upgrades</td><td>The provider</td></tr>
-    <tr><td>Who backs up</td><td>You, pg_basebackup plus a WAL archive you monitor</td><td>You, same as on-prem</td><td>Barman Cloud plugin, backups and point-in-time recovery</td><td>Automated backups with point-in-time recovery, up to 35 days on RDS</td></tr>
-    <tr><td>Who fails over</td><td>You, Patroni or a runbook</td><td>You, Patroni or a runbook</td><td>The operator, automated failover</td><td>The provider, Multi-AZ in 60 to 120 seconds, Aurora under 30</td></tr>
-    <tr><td>What you still own</td><td>Everything: backups, replication, failover, autovacuum, tuning</td><td>Every operational job, plus the VM and EBS bill</td><td>Cluster definition, storage class, backup destination, version upgrades, Postgres tuning</td><td>Schema, indexes, query plans, autovacuum health, connection pooling, restore tests, the bill</td></tr>
-    <tr><td>Cost shape</td><td>Hardware plus people</td><td>VM plus EBS bill</td><td>Cluster plus storage plus operator overhead</td><td>Per-hour instance plus per-GB plus per-I/O rent</td></tr>
+  <table class="breaks"><thead><tr><th></th><th>On-prem</th><th>Kubernetes</th><th>Managed cloud</th></tr></thead><tbody>
+    <tr><td>Problem it solves</td><td>Same control, no hardware</td><td>Database declared in YAML like everything else</td><td>Provisioning, patching, backups, failover handled</td></tr>
+    <tr><td>Who patches</td><td>You, OS and engine</td><td>The operator provisions; you own version upgrades</td><td>The provider</td></tr>
+    <tr><td>Who backs up</td><td>You, same as on-prem</td><td>Barman Cloud plugin, backups and point-in-time recovery</td><td>Automated backups with point-in-time recovery, up to 35 days on RDS</td></tr>
+    <tr><td>Who fails over</td><td>You, Patroni or a runbook</td><td>The operator, automated failover</td><td>The provider, Multi-AZ in 60 to 120 seconds, Aurora under 30</td></tr>
+    <tr><td>What you still own</td><td>Every operational job, plus the VM and EBS bill</td><td>Cluster definition, storage class, backup destination, version upgrades, Postgres tuning</td><td>Schema, indexes, query plans, autovacuum health, connection pooling, restore tests, the bill</td></tr>
+    <tr><td>Cost shape</td><td>VM plus EBS bill</td><td>Cluster plus storage plus operator overhead</td><td>Per-hour instance plus per-GB plus per-I/O rent</td></tr>
   </tbody></table>
-  <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0"><b style="color:var(--ink)">Sources:</b> <a href="https://docs.apps.rancher.io/reference-guides/cloudnative-pg">CloudNativePG docs</a> · <a href="https://github.com/zalando/postgres-operator">Zalando Postgres Operator</a> · <a href="https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html">Aurora overview, AWS docs</a> · <a href="https://aws.amazon.com/rds/features/multi-az/">RDS Multi-AZ</a> · <a href="https://cloud.google.com/sql/docs/features">Cloud SQL features</a></p>
+  <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0"><b style="color:var(--ink)">Sources:</b> <a href="https://cloudnative-pg.io/docs/current">CloudNativePG docs</a> · <a href="https://github.com/zalando/postgres-operator">Zalando Postgres Operator</a> · <a href="https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html">Aurora overview, AWS docs</a> · <a href="https://aws.amazon.com/rds/features/multi-az/">RDS Multi-AZ</a> · <a href="https://cloud.google.com/sql/docs/features">Cloud SQL features</a></p>
+  <h4 style="margin:22px 0 8px;font-size:16px">EC2, once, for all three engines</h4>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px">The EC2 column is identical for all three engines, so it lives here once instead of three times. The only row that differs is failover, where each engine names its own tooling.</p>
+  <table class="breaks"><thead><tr><th>Concern</th><th>EC2, all three engines</th></tr></thead><tbody>
+    <tr><td>Problem it solves</td><td>Same control, no hardware</td></tr>
+    <tr><td>Who patches</td><td>You, OS and engine</td></tr>
+    <tr><td>Who backs up</td><td>You, same as on-prem</td></tr>
+    <tr><td>Who fails over</td><td>You, by runbook: Patroni for PostgreSQL, your orchestrator for MySQL, a runbook for MongoDB</td></tr>
+    <tr><td>What you still own</td><td>Every operational job, plus the VM and EBS bill</td></tr>
+    <tr><td>Cost shape</td><td>VM plus EBS bill</td></tr>
+  </tbody></table>
+
 
 
   <h3 style="margin:28px 0 4px;font-size:20px"><span class="tag my">MySQL · InnoDB</span> RDS for MySQL · Aurora MySQL · Cloud SQL for MySQL</h3>
@@ -118,7 +129,7 @@ spec:
       <li>Replica lag on binlog-based replicas, and GTID consistency at failover</li>
       <li>Durability settings: flush/sync choices still exist in the parameter group, and can still be set wrong</li></ul></div>
   </div>
-  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no SUPER privilege and no filesystem. <span class="mono">#innodb_redo/</span> and the binlog files are unreachable. Binlog access is through stored procedures and retention settings, and some InnoDB internals (change buffer behavior, redo sizing on Aurora) are managed for you whether you like their values or not. Sharding remains your problem. Vitess runs on top, not inside.</p>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 8px"><b style="color:var(--ink)">Tradeoffs:</b> no SUPER privilege and no filesystem. On RDS, <span class="mono">#innodb_redo/</span> and the binlog files are unreachable. On Aurora MySQL the redo files do not exist on the compute node at all: redo is shipped to the storage layer, which applies it. Binlog access is through stored procedures and retention settings, and some InnoDB internals (change buffer behavior, redo sizing on Aurora) are managed for you whether you like their values or not. Sharding remains your problem. Vitess runs on top, not inside.</p>
   <table class="breaks"><thead><tr><th>Concern</th><th>On-prem MySQL</th><th>Managed (RDS / Aurora / Cloud SQL)</th></tr></thead><tbody>
     <tr><td>Provisioning &amp; patching</td><td>Your team, per server</td><td>Provider; replicas and Multi-AZ in minutes</td></tr>
     <tr><td>Backups &amp; PITR</td><td>XtraBackup/mysqldump + binlog archive you operate</td><td>Automated snapshots + binlog PITR within retention</td></tr>
@@ -141,7 +152,7 @@ spec:
   </div>
   <div class="hostblock"><h4>Kubernetes</h4>
     <p><b>The problem it solves:</b> MySQL clusters declared in YAML, with failover and backups automated.</p>
-    <p>Two operators I verified. The Percona Operator for MySQL runs a PerconaServerMySQL resource, with Orchestrator for async replication, HAProxy or MySQL Router in front, and XtraBackup for backups. Group Replication is generally available. Async replication is still a tech preview. Version 1.2.0 added cross-site ClusterSet replication. Version 1.3.0 added encrypted binlogs for point-in-time recovery. The Oracle MySQL Operator runs an InnoDBCluster resource, apiVersion mysql.oracle.com/v2, with three instances plus a Router. It manages the full lifecycle, including upgrades and backups, and a MySQLBackup resource runs backup jobs.</p>
+    <p>Two operators I verified, as of Nov 2026. The Percona Operator for MySQL runs a PerconaServerMySQL resource, with Orchestrator for async replication, HAProxy or MySQL Router in front, and XtraBackup for backups. Group Replication is generally available. Async replication is still a tech preview. Version 1.2.0 added cross-site ClusterSet replication. Version 1.3.0 added encrypted binlogs for point-in-time recovery. The Oracle MySQL Operator runs an InnoDBCluster resource, apiVersion mysql.oracle.com/v2, with three instances plus a Router. It manages the full lifecycle, including upgrades and backups, and a MySQLBackup resource runs backup jobs.</p>
     <p><b>What you still own:</b> the resource definition, the storage, the backup destination, the version, and the same InnoDB tuning: innodb_buffer_pool_size, innodb_redo_log_capacity, innodb_flush_log_at_trx_commit. Sharding stays your problem. Vitess runs on top, not inside.</p>
     <div class="lookcmd">apiVersion: mysql.oracle.com/v2
 kind: InnoDBCluster
@@ -162,13 +173,13 @@ spec:
       <div class="dbox good"><b>managed cloud</b>the provider's control plane, no host at all</div>
     </div>
   </div>
-  <table class="breaks"><thead><tr><th></th><th>On-prem</th><th>EC2</th><th>Kubernetes</th><th>Managed cloud</th></tr></thead><tbody>
-    <tr><td>Problem it solves</td><td>Full control over InnoDB and the two logs</td><td>Same control, no hardware</td><td>Clusters declared in YAML, failover and backups automated</td><td>Backups, replica provisioning, failover handled</td></tr>
-    <tr><td>Who patches</td><td>You</td><td>You, OS and engine</td><td>The operator runs the cluster lifecycle</td><td>The provider</td></tr>
-    <tr><td>Who backs up</td><td>You, XtraBackup or mysqldump on a schedule you test</td><td>You, same as on-prem</td><td>XtraBackup through the operator</td><td>Automated snapshots plus binlog-based point-in-time recovery</td></tr>
-    <tr><td>Who fails over</td><td>You, your orchestrator or your runbook</td><td>You, your orchestrator or your runbook</td><td>Orchestrator, or the operator's automation</td><td>The provider, Multi-AZ in 60 to 120 seconds, Aurora in tens of seconds</td></tr>
-    <tr><td>What you still own</td><td>OS, backups, binlog archive, replication, failover</td><td>Same jobs, plus the VM and EBS bill</td><td>Resource definition, storage, backup destination, version, InnoDB tuning; sharding stays yours</td><td>Queries, indexes, purge and history list, buffer pool sizing, primary key discipline, replica lag, durability settings</td></tr>
-    <tr><td>Cost shape</td><td>Hardware plus people</td><td>VM plus EBS bill</td><td>Cluster plus storage</td><td>Hourly rent plus I/O charges, notably Aurora</td></tr>
+  <table class="breaks"><thead><tr><th></th><th>On-prem</th><th>Kubernetes</th><th>Managed cloud</th></tr></thead><tbody>
+    <tr><td>Problem it solves</td><td>Same control, no hardware</td><td>Clusters declared in YAML, failover and backups automated</td><td>Backups, replica provisioning, failover handled</td></tr>
+    <tr><td>Who patches</td><td>You, OS and engine</td><td>The operator runs the cluster lifecycle</td><td>The provider</td></tr>
+    <tr><td>Who backs up</td><td>You, same as on-prem</td><td>XtraBackup through the operator</td><td>Automated snapshots plus binlog-based point-in-time recovery</td></tr>
+    <tr><td>Who fails over</td><td>You, your orchestrator or your runbook</td><td>Orchestrator, or the operator's automation</td><td>The provider, Multi-AZ in 60 to 120 seconds, Aurora in tens of seconds</td></tr>
+    <tr><td>What you still own</td><td>Same jobs, plus the VM and EBS bill</td><td>Resource definition, storage, backup destination, version, InnoDB tuning; sharding stays yours</td><td>Queries, indexes, purge and history list, buffer pool sizing, primary key discipline, replica lag, durability settings</td></tr>
+    <tr><td>Cost shape</td><td>VM plus EBS bill</td><td>Cluster plus storage</td><td>Hourly rent plus I/O charges, notably Aurora</td></tr>
   </tbody></table>
   <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0"><b style="color:var(--ink)">Sources:</b> <a href="https://docs.percona.com/percona-operator-for-mysql/latest/architecture.html">Percona Operator for MySQL architecture</a> · <a href="https://dev.mysql.com/doc/mysql-operator/en/mysql-operator-innodbcluster-simple-kubectl.html">Oracle MySQL Operator manual</a> · <a href="https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html">Aurora overview, AWS docs</a> · <a href="https://aws.amazon.com/rds/features/multi-az/">RDS Multi-AZ</a> · <a href="https://cloud.google.com/sql/docs/features">Cloud SQL features</a></p>
 
@@ -213,7 +224,7 @@ spec:
   </div>
   <div class="hostblock"><h4>Kubernetes</h4>
     <p><b>The problem it solves:</b> replica sets and sharded clusters declared in YAML.</p>
-    <p>The MongoDB Controllers for Kubernetes Operator defines a MongoDB resource with three types: Standalone, ReplicaSet, and ShardedCluster. You set members and shardCount in the spec. The operator creates the StatefulSets: one pod per member, plus mongos and config server pods for sharded clusters. The Community edition covers replica sets. Sharded clusters need Enterprise Advanced.</p>
+    <p>The MongoDB Controllers for Kubernetes Operator, version 1.9 as of Nov 2026, defines a MongoDB resource with three types: Standalone, ReplicaSet, and ShardedCluster. You set members and shardCount in the spec. The operator creates the StatefulSets: one pod per member, plus mongos and config server pods for sharded clusters. The Community edition covers replica sets. Sharded clusters need Enterprise Advanced.</p>
     <p><b>What you still own:</b> the resource definition, the storage, the backup destination, the version, the shard key, and the same WiredTiger tuning: cacheSizeGB and oplog size. The shard key stays near-permanent.</p>
     <div class="lookcmd">apiVersion: mongodb.com/v1
 kind: MongoDB
@@ -233,13 +244,13 @@ spec:
       <div class="dbox good"><b>managed cloud</b>Atlas, no host at all</div>
     </div>
   </div>
-  <table class="breaks"><thead><tr><th></th><th>On-prem</th><th>EC2</th><th>Kubernetes</th><th>Managed cloud</th></tr></thead><tbody>
-    <tr><td>Problem it solves</td><td>Full control over replica sets and sharding, no cloud bill</td><td>Same control, no hardware</td><td>Replica sets and sharded clusters declared in YAML</td><td>Replica set and sharded cluster operations handled</td></tr>
-    <tr><td>Who patches</td><td>You</td><td>You, OS and engine</td><td>The operator automates provisioning and member management</td><td>The provider</td></tr>
-    <tr><td>Who backs up</td><td>You, mongodump or filesystem snapshots</td><td>You, same as on-prem</td><td>The operator's backup jobs</td><td>Continuous cloud backups with point-in-time recovery, recovery point as low as 1 minute</td></tr>
-    <tr><td>Who fails over</td><td>You, by runbook</td><td>You, by runbook</td><td>The operator</td><td>Automatic, three-node replica set by default</td></tr>
-    <tr><td>What you still own</td><td>Rolling upgrades, member replacement, backup storage, restore tests, oplog window math</td><td>Same jobs, plus the VM and EBS bill</td><td>Resource definition, storage, backup destination, version, shard key, WiredTiger tuning</td><td>Schema and indexing, the shard key, read and write concerns, oplog window math, tier sizing</td></tr>
-    <tr><td>Cost shape</td><td>Hardware plus people</td><td>VM plus EBS bill</td><td>Cluster plus storage</td><td>Per-tier hourly rent, RAM, CPU, storage bundled</td></tr>
+  <table class="breaks"><thead><tr><th></th><th>On-prem</th><th>Kubernetes</th><th>Managed cloud</th></tr></thead><tbody>
+    <tr><td>Problem it solves</td><td>Same control, no hardware</td><td>Replica sets and sharded clusters declared in YAML</td><td>Replica set and sharded cluster operations handled</td></tr>
+    <tr><td>Who patches</td><td>You, OS and engine</td><td>The operator automates provisioning and member management</td><td>The provider</td></tr>
+    <tr><td>Who backs up</td><td>You, same as on-prem</td><td>The operator's backup jobs</td><td>Continuous cloud backups with point-in-time recovery, recovery point as low as 1 minute</td></tr>
+    <tr><td>Who fails over</td><td>You, by runbook</td><td>The operator</td><td>Automatic, three-node replica set by default</td></tr>
+    <tr><td>What you still own</td><td>Same jobs, plus the VM and EBS bill</td><td>Resource definition, storage, backup destination, version, shard key, WiredTiger tuning</td><td>Schema and indexing, the shard key, read and write concerns, oplog window math, tier sizing</td></tr>
+    <tr><td>Cost shape</td><td>VM plus EBS bill</td><td>Cluster plus storage</td><td>Per-tier hourly rent, RAM, CPU, storage bundled</td></tr>
   </tbody></table>
   <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0"><b style="color:var(--ink)">Sources:</b> <a href="https://www.mongodb.com/docs/kubernetes/v1.9/reference/k8s-operator-specification/">MongoDB Kubernetes Operator reference</a> · <a href="https://www.mongodb.com/docs/atlas/architecture/current/backups/">Atlas backup guidance</a></p>
 

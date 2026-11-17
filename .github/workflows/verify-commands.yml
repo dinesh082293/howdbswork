@@ -1,0 +1,90 @@
+name: Verify commands
+
+# Runs every command shown on the site against real engines and fails the
+# build on any error. On a passing push to main it also rolls the footer
+# "Checked against" stamp to the current month (only when the month changed).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  verify-commands:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Start PostgreSQL 18
+        run: |
+          docker run -d --name ci-pg \
+            -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=shop \
+            postgres:18 -c shared_preload_libraries=pg_stat_statements
+          until docker exec ci-pg pg_isready -U postgres -d shop; do sleep 2; done
+
+      - name: Start MySQL 8.4
+        run: |
+          docker run -d --name ci-my \
+            -e MYSQL_ROOT_PASSWORD=rootpass -e MYSQL_DATABASE=shop \
+            mysql:8.4 --server-id=1 --log-bin=mysql-bin \
+            --gtid-mode=ON --enforce-gtid-consistency=ON --binlog-format=ROW
+          until docker exec ci-my mysqladmin ping -uroot -prootpass --silent; do sleep 2; done
+
+      - name: Start MongoDB 8 (single-node replica set)
+        run: |
+          docker run -d --name ci-mo mongo:8.0 mongod --replSet rs0 --bind_ip_all
+          until docker exec ci-mo mongosh --quiet --eval 'db.runCommand({ping: 1}).ok'; do sleep 2; done
+          docker exec ci-mo mongosh --quiet --eval 'rs.initiate()'
+          until docker exec ci-mo mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; do sleep 2; done
+
+      - name: Seed the demo schema
+        run: |
+          docker exec -i ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 < scripts/ci-seed.sql
+          docker exec -i ci-my mysql -uroot -prootpass shop < scripts/ci-seed-mysql.sql
+          docker cp scripts/ci-seed-mongo.js ci-mo:/tmp/ci-seed-mongo.js
+          docker exec ci-mo mongosh --quiet /tmp/ci-seed-mongo.js
+
+      - name: Extract commands from the site
+        run: python3 scripts/extract-commands.py --root . --out ci-out
+
+      - name: Check engine pages stay consistent
+        run: python3 scripts/check-engines.py --root .
+
+      - name: Run PostgreSQL commands
+        run: docker exec -i ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 < ci-out/pg.sql
+
+      - name: Run MySQL commands
+        run: docker exec -i ci-my mysql -uroot -prootpass shop < ci-out/mysql.sql
+
+      - name: Run MongoDB commands
+        run: |
+          docker cp ci-out/mongo.js ci-mo:/tmp/mongo.js
+          docker exec ci-mo mongosh --quiet shop /tmp/mongo.js
+
+      - name: Run shell commands
+        run: |
+          docker cp ci-out/shell-pg.sh ci-pg:/tmp/shell-pg.sh
+          docker exec ci-pg bash /tmp/shell-pg.sh
+          docker cp ci-out/shell-my.sh ci-my:/tmp/shell-my.sh
+          docker exec ci-my bash /tmp/shell-my.sh
+
+      - name: Update Checked against stamp
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          python3 scripts/update-checked-stamp.py
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "Update Checked against stamp [skip ci]"
+            git push
+          fi
