@@ -435,6 +435,131 @@
     return el;
   }
 
+  function nodeDetails(node, result) {
+    var details = [];
+    if (node.startupCost !== null && node.totalCost !== null) {
+      details.push('Cost ' + node.startupCost + '..' + node.totalCost);
+    }
+    if (node.estRows !== null) {
+      details.push('Estimated rows ' + node.estRows);
+    }
+    if (node.actualRows !== null) {
+      details.push('Actual rows ' + node.actualRows);
+    }
+    if (node.loops !== null) {
+      details.push('Loops ' + node.loops);
+    }
+    if (node.actualEnd !== null) {
+      details.push('Actual time ' + formatMs(node.actualStart) + ' to ' + formatMs(node.actualEnd));
+      details.push('Self time ' + formatMs(node.selfTime) + ' (' + formatShare(node.share) + ' of total)');
+    } else if (node.totalCost !== null) {
+      details.push('Cost share ' + formatShare(node.costShare));
+    }
+    if (node.buffers.hit !== null || node.buffers.read !== null) {
+      details.push('Buffers shared hit=' + (node.buffers.hit === null ? 0 : node.buffers.hit) + ' read=' + (node.buffers.read === null ? 0 : node.buffers.read));
+    }
+    if (node.sortMethod) {
+      details.push('Sort Method: ' + node.sortMethod);
+    }
+    if (node.joinFilter) {
+      details.push('Join Filter: ' + node.joinFilter);
+    }
+    if (node.rowsRemoved !== null) {
+      details.push('Rows Removed by Filter: ' + node.rowsRemoved);
+    }
+    if (node.heapFetches !== null) {
+      details.push('Heap Fetches: ' + node.heapFetches);
+    }
+    return details.join(' | ');
+  }
+
+  function renderTree(doc, outEl, result) {
+    var villain = null;
+    var best = -1;
+    var i;
+    for (i = 0; i < result.nodes.length; i++) {
+      var n = result.nodes[i];
+      var v = result.hasActual ? n.selfTime : (n.totalCost || 0);
+      if (v > best) { best = v; villain = n; }
+    }
+
+    if (villain && villain.flags.length > 0) {
+      var tip = makeEl(doc, 'p', 'plan-tip', null);
+      tip.textContent = 'The one thing to fix: ' + villain.flags[0].text;
+      outEl.appendChild(tip);
+    } else if (villain) {
+      var tip2 = makeEl(doc, 'p', 'plan-tip', null);
+      var name = villain.type + (villain.relation ? ' on ' + villain.relation : '');
+      tip2.textContent = 'The slowest step is ' + name + ' at ' +
+        (result.hasActual ? formatShare(villain.share) + ' of the time.' : formatShare(villain.costShare) + ' of the cost.') +
+        ' Read its numbers below before touching anything else.';
+      outEl.appendChild(tip2);
+    }
+
+    function nodeEl(node) {
+      var share = result.hasActual ? node.share : node.costShare;
+      var cls = 'plan-node plan-fast';
+      if (share >= 0.3) {
+        cls = 'plan-node plan-slow';
+      } else if (share >= 0.05) {
+        cls = 'plan-node plan-med';
+      }
+      if (node === villain) { cls += ' plan-villain'; }
+      var box = makeEl(doc, 'div', cls, null);
+
+      var title = node.type;
+      if (node.relation) {
+        title += ' on ' + node.relation;
+      }
+      if (node.index) {
+        title += ' using ' + node.index;
+      }
+      if (node === villain) {
+        title += '  ← slowest step';
+      }
+      var head = makeEl(doc, 'p', '', title);
+      box.appendChild(head);
+
+      var barWrap = makeEl(doc, 'div', '', null);
+      barWrap.setAttribute('style', 'background: #eee; height: 8px;');
+      var bar = makeEl(doc, 'div', '', null);
+      var pct = Math.max(0, Math.min(100, Math.round(share * 100)));
+      bar.setAttribute('style', 'height: 8px; width: ' + pct + '%; background: #888;');
+      barWrap.appendChild(bar);
+      box.appendChild(barWrap);
+
+      var detailEl = makeEl(doc, 'p', '', nodeDetails(node, result));
+      box.appendChild(detailEl);
+
+      var j, f, k;
+      for (j = 0; j < node.flags.length; j++) {
+        f = node.flags[j];
+        var flagEl = makeEl(doc, 'p', '', null);
+        flagEl.textContent = f.text + ' ';
+        for (k = 0; k < f.links.length; k++) {
+          var a = makeEl(doc, 'a', '', f.links[k].label);
+          a.setAttribute('href', f.links[k].href);
+          flagEl.appendChild(a);
+          if (k < f.links.length - 1) {
+            flagEl.appendChild(doc.createTextNode(' '));
+          }
+        }
+        box.appendChild(flagEl);
+      }
+
+      for (var c = 0; c < node.children.length; c++) {
+        box.appendChild(nodeEl(node.children[c]));
+      }
+      return box;
+    }
+
+    var tree = makeEl(doc, 'div', 'plan-tree', null);
+    for (i = 0; i < result.roots.length; i++) {
+      tree.appendChild(nodeEl(result.roots[i]));
+    }
+    outEl.appendChild(tree);
+  }
+
   function renderResults(doc, outEl, result) {
     while (outEl.firstChild) {
       outEl.removeChild(outEl.firstChild);
@@ -453,17 +578,6 @@
     }
     outEl.appendChild(summary);
 
-    var sorted = result.nodes.slice();
-    if (result.hasActual) {
-      sorted.sort(function (a, b) {
-        return b.selfTime - a.selfTime;
-      });
-    } else {
-      sorted.sort(function (a, b) {
-        return (b.totalCost || 0) - (a.totalCost || 0);
-      });
-    }
-
     var flagCount = 0;
     var i;
     for (i = 0; i < result.nodes.length; i++) {
@@ -474,94 +588,7 @@
       outEl.appendChild(flagNote);
     }
 
-    var list = makeEl(doc, 'div', '', null);
-    outEl.appendChild(list);
-
-    for (i = 0; i < sorted.length; i++) {
-      var node = sorted[i];
-      var share = result.hasActual ? node.share : node.costShare;
-      var cls = 'plan-node plan-fast';
-      if (share >= 0.3) {
-        cls = 'plan-node plan-slow';
-      } else if (share >= 0.05) {
-        cls = 'plan-node plan-med';
-      }
-      var box = makeEl(doc, 'div', cls, null);
-
-      var title = node.type;
-      if (node.relation) {
-        title += ' on ' + node.relation;
-      }
-      if (node.index) {
-        title += ' using ' + node.index;
-      }
-      var head = makeEl(doc, 'p', '', title);
-      box.appendChild(head);
-
-      var barWrap = makeEl(doc, 'div', '', null);
-      barWrap.setAttribute('style', 'background: #eee; height: 8px;');
-      var bar = makeEl(doc, 'div', '', null);
-      var pct = Math.max(0, Math.min(100, Math.round(share * 100)));
-      bar.setAttribute('style', 'height: 8px; width: ' + pct + '%; background: #888;');
-      barWrap.appendChild(bar);
-      box.appendChild(barWrap);
-
-      var details = [];
-      if (node.startupCost !== null && node.totalCost !== null) {
-        details.push('Cost ' + node.startupCost + '..' + node.totalCost);
-      }
-      if (node.estRows !== null) {
-        details.push('Estimated rows ' + node.estRows);
-      }
-      if (node.actualRows !== null) {
-        details.push('Actual rows ' + node.actualRows);
-      }
-      if (node.loops !== null) {
-        details.push('Loops ' + node.loops);
-      }
-      if (node.actualEnd !== null) {
-        details.push('Actual time ' + formatMs(node.actualStart) + ' to ' + formatMs(node.actualEnd));
-        details.push('Self time ' + formatMs(node.selfTime) + ' (' + formatShare(node.share) + ' of total)');
-      } else if (node.totalCost !== null) {
-        details.push('Cost share ' + formatShare(node.costShare));
-      }
-      if (node.buffers.hit !== null || node.buffers.read !== null) {
-        details.push('Buffers shared hit=' + (node.buffers.hit === null ? 0 : node.buffers.hit) + ' read=' + (node.buffers.read === null ? 0 : node.buffers.read));
-      }
-      if (node.sortMethod) {
-        details.push('Sort Method: ' + node.sortMethod);
-      }
-      if (node.joinFilter) {
-        details.push('Join Filter: ' + node.joinFilter);
-      }
-      if (node.rowsRemoved !== null) {
-        details.push('Rows Removed by Filter: ' + node.rowsRemoved);
-      }
-      if (node.heapFetches !== null) {
-        details.push('Heap Fetches: ' + node.heapFetches);
-      }
-      var detailEl = makeEl(doc, 'p', '', details.join(' | '));
-      box.appendChild(detailEl);
-
-      var f;
-      var j;
-      for (j = 0; j < node.flags.length; j++) {
-        f = node.flags[j];
-        var flagEl = makeEl(doc, 'p', '', null);
-        flagEl.textContent = f.text + ' ';
-        for (var k = 0; k < f.links.length; k++) {
-          var a = makeEl(doc, 'a', '', f.links[k].label);
-          a.setAttribute('href', f.links[k].href);
-          flagEl.appendChild(a);
-          if (k < f.links.length - 1) {
-            flagEl.appendChild(doc.createTextNode(' '));
-          }
-        }
-        box.appendChild(flagEl);
-      }
-
-      list.appendChild(box);
-    }
+    renderTree(doc, outEl, result);
   }
 
   function showMessage(doc, outEl, message) {
@@ -573,48 +600,68 @@
   }
 
   if (typeof window !== 'undefined') {
-    window.__explainTool = { parsePlan: parsePlan, SAMPLE: SAMPLE, buildFlags: buildFlags };
+    window.__explainTool = { parsePlan: parsePlan, SAMPLE: SAMPLE, buildFlags: buildFlags, renderResults: renderResults };
   }
 
-  if (typeof document === 'undefined' || !document.getElementById || !document.getElementById('explainTool')) {
+  if (typeof document === 'undefined' || !document.querySelectorAll) {
     return;
   }
 
-  var input = document.getElementById('planInput');
-  var analyzeBtn = document.getElementById('planAnalyze');
-  var sampleBtn = document.getElementById('planSample');
-  var outEl = document.getElementById('planOut');
-
-  if (!input || !analyzeBtn || !sampleBtn || !outEl) {
-    return;
-  }
-
-  analyzeBtn.addEventListener('click', function () {
+  function analyzeText(doc, input, outEl) {
     var text = input.value || '';
     if (!text.trim()) {
-      showMessage(document, outEl, 'Paste a plan first.');
+      showMessage(doc, outEl, 'Paste a plan first.');
       return;
     }
     var result;
     try {
       result = parsePlan(text);
     } catch (e) {
-      showMessage(document, outEl, 'I could not read this as an EXPLAIN ANALYZE plan. Paste the text output, starting with a node line like Seq Scan or Index Scan.');
+      showMessage(doc, outEl, 'I could not read this as an EXPLAIN ANALYZE plan. Paste the text output, starting with a node line like Seq Scan or Index Scan.');
       return;
     }
     if (!result || !result.nodes || result.nodes.length === 0) {
-      showMessage(document, outEl, 'I could not read this as an EXPLAIN ANALYZE plan. Paste the text output, starting with a node line like Seq Scan or Index Scan.');
+      showMessage(doc, outEl, 'I could not read this as an EXPLAIN ANALYZE plan. Paste the text output, starting with a node line like Seq Scan or Index Scan.');
       return;
     }
     try {
-      renderResults(document, outEl, result);
+      renderResults(doc, outEl, result);
     } catch (e) {
-      showMessage(document, outEl, 'I could not read this as an EXPLAIN ANALYZE plan. Paste the text output, starting with a node line like Seq Scan or Index Scan.');
+      showMessage(doc, outEl, 'I could not read this as an EXPLAIN ANALYZE plan. Paste the text output, starting with a node line like Seq Scan or Index Scan.');
     }
-  });
+  }
 
-  sampleBtn.addEventListener('click', function () {
-    input.value = SAMPLE;
-    input.focus();
-  });
+  var tools = document.querySelectorAll('.explain-tool');
+  for (var t = 0; t < tools.length; t++) {
+    (function (block) {
+      var input = block.querySelector('[data-plan-input]');
+      var analyzeBtn = block.querySelector('[data-plan-analyze]');
+      var sampleBtn = block.querySelector('[data-plan-sample]');
+      var outEl = block.querySelector('[data-plan-out]');
+      var vizBtn = block.querySelector('[data-plan-viz]');
+      if (!input || !analyzeBtn || !outEl) { return; }
+
+      analyzeBtn.addEventListener('click', function () {
+        analyzeText(document, input, outEl);
+      });
+      if (sampleBtn) {
+        sampleBtn.addEventListener('click', function () {
+          input.value = SAMPLE;
+          input.focus();
+        });
+      }
+      if (vizBtn) {
+        vizBtn.addEventListener('click', function () {
+          var srcId = vizBtn.getAttribute('data-plan-viz');
+          var src = srcId ? document.getElementById(srcId) : null;
+          if (!src || !src.textContent || !src.textContent.trim() || src.textContent.indexOf('Nothing run yet') !== -1) {
+            showMessage(document, outEl, 'Run the EXPLAIN in the live panel first, then press this button again.');
+            return;
+          }
+          input.value = src.textContent;
+          analyzeText(document, input, outEl);
+        });
+      }
+    })(tools[t]);
+  }
 })();

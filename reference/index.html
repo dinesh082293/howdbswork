@@ -52,13 +52,13 @@ Execution Time: 0.052 ms</pre>
   <div class="derive"><b class="dt">Derivation: why ESR is a theorem, not a convention</b>A compound index stores keys lexicographically. Sorted by field 1, then within equal field-1 values by field 2, then within equal (field 1, field 2) pairs by field 3. Three consequences follow mechanically. <b>Equality first:</b> an equality predicate on field 1 collapses the scan to one contiguous key range, located in O(log N). <b>Sort second:</b> within that contiguous range, field-2 keys are already stored in sort order, so the scan emits rows sorted. No SORT stage. No 100 MB abort. <b>Range last:</b> a range predicate on a field terminates the usable ordering. Every key after the range boundary must still be visited for subsequent fields, so a range field placed before the sort field destroys the sort guarantee. Reverse the order and the equality condition degrades from an O(log N) seek to a scan of every key inside the range. On a range covering 80% of the index, the index is 80% of a full scan. ESR is the only ordering that preserves all three properties simultaneously, because of how the keys are physically stored. Nothing about it is stylistic.</div>
   <h3 style="margin:26px 0 8px;font-size:17px">Paste your own plan: EXPLAIN, annotated</h3>
   <p class="sub">The outputs above are mine. Yours is the one that matters. Paste your EXPLAIN ANALYZE output below. Everything runs in your browser. Nothing leaves this page, and nothing is stored. If your plan has names you do not want to share, replace them before pasting. Prefer an external tool? <a href="https://explain.depesz.com/">explain.depesz.com</a> and <a href="https://www.pgmustard.com/">pgMustard</a> read the same format.</p>
-  <div class="lab" id="explainTool">
-    <textarea id="planInput" spellcheck="false" placeholder="Paste EXPLAIN (ANALYZE, BUFFERS) output here"></textarea>
+  <div class="lab explain-tool" id="explainTool">
+    <textarea id="planInput" data-plan-input spellcheck="false" placeholder="Paste EXPLAIN (ANALYZE, BUFFERS) output here"></textarea>
     <div class="controls" style="margin-top:10px">
-      <button class="btn primary" id="planAnalyze">Analyze this plan</button>
-      <button class="btn" id="planSample">Try a sample plan</button>
+      <button class="btn primary" id="planAnalyze" data-plan-analyze>Analyze this plan</button>
+      <button class="btn" id="planSample" data-plan-sample>Try a sample plan</button>
     </div>
-    <div id="planOut"></div>
+    <div id="planOut" data-plan-out></div>
   </div>
 </div></section>
 <section id="compare" style="padding-top:6px"><div class="wrap">

@@ -115,6 +115,12 @@ SHOW BINLOG EVENTS IN 'mysql-bin.000001';
 $ mysqlbinlog mysql-bin.000001 | less</div></dd>
       </dl>
     </div></div>
+  <div class="diagram"><p class="dcap">Checkpoint age: the redo ring's headroom</p><div class="dflow">
+    <div class="dbox"><b>Writes</b>dirty pages pile up in the buffer pool</div><span class="darrow">→</span>
+    <div class="dbox"><b>Redo ring</b>32 files, #ib_redo0 to #ib_redo31</div><span class="darrow">→</span>
+    <div class="dbox hot"><b>Checkpoint age near capacity</b>InnoDB throttles writers to flush speed</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Lever</b>raise innodb_redo_log_capacity, live</div>
+  </div></div>
 <p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../postgresql/index.html#logs">PostgreSQL: WAL</a> · <a href="../mongodb/index.html#logs">MongoDB · WiredTiger: journal and oplog</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
 </div></section>
 <section id="commands"><div class="wrap">
@@ -146,6 +152,12 @@ SHOW REPLICA STATUS\G</pre></div></div>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Mechanism.</b> An index lookup reads pages one at a time, in key order. Those pages sit scattered across the <span class="mono">.ibd</span> file. Each one is a random read. A full scan reads the same file front to back, in one pass. One sequential pass can beat thousands of random reads. The planner compares those two costs. It picks the cheaper one. It skips the index when the query must return a large share of the table.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The planner estimates row counts from statistics. A bulk load can leave those statistics stale. The planner then guesses wrong. <span class="mono">ANALYZE TABLE</span> refreshes the statistics. Run it after a bulk load. Then read EXPLAIN again.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">A secondary index does not hold the row. It holds the primary key value. Each match needs a second read into the clustered index. That read fetches the row from <span class="mono">users.ibd</span>. This is the bookmark lookup. One match costs two reads. A thousand matches cost two thousand reads.</p>
+  <div class="diagram"><p class="dcap">Secondary index lookup: two reads per match</p><div class="dflow">
+    <div class="dbox"><b>Secondary index</b>'Asha' → primary key 42</div><span class="darrow">→</span>
+    <div class="dbox"><b>Clustered index</b>42 → the row, inside users.ibd</div><span class="darrow">→</span>
+    <div class="dbox hot"><b>1,000 matches</b>2,000 reads, unless the index covers the query</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Covering index</b>EXPLAIN shows "Using index", no second hop</div>
+  </div></div>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Every secondary entry carries a copy of the primary key. A long string key makes every secondary entry longer. Longer entries mean more pages per index. Keep the primary key short. Use an integer id when you can.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Exact check.</b> Run EXPLAIN. Then refresh statistics. Then check what the index holds.</p>
 <div class="lookcmd">EXPLAIN SELECT id, email FROM users WHERE status = 'active';
@@ -155,6 +167,11 @@ ANALYZE TABLE users;
 SELECT INDEX_NAME, COLUMN_NAME, CARDINALITY
 FROM information_schema.statistics
 WHERE TABLE_SCHEMA = 'shop' AND TABLE_NAME = 'users';</div>
+  <div class="diagram"><p class="dcap">Failover with GTIDs: subtraction, not forensics</p><div class="dflow">
+    <div class="dbox"><b>Source gtid_executed</b>the full set of committed transactions</div><span class="darrow">−</span>
+    <div class="dbox"><b>Replica gtid_executed</b>what it has applied</div><span class="darrow">=</span>
+    <div class="dbox good"><b>The gap</b>exactly the transactions the replica lacks</div>
+  </div></div>
 <p style="font-size:14.5px;color:var(--muted);margin:8px 0 0;max-width:820px">Read EXPLAIN for the access type. A scan on a wide query is the planner doing its job. A scan on a narrow query means stale statistics or a missing index.</p>
 </div></section>
 <section><div class="wrap">

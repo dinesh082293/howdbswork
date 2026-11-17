@@ -1462,5 +1462,35 @@
   "u": "decisions/sync-replication-failover/index.html#appendix",
   "s": "Decisions",
   "k": "appendix derivations raw output benchmark method sources ARIES"
+ },
+ {
+  "t": "Play with a B+ tree: search, insert, delete, range scan",
+  "u": "staff-path/index.html#labs",
+  "s": "Staff Path",
+  "k": "B+ tree interactive search insert delete range scan split leaf chain postgres innodb step play"
+ },
+ {
+  "t": "How a table slows down as it grows",
+  "u": "staff-path/index.html#labs",
+  "s": "Staff Path",
+  "k": "growth rows scan pages lookup buffers tree depth slider 1000 1000000"
+ },
+ {
+  "t": "Watch a failover happen",
+  "u": "decisions/sync-replication-failover/index.html#breaks",
+  "s": "Decisions",
+  "k": "failover kill primary promote standby LSN patroni synchronous asynchronous data loss"
+ },
+ {
+  "t": "See the plan as a tree: which step is the villain",
+  "u": "postgresql/index.html#liveSqlPg",
+  "s": "PostgreSQL",
+  "k": "EXPLAIN plan visualizer tree slowest step seq scan index scan villain tip"
+ },
+ {
+  "t": "Where to go next, in order",
+  "u": "index.html#sitemap",
+  "s": "Home",
+  "k": "site map where to start path beginner staff decisions stories cheat sheet reference cloud"
  }
 ]

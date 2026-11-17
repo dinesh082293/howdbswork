@@ -110,6 +110,12 @@ db.getSiblingDB('local').oplog.rs
   .find().sort({$natural: -1}).limit(1)</div></dd>
       </dl>
     </div></div>
+  <div class="diagram"><p class="dcap">Journal to checkpoint: what covers the 60-second gap</p><div class="dflow">
+    <div class="dbox"><b>Write</b>journal/WiredTigerLog.*, on disk first</div><span class="darrow">→</span>
+    <div class="dbox"><b>Cache</b>timestamped versions, dirty pages</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Checkpoint, about every 60 s</b>consistent snapshot into collection-*.wt</div><span class="darrow">→</span>
+    <div class="dbox"><b>Crash</b>last checkpoint plus journal replay</div>
+  </div></div>
 <p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../postgresql/index.html#logs">PostgreSQL: WAL</a> · <a href="../mysql/index.html#logs">MySQL · InnoDB: redo log and binary log</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
 </div></section>
 <section id="commands"><div class="wrap">
@@ -140,6 +146,16 @@ db.serverStatus().wiredTiger.cache</pre></div></div>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Mechanism.</b> A compound index stores keys in field order. Field 1 first. Field 2 inside field 1. Field 3 inside field 2. Put the equality field first. Put the sort field second. Put the range field last. That is ESR.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The equality match narrows the walk to one slice. Inside that slice, the sort field is already in order. The query reads rows in sorted order. The range field sits last. It trims the tail.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Put the fields in the wrong order and the sort breaks. A range field before the sort field breaks it. The index can no longer hand back rows in sort order. MongoDB adds a SORT stage. That stage sorts in memory. The limit is 100 MB. A sort past that limit fails unless the query allows disk use.</p>
+  <div class="diagram"><p class="dcap">ESR: equality, sort, range, in that order</p><div class="dflow">
+    <div class="dbox good"><b>Equality first</b>status: collapses to one slice</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Sort second</b>createdAt: already in order, no SORT stage</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Range last</b>amount: trims the tail</div>
+  </div></div>
+  <div class="diagram"><p class="dcap">Range before sort: the order breaks</p><div class="dflow">
+    <div class="dbox"><b>Range first</b>amount: the ordering ends here</div><span class="darrow">→</span>
+    <div class="dbox hot"><b>Sort field after</b>no longer in order</div><span class="darrow">→</span>
+    <div class="dbox hot"><b>SORT stage</b>in-memory sort, 100 MB limit</div>
+  </div></div>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">MongoDB caches the winning plan for a query shape. I add an index. I drop an index. The cached plan can go stale. I check the cached plans. Then I clear the cache for that collection. The next run picks a fresh plan.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px"><b style="color:var(--ink)">Exact check.</b> Build the index in ESR order. Then explain the query. Then check index use and plan cache.</p>
 <div class="lookcmd">db.orders.createIndex({ status: 1, createdAt: -1, amount: 1 });
@@ -163,6 +179,12 @@ db.runCommand({ planCacheClear: "orders" });</div>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">How to host MongoDB on-prem, on EC2, in Kubernetes, or on Atlas is on the <a href="../cloud/index.html#mo-hosting">Cloud page</a>.</p>
 <h3 style="margin:18px 0 4px;font-size:19px">Before you leave, check this</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One command. It tells you how long a secondary can stay down and still catch up.</p>
+  <div class="diagram"><p class="dcap">The oplog window: size divided by write rate</p><div class="dflow">
+    <div class="dbox"><b>10 GB oplog</b>fixed size, capped</div><span class="darrow">÷</span>
+    <div class="dbox"><b>5 MB/min writes</b>the current rate</div><span class="darrow">=</span>
+    <div class="dbox good"><b>34-hour window</b>longest survivable downtime</div><span class="darrow">→</span>
+    <div class="dbox hot"><b>Rate grows 10x</b>same oplog, 3.4-hour window</div>
+  </div></div>
 <div class="lookcmd">rs.printReplicationInfo()</div>
 <p style="font-size:14.5px;color:var(--muted);margin:8px 0 0;max-width:820px">Read "log length start to end". That is the window in hours. Compare it to your longest maintenance.</p>
 </div></section>

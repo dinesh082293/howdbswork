@@ -439,10 +439,34 @@ a.sitesearch-result:hover{background:var(--surface2)}
 .paircard .storylink{margin-top:12px;font-size:13.5px;line-height:1.55}
 .paircard .storylink b{color:var(--ink)}
 
-/* Added Nov 16, 2026: sticky table of contents and engine toggle on the Decisions pages */
+/* Added Nov 17, 2026: sticky table of contents and engine toggle on the Decisions pages */
 .doctoc{position:sticky;top:58px;z-index:40;background:var(--bg);border-bottom:1px solid var(--line);padding:12px 0}
 .doctoc .seg{margin-bottom:0}
 .toclist{list-style:none;margin:0 0 10px;padding:0;display:flex;flex-wrap:wrap;gap:2px 16px}
 .toclist a{font-size:13px;font-weight:500;text-decoration:none}
 .toclist a:hover{text-decoration:underline}
 .pagenav{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+
+/* Added Nov 17, 2026: interactive widgets, B+ tree, failover, EXPLAIN tree */
+select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink)}
+.bnode.cur{border-color:var(--teal);box-shadow:0 0 0 2px color-mix(in srgb,var(--teal) 40%,transparent)}
+.bt-chain{margin-top:14px}
+.bt-chain .dcap{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 9px}
+.bt-leaves{flex-wrap:wrap}
+.bt-mysql .bnode.leaf{border-color:var(--my)}
+.bt-mysql .bnode.cur{border-color:var(--my);box-shadow:0 0 0 2px color-mix(in srgb,var(--my) 40%,transparent)}
+.fo-nodes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:640px){.fo-nodes{grid-template-columns:1fr}}
+.fo-node{border:2px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--surface);font-size:13.5px}
+.fo-node b{display:block;font-size:15px;margin-bottom:4px}
+.fo-node span{display:block;font-size:12.5px;color:var(--muted);line-height:1.5}
+.fo-node .mono{color:var(--ink)}
+.fo-node.fo-primary{border-color:var(--teal);background:var(--teal-bg)}
+.fo-node.fo-standby{border-color:var(--line)}
+.fo-node.fo-dead{border-color:#dc2626;background:color-mix(in srgb,#dc2626 8%,var(--surface))}
+.fo-node.fo-winner{border-color:var(--problem-line);background:var(--problem-bg)}
+.plan-tip{background:var(--problem-bg);border:1px solid color-mix(in srgb,var(--problem-line) 35%,transparent);border-left:6px solid var(--problem-line);border-radius:10px;padding:12px 14px;font-size:14.5px;font-weight:600;line-height:1.5;margin:12px 0}
+.plan-tree>.plan-node{margin:12px 0}
+.plan-tree .plan-node .plan-node{margin:10px 0 4px 18px;border-left:3px solid var(--line)}
+.plan-node.plan-villain{border:2px solid #dc2626;background:color-mix(in srgb,#dc2626 7%,var(--surface))}
+.plan-node.plan-villain p:first-child{color:#dc2626}

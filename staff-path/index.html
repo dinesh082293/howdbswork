@@ -182,28 +182,40 @@ db.getSiblingDB('local').oplog.rs.stats().maxSize</div></div><div class="wib"><h
       <div class="g hot"><b>500K-2M rows</b>The transition zone: scan cost crosses the timeout budget while traffic is also at its highest.</div>
       <div class="g hot"><b>10M rows</b>Scan: ~3-8 s per query. An incident, not a slowdown.</div>
     </div>
-    <p>Type a number and watch the lookup walk: root, internal, leaf. Only 3 pages are read, no matter how big the table file gets.</p>
-    <div class="btree-wrap"><div class="btree">
-      <div class="brow"><div class="bnode" data-node="root"><span data-k="30">30</span><span data-k="70">70</span></div></div>
-      <div class="brow">
-        <div class="bnode" data-node="mid"><span data-k="10">10</span><span data-k="20">20</span></div>
-        <div class="bnode" data-node="mid"><span data-k="45">45</span><span data-k="60">60</span></div>
-        <div class="bnode" data-node="mid"><span data-k="85">85</span><span data-k="95">95</span></div>
-      </div>
-      <div class="brow">
-        <div class="bnode leaf" data-node="leaf"><span data-k="5">5</span><span data-k="12">12</span><span data-k="18">18</span><span data-k="27">27</span></div>
-        <div class="bnode leaf" data-node="leaf"><span data-k="33">33</span><span data-k="48">48</span><span data-k="61">61</span><span data-k="69">69</span></div>
-        <div class="bnode leaf" data-node="leaf"><span data-k="72">72</span><span data-k="88">88</span><span data-k="93">93</span><span data-k="99">99</span></div>
-      </div>
-    </div></div>
+    <p>Play with the real thing. This is the users table from the walkthrough: 10, 25, 87 in one leaf. Search for a key, insert one, delete one, or scan a range. Press Step to watch one move at a time. Insert 42, then 15, 30, 50, 60, 70, 80, 90, and watch the leaf split and the tree grow a level.</p>
+    <div id="btreeWidget">
+    <div class="seg" id="btreeSeg">
+      <button aria-pressed="true" data-e="pg">PostgreSQL · modified B+ tree</button>
+      <button aria-pressed="false" data-e="my">MySQL · InnoDB · clustered B+ tree</button>
+    </div>
+    <p id="btreeNote" style="font-size:14px;color:var(--muted);margin:0 0 12px;max-width:820px">PostgreSQL: a modified B+ tree. Internal nodes are linked too, so many sessions can read and write at once. A leaf entry is (key, heap pointer): the row itself lives in the heap file, base/16384/16397.</p>
+    <div class="btree-wrap"><div class="btree" id="btreeTree"></div></div>
+    <p class="mono" id="btreeCount" style="font-size:12.5px;color:var(--muted);margin:8px 0 0">3 keys in 1 level</p>
     <div class="controls">
-      <label style="font-size:13.5px;font-weight:600">Find key <input type="number" id="findKey" value="48" min="1" max="100"></label>
-      <button class="btn primary" id="findBtn">Find it</button>
-      <span class="mono" id="findMsg" style="font-size:12.5px;color:var(--muted)">4 buffers, vs scanning every page of the table file</span>
+      <label style="font-size:13.5px;font-weight:600">Key <input type="number" id="btreeKey" value="42" min="1" max="999"></label>
+      <button class="btn primary" id="btreeSearch">Search</button>
+      <button class="btn" id="btreeInsert">Insert</button>
+      <button class="btn" id="btreeDelete">Delete</button>
+    </div>
+    <div class="controls">
+      <label style="font-size:13.5px;font-weight:600">Range <input type="number" id="btreeLo" value="30" min="1" max="999"> to <input type="number" id="btreeHi" value="70" min="1" max="999"></label>
+      <button class="btn" id="btreeRange">Scan range</button>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="btreeStep">Step →</button>
+      <button class="btn" id="btreePlay">▶ Play</button>
+      <label style="font-size:13.5px;font-weight:600">Speed <select id="btreeSpeed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select></label>
+      <button class="btn" id="btreeDemo">Load the demo set</button>
+      <button class="btn" id="btreeReset">↺ Reset</button>
+    </div>
+    <p class="logbox" id="btreeStatus">The users table: 10, 25, 87 in one leaf. Insert 42, the row from the walkthrough, then keep going until the leaf splits.</p>
     </div>
     <div class="controls"><label style="font-size:13.5px;font-weight:600">Table size: <span class="mono" id="rowLabel">1,000,000</span> rows</label>
       <input type="range" id="rowRange" min="3" max="9" step="1" value="6" style="flex:1;min-width:140px">
       <span class="mono" id="depthLabel" style="font-size:12.5px">tree depth ≈ 3</span></div>
+    <div class="hbar-row"><span class="hbar-label">Index lookup</span><span class="hbar-track"><i class="hbar-fill" id="growLookupBar" style="width:2%"></i></span><span class="mono" id="growLookupLabel">4 buffers · 0.05 ms</span></div>
+    <div class="hbar-row"><span class="hbar-label">Full scan</span><span class="hbar-track"><i class="hbar-fill warn" id="growScanBar" style="width:100%"></i></span><span class="mono" id="growScanLabel">12,500 pages · about 1 s</span></div>
+    <p style="font-size:13.5px;color:var(--muted);margin:6px 0 0">Rows here are about 100 bytes each, the users table, so a page holds about 80 of them. Scan time is pages times 8 KB at about 100 MB/s, one stream, no parallelism. The lookup bar is drawn at 2% for visibility: at 1 million rows its true width is 0.03% of the scan bar. Drag the slider and watch the scan grow while the lookup stays flat.</p>
     <p style="font-size:14px;color:var(--muted);margin:10px 0 0"><b style="color:var(--ink)">The consequence:</b> at 1 billion rows the tree is about 4 levels deep. That is one additional page read versus 10 million rows. A missing index is not a percentage regression. It is a change of complexity class, from O(log N) page reads to O(N). That is why the same query passes QA at 10K rows and pages the on-call at 10M, with no code change in between.</p>
     <p style="font-size:14px;color:var(--muted);margin:10px 0 0">See the same lookup on a B-tree next to a B+tree, and a range scan gliding along the leaf chain: <a href="https://simulation.amarkhamkar.com/">Data Structure Simulators</a>. It runs entirely in your browser.</p>
   </div>
@@ -283,6 +295,7 @@ db.getSiblingDB('local').oplog.rs.stats().maxSize</div></div><div class="wib"><h
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
   <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/btree.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
 </body>
