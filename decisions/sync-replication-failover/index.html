@@ -327,6 +327,26 @@ COMMIT/*!*/;</pre>
   <p class="sub"><b style="color:var(--ink)">Failure 2: a <span class="mono">w: 1</span> write is rolled back.</b> Blast radius: the write disappears from the new primary and lands in <span class="mono">rollback/</span> files on the old primary as BSON. Inserts and updates are saved there. Deletes and drops are not. Detection: the old primary enters ROLLBACK state on rejoin, and files appear in the rollback directory. First metric to move: rollback files on disk. Mitigation: <span class="mono">w: "majority"</span> for anything that cannot be lost.</p>
   <p class="sub"><b style="color:var(--ink)">Failure 3: a secondary falls behind the oplog window.</b> Blast radius: it cannot catch up by tailing the oplog and needs a full initial sync. During the sync it is not available as a failover target. Detection: <span class="mono">rs.printReplicationInfo()</span> shows the oplog window in hours, and the secondary lag exceeds it. First metric to move: the oplog window. Mitigation: size the oplog for the longest planned downtime, and watch the window, not just the lag.</p>
   <table class="breaks"><thead><tr><th>Engine</th><th>Failure</th><th>First metric to move</th><th>Mitigation</th></tr></thead><tbody><tr><td>PostgreSQL</td><td>Sync standby down</td><td>Sessions waiting on <span class="mono">SyncRep</span></td><td>Quorum <span class="mono">ANY 1 (s1, s2)</span>, or remove the dead standby</td></tr><tr><td>PostgreSQL</td><td>Standby up but slow</td><td>Commit p99 latency</td><td>Standby disk as fast as the primary</td></tr><tr><td>PostgreSQL</td><td><span class="mono">synchronous_standby_names</span> empty</td><td>None, that is the danger</td><td>Check the setting and the view at deploy time</td></tr><tr><td>PostgreSQL</td><td>Old primary returns and writes</td><td>Two servers not in recovery</td><td>Fence the old primary</td></tr><tr><td>PostgreSQL</td><td>Wrong standby promoted</td><td>LSN gap between standbys</td><td>Promote the highest flush LSN</td></tr><tr><td>PostgreSQL</td><td>Old primary rejoins</td><td>Timeline moved past</td><td><span class="mono">pg_rewind</span></td></tr><tr><td>MySQL</td><td>Semi-sync times out</td><td><span class="mono">Rpl_semi_sync_source_status</span> OFF</td><td>Alert on the status, not the enabled variable</td></tr><tr><td>MySQL</td><td>Wrong replica promoted</td><td>GTID set difference</td><td>Promote the most advanced replica</td></tr><tr><td>MySQL</td><td>Minority partition in Group Replication</td><td>Group size</td><td>Odd member counts, set the unreachable timeout</td></tr><tr><td>MySQL</td><td><span class="mono">AFTER_COMMIT</span> set</td><td>Wait point variable</td><td>Keep <span class="mono">AFTER_SYNC</span>, verify at deploy</td></tr><tr><td>MySQL</td><td>Errant GTIDs</td><td>GTID set difference</td><td>Empty transaction per errant GTID, or rebuild</td></tr><tr><td>MongoDB</td><td>Primary loses its majority</td><td>Election count in the logs</td><td>Three voting members, different failure domains</td></tr><tr><td>MongoDB</td><td><span class="mono">w: 1</span> write rolled back</td><td>Rollback files on disk</td><td><span class="mono">w: "majority"</span> for anything that cannot be lost</td></tr><tr><td>MongoDB</td><td>Secondary behind the oplog window</td><td>Oplog window</td><td>Size the oplog for the longest planned downtime</td></tr></tbody></table>
+  <div class="lab" id="failoverWidget" style="margin-top:18px">
+    <h3 style="margin:0 0 6px;font-size:17px">Watch a failover happen</h3>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 12px">The primary dies at 3 AM. Who becomes primary, how long does it take, and what is lost? Press Kill the primary. The numbers are the ones from this page: 2,000 commits/s, 5 s of lag, 20 to 30 s to detect on Patroni defaults.</p>
+    <div class="seg" id="foSeg">
+      <button aria-pressed="true" data-mode="sync">Synchronous: S1 ACKs every commit</button>
+      <button aria-pressed="false" data-mode="async">Asynchronous: S1 trails by about 5 s</button>
+    </div>
+    <div class="fo-nodes">
+      <div class="fo-node fo-primary" id="foNodeP"><b>Primary</b><span class="mono" id="foLsnP">LSN 0/3A4F900</span><span id="foStateP">PRIMARY, accepting writes</span></div>
+      <div class="fo-node fo-standby" id="foNodeS1"><b>Standby S1</b><span class="mono" id="foLsnS1">LSN 0/3A4F900</span><span id="foStateS1">standby, synchronous</span></div>
+      <div class="fo-node fo-standby" id="foNodeS2"><b>Standby S2</b><span class="mono" id="foLsnS2">LSN 0/3A4F800</span><span id="foStateS2">standby, asynchronous</span></div>
+    </div>
+    <p class="mono" id="foCommits" style="font-size:13px;color:var(--muted);margin:12px 0 4px">0 commits accepted</p>
+    <div class="controls">
+      <button class="btn primary" id="foKill">Kill the primary</button>
+      <button class="btn" id="foReset">↺ Reset</button>
+    </div>
+    <p class="logbox" id="foStatus">Healthy: the primary accepts writes, S1 ACKs every commit before it returns, S2 trails a little behind. Press Kill the primary to watch the failover.</p>
+    <p id="foLost" style="font-size:14px;font-weight:700;margin:10px 0 0"></p>
+  </div>
 </div></section>
 <section id="alternatives" style="padding-top:6px"><div class="wrap">
   <div class="kicker">10-minute layer · section 6 of 8</div>
@@ -590,6 +610,7 @@ COMMIT/*!*/;</pre>
 <script src="../../assets/js/copy-buttons.js"></script>
 <script src="../../assets/js/search.js"></script>
 <script src="../../assets/js/explain-tool.js"></script>
+<script src="../../assets/js/failover.js"></script>
 <script>
 (function(){
   var toggle = document.getElementById('engineToggle');

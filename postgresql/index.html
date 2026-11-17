@@ -105,6 +105,12 @@ $ pg_waldump pg_wal/000000010000000000000003
 -- in psql: SELECT pg_current_wal_lsn();</div></dd>
       </dl>
     </div></div>
+  <div class="diagram"><p class="dcap">WAL recycling: when a segment can be reused</p><div class="dflow">
+    <div class="dbox"><b>Writes</b>WAL records append to the current segment</div><span class="darrow">→</span>
+    <div class="dbox"><b>Checkpoint</b>dirty pages flush to base/ files</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Recycle</b>segments before the checkpoint are renamed and reused</div><span class="darrow">→</span>
+    <div class="dbox hot"><b>Blocked</b>a dead replication slot or failed archiving holds every segment after it</div>
+  </div></div>
 <p style="font-size:14.5px;color:var(--muted)">The other logs: <a href="../mysql/index.html#logs">MySQL · InnoDB: redo log and binary log</a> · <a href="../mongodb/index.html#logs">MongoDB · WiredTiger: journal and oplog</a> · <a href="../reference/index.html#logs-pattern">the pattern behind all five, and where they break</a></p>
 <p style="font-size:14.5px;color:var(--muted)">See the real thing: <a href="https://postgrespro.com/community/books/internals">PostgreSQL 14 Internals</a> by Egor Rogov, free PDF. The best single source on how Postgres actually works, and the book behind half the claims on this page.</p>
 </div></section>
@@ -133,6 +139,13 @@ SELECT relname, n_dead_tup
   FROM pg_stat_user_tables;</pre></div></div>
 </div></section>
 <section><div class="wrap">
+  <div class="diagram"><p class="dcap">One lookup, four pages: root, internal, leaf, heap</p><div class="dflow">
+    <div class="dbox"><b>Root page</b>users_pkey, in shared_buffers</div><span class="darrow">→</span>
+    <div class="dbox"><b>Internal page</b>42 sits between 25 and 87</div><span class="darrow">→</span>
+    <div class="dbox"><b>Leaf page</b>42 → page 7, slot 3</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Heap page</b>base/16384/16397, the row</div>
+  </div></div>
+  <p class="fnote">Play with this walk: <a href="../staff-path/index.html#labs">the B+ tree widget</a> runs the same lookup step by step, with splits, deletes, and range scans.</p>
   <div class="lab" id="liveSqlPg" style="margin-bottom:22px">
     <h3 style="margin:0 0 6px;font-size:17px">Try it live: a real Postgres, in your browser</h3>
     <p style="font-size:14px;color:var(--muted);margin:0 0 12px">No install, no account. This panel runs a real PostgreSQL in your browser. It starts with the same users table as the Home walkthrough, ids 10, 25, and 87. Run the insert, then the select, then the EXPLAIN, and watch the same numbers come out of a real plan.</p>
@@ -147,10 +160,27 @@ SELECT relname, n_dead_tup
     <div class="controls" style="margin-top:10px"><button class="btn primary" id="liveSqlRunPg">Run</button></div>
     <pre id="liveSqlOutPg">Nothing run yet.</pre>
   </div>
+  <div class="lab explain-tool" id="planVizPg" style="margin-bottom:22px">
+    <h3 style="margin:0 0 6px;font-size:17px">See the plan as a tree: which step is the villain</h3>
+    <p style="font-size:14px;color:var(--muted);margin:0 0 12px">Run the EXPLAIN in the live panel above, then press Visualize last plan. The tree shows every step with its share of the time, the slowest step in red, and the one thing to fix first. Or paste any EXPLAIN (ANALYZE, BUFFERS) output below.</p>
+    <textarea id="planInputPg" data-plan-input spellcheck="false" placeholder="Paste EXPLAIN (ANALYZE, BUFFERS) output here"></textarea>
+    <div class="controls" style="margin-top:10px">
+      <button class="btn primary" data-plan-viz="liveSqlOutPg">Visualize last plan</button>
+      <button class="btn" data-plan-analyze>Analyze this plan</button>
+      <button class="btn" data-plan-sample>Try a sample plan</button>
+    </div>
+    <div data-plan-out></div>
+  </div>
 <h3 style="margin:6px 0 4px;font-size:19px">One incident I keep coming back to</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The app slowed down over days. The file grew to 5 times its size. Live row counts did not move.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">I checked the oldest open transaction first. One long transaction was stopping VACUUM, so dead tuples piled up and the heap file bloated.</p>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">The fix was the transaction, not the space. Kill it or fix the code path, set idle_in_transaction_session_timeout, and run reports on a replica.</p>
+  <div class="diagram"><p class="dcap">Why dead tuples pile up: one long transaction pins the horizon</p><div class="dflow">
+    <div class="dbox"><b>UPDATE / DELETE</b>dead tuples accumulate</div><span class="darrow">→</span>
+    <div class="dbox"><b>Autovacuum</b>removes what no snapshot needs</div><span class="darrow">→</span>
+    <div class="dbox hot"><b>One idle-in-transaction session</b>horizon pinned, vacuum cannot advance</div><span class="darrow">→</span>
+    <div class="dbox good"><b>Fix</b>kill it, set idle_in_transaction_session_timeout</div>
+  </div></div>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">Real versions of this story: Uber hit the same write amplification at scale, and Notion hit the same VACUUM stall. Both are on the <a href="../stories/index.html#postgresql">Stories page</a>. How to host Postgres on-prem, on EC2, in Kubernetes, or managed is on the <a href="../cloud/index.html#pg-hosting">Cloud page</a>.</p>
 <h3 style="margin:18px 0 4px;font-size:19px">Before you leave, check this</h3>
 <p style="font-size:14.5px;color:var(--muted);margin:0 0 8px;max-width:820px">One command. It tells you whether cleanup is keeping up.</p>
@@ -167,6 +197,7 @@ SELECT relname, n_dead_tup
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
+<script src="../assets/js/explain-tool.js"></script>
 <script type="module" src="../assets/js/pglite-panel.js"></script>
 </body>
 </html>

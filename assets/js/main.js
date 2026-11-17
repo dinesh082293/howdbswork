@@ -467,32 +467,26 @@ document.getElementById('engineSeg').addEventListener('click',function(e){
 });
 renderPage();}
 function fmt(n){return n.toLocaleString('en-US')}
-if(document.getElementById('findBtn')){document.getElementById('findBtn').addEventListener('click',function(){
-  var key=+document.getElementById('findKey').value||0;
-  document.querySelectorAll('.bnode span').forEach(function(s){s.classList.remove('hit')});
-  var root=document.querySelector('[data-node="root"]');
-  var branch = key<30?0 : key<70?1 : 2;
-  var midNodes=document.querySelectorAll('[data-node="mid"]');
-  var leafNodes=document.querySelectorAll('[data-node="leaf"]');
-  var seq=[root,midNodes[branch],leafNodes[branch]];
-  seq.forEach(function(node,idx){
-    setTimeout(function(){
-      node.querySelectorAll('span').forEach(function(s){ if(+s.getAttribute('data-k')<=key) s.classList.add('hit'); });
-      if(idx===2){
-        var found=false;
-        node.querySelectorAll('span').forEach(function(s){ if(+s.getAttribute('data-k')===key) found=true; });
-        document.getElementById('findMsg').textContent = found ?
-          'Found '+key+' in 3 index pages: root → internal → leaf. One more read, the heap page, makes 4 buffers for the row.' :
-          key+' is not in the tree, and we know after the same 3 index pages, because the leaf page is exactly where it would have to be.';
-      }
-    }, idx*450);
-  });
-});}
 if(document.getElementById('rowRange')){document.getElementById('rowRange').addEventListener('input',function(e){
   var rows=Math.pow(10,+e.target.value);
   document.getElementById('rowLabel').textContent=fmt(rows);
   var depth=Math.max(2,Math.ceil(Math.log(rows/20)/Math.log(400))+1);
-  document.getElementById('depthLabel').textContent='tree depth ≈ '+depth+' · a full scan would read ≈ '+fmt(Math.round(rows/100))+' pages';
+  document.getElementById('depthLabel').textContent='tree depth ≈ '+depth;
+  var scanPages=Math.round(rows/80);
+  var scanSecs=scanPages/12500;
+  var scanTxt;
+  if(scanSecs<1){scanTxt=Math.round(scanSecs*1000)+' ms';}
+  else if(scanSecs<60){scanTxt='about '+scanSecs.toFixed(scanSecs<10?1:0)+' s';}
+  else{scanTxt='about '+Math.round(scanSecs/60)+' min';}
+  var lookupBuffers=depth+1;
+  var lb=document.getElementById('growLookupBar');
+  var ll=document.getElementById('growLookupLabel');
+  var sb=document.getElementById('growScanBar');
+  var sl=document.getElementById('growScanLabel');
+  if(lb){lb.style.width=Math.max(2,Math.round(lookupBuffers/scanPages*100))+'%';}
+  if(ll){ll.textContent=lookupBuffers+' buffers · 0.05 ms';}
+  if(sb){sb.style.width='100%';}
+  if(sl){sl.textContent=fmt(scanPages)+' pages · '+scanTxt;}
 });
 }
 var tx={a:false,b:false,committed:100,pending:null,bSnap:null};
@@ -678,7 +672,8 @@ mo:[
  {s:5,t:"Secondaries tail the oplog and apply it",d:"Each secondary continuously pulls new oplog entries and applies them, converging on the same data. If the primary dies, the most up-to-date members vote and elect a new primary, and majority write concern is what guarantees this insert survives that election.",log:null,page:3,index:1,rep:1},
  {s:5,t:"Later (~60 s): a checkpoint makes it permanent in the .wt files",d:"At the next checkpoint, WiredTiger writes a consistent snapshot of all dirty pages into collection-2-….wt, updates its metadata in WiredTiger.wt, and old journal files are removed. The insert was safe since the journal + majority steps, the checkpoint is the final tidy-up.",log:null,page:3,index:1,rep:1}
 ]};
-var insEng='pg', insCur=-1, insTimer=null;
+var insEng='pg', insCur=-1, insTimer=null, insSpeed=1600;
+var INS_SPEEDS={slow:2600,normal:1600,fast:800};
 function insState(){
   var st={log:[],page:0,index:0,rep:0};
   var steps=INS_STEPS[insEng];
@@ -750,8 +745,23 @@ document.getElementById('insPlay').addEventListener('click',function(){
   insTimer=setInterval(function(){
     if(insCur>=INS_STEPS[insEng].length-1){insStopPlay(); return;}
     insGo(insCur+1);
-  },1600);
+  },insSpeed);
   insGo(insCur+1);
+});
+var insSpeedSel=document.getElementById('insSpeedSel');
+if(insSpeedSel){insSpeedSel.addEventListener('change',function(){
+  insSpeed=INS_SPEEDS[insSpeedSel.value]||1600;
+});}
+document.addEventListener('keydown',function(e){
+  var tag=(e.target&&e.target.tagName)||'';
+  if(tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT'||tag==='BUTTON'){return;}
+  var lab=document.getElementById('insSteps');
+  if(!lab){return;}
+  var r=lab.getBoundingClientRect();
+  if(r.top>window.innerHeight||r.bottom<0){return;}
+  if(e.key==='ArrowRight'){e.preventDefault();insStopPlay();insGo(insCur+1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();insStopPlay();insGo(insCur-1);}
+  else if(e.key===' '){e.preventDefault();document.getElementById('insPlay').click();}
 });
 document.getElementById('insSeg').addEventListener('click',function(e){
   var b=e.target.closest('button'); if(!b)return;

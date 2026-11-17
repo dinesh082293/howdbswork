@@ -82,6 +82,24 @@
   </div>
   <p class="sub">Decisions: <a href="decisions/sync-replication-failover/index.html">Synchronous replication and failover</a>, what a commit waits for before it returns.</p>
 </div></section>
+<section id="sitemap" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">The whole site · one picture</div>
+  <h2>Where to go next, in order</h2>
+  <p class="sub">Start at the top and go down. Each step assumes the one above it. The three boxes on the right are reference, not a path: open them when a question comes up, not in order.</p>
+  <div class="diagram"><p class="dcap">The path, top to bottom</p><div class="dflow">
+    <div class="dbox good"><b><a href="start-here/index.html">1 · Start here</a></b>one insert, end to end · 10 min</div><span class="darrow">→</span>
+    <div class="dbox"><b><a href="postgresql/index.html">2 · Pick an engine</a></b>PostgreSQL, MySQL, or MongoDB · files and logs</div><span class="darrow">→</span>
+    <div class="dbox"><b><a href="staff-path/index.html">3 · Staff path</a></b>six levels, eighteen problem pairs · 2 hr</div><span class="darrow">→</span>
+    <div class="dbox"><b><a href="decisions/index.html">4 · Decisions</a></b>sync replication and failover, then nine more</div><span class="darrow">→</span>
+    <div class="dbox"><b><a href="stories/index.html">5 · Stories</a></b>sixteen times a real database broke</div>
+  </div></div>
+  <div class="diagram"><p class="dcap">Reference, open as needed</p><div class="dflow">
+    <div class="dbox"><b><a href="cheat-sheet/index.html">Cheat sheet</a></b>the whole site in 24 rules</div><span class="darrow">·</span>
+    <div class="dbox"><b><a href="reference/index.html">Reference</a></b>every idea on one card, plus the EXPLAIN visualizer</div><span class="darrow">·</span>
+    <div class="dbox"><b><a href="cloud/index.html">Cloud</a></b>hosting, on-prem to managed</div>
+  </div></div>
+  <p class="sub">New to databases entirely? Start here is written for you: no prior knowledge, every term defined where it first appears. Already running production? Skip to the staff path, level 2, and the Decisions page.</p>
+</div></section>
 <section id="stories-strip"><div class="wrap">
   <div class="kicker">Real stories</div>
   <h2>Sixteen times a real database broke</h2>
@@ -92,6 +110,7 @@
   <h2>What changed, and when</h2>
   <p class="sub">I update this log when the site changes. New pages first. Small fixes do not get a line.</p>
   <ul style="font-size:15px;line-height:1.8;max-width:760px">
+    <li><b>Nov 17, 2026:</b> the site is now playable, not just readable: a B+ tree you can search, insert, delete, and range-scan step by step, an animated failover on the Decisions page, an EXPLAIN visualizer that names the slowest step, and a table-growth slider. Every engine page has a diagram for every concept, and the home page has a map of the whole site.</li>
     <li><b>Nov 17, 2026:</b> Start here now has a graphic for every concept too, including the 4 buffers vs 1,250,000 pages chart, drawn to scale.</li>
     <li><b>Nov 17, 2026:</b> the Decisions page now has a graphic for every concept, diagrams, bar charts, and summary tables, not just text.</li>
     <li><b>Nov 17, 2026:</b> architecture diagrams on the home page, one per engine, client to memory to log to data files.</li>
