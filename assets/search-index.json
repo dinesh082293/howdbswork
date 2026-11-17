@@ -15,7 +15,7 @@
   "t": "Durability is an ordering rule, not a feature",
   "u": "start-here/index.html#rules",
   "s": "Start here",
-  "k": "durability log first commit fsync pg_wal ib_logfile0 WiredTigerLog"
+  "k": "durability log first commit fsync pg_wal #ib_redo0 WiredTigerLog"
  },
  {
   "t": "Lookup cost is page count, nothing else",
@@ -45,7 +45,7 @@
   "t": "Index (B+ tree)",
   "u": "start-here/index.html#glossary",
   "s": "Start here",
-  "k": "index B+ tree sorted key page lookup 3 page reads"
+  "k": "index B+ tree sorted key page lookup 4 buffers"
  },
  {
   "t": "Transaction",
@@ -261,7 +261,7 @@
   "t": "Every log file a DBA needs to know",
   "u": "postgresql/index.html",
   "s": "PostgreSQL",
-  "k": "log files pg_wal postgresql-16-main.log server log error slow archive_status"
+  "k": "log files pg_wal postgresql-18-main.log server log error slow archive_status"
  },
  {
   "t": "The parameters DBAs actually touch during outages",
@@ -297,7 +297,7 @@
   "t": "max_wal_size",
   "u": "postgresql/index.html",
   "s": "PostgreSQL",
-  "k": "max_wal_size checkpoint 1 GB reload checkpoints_req checkpoint storms"
+  "k": "max_wal_size checkpoint 1 GB reload num_requested checkpoint storms"
  },
  {
   "t": "checkpoint_timeout",
@@ -405,7 +405,7 @@
   "t": "Every log file a DBA needs to know",
   "u": "mysql/index.html",
   "s": "MySQL",
-  "k": "log files redo binlog error slow log ib_logfile0 mysql-bin hostname.err"
+  "k": "log files redo binlog error slow log #ib_redo0 mysql-bin hostname.err"
  },
  {
   "t": "The parameters DBAs actually touch during outages",
@@ -435,13 +435,13 @@
   "t": "Files on disk: the datadir",
   "u": "mysql/index.html#files",
   "s": "MySQL",
-  "k": "files ls datadir ibdata1 ib_logfile0 mysql-bin undo_001 shop users.ibd"
+  "k": "files ls datadir ibdata1 #ib_redo0 mysql-bin undo_001 shop users.ibd"
  },
  {
-  "t": "ib_logfile0 and ib_logfile1",
+  "t": "#ib_redo0 and #ib_redo31",
   "u": "mysql/index.html#files",
   "s": "MySQL",
-  "k": "ib_logfile0 ib_logfile1 redo log #innodb_redo #ib_redo crash safety"
+  "k": "#ib_redo0 #ib_redo31 redo log #innodb_redo crash safety"
  },
  {
   "t": "mysql-bin.000001",
@@ -471,7 +471,7 @@
   "t": "Redo log",
   "u": "mysql/index.html#logs",
   "s": "MySQL",
-  "k": "redo log ib_logfile0 ib_logfile1 physical page changes crash replay LOG section checkpoint age"
+  "k": "redo log #ib_redo0 #ib_redo31 physical page changes crash replay LOG section checkpoint age"
  },
  {
   "t": "Binary log (binlog)",
@@ -669,7 +669,7 @@
   "t": "4. Checkpoint distance = crash recovery time",
   "u": "cheat-sheet/index.html#cs-pg",
   "s": "Cheat Sheet",
-  "k": "postgresql checkpoint distance crash recovery max_wal_size replay 1 GB checkpoints_req pg_stat_bgwriter"
+  "k": "postgresql checkpoint distance crash recovery max_wal_size replay 1 GB num_requested pg_stat_checkpointer"
  },
  {
   "t": "5. shared_buffers is ~25% of RAM: on purpose",
@@ -699,7 +699,7 @@
   "t": "1. Two logs, two different jobs",
   "u": "cheat-sheet/index.html#cs-my",
   "s": "Cheat Sheet",
-  "k": "mysql innodb two logs redo binlog ib_logfile0 mysql-bin.000042 crash recovery replicas two-phase commit"
+  "k": "mysql innodb two logs redo binlog #ib_redo0 mysql-bin.000042 crash recovery replicas two-phase commit"
  },
  {
   "t": "2. The table file IS the primary-key index",
@@ -909,7 +909,7 @@
   "t": "B+ tree lookup: finding one key among millions",
   "u": "staff-path/index.html#labs",
   "s": "Staff Path",
-  "k": "B+ tree lookup fanout 400 depth log root internal leaf 3 page reads sequential scan"
+  "k": "B+ tree lookup fanout 400 depth log root internal leaf 4 buffers sequential scan"
  },
  {
   "t": "MVCC: two transactions, one row, no waiting",
@@ -975,7 +975,7 @@
   "t": "Redo log and doublewrite buffer",
   "u": "staff-path/index.html#reference",
   "s": "Staff Path",
-  "k": "reference under the hood redo log doublewrite buffer ib_logfile0 torn page"
+  "k": "reference under the hood redo log doublewrite buffer #ib_redo0 torn page"
  },
  {
   "t": "Journal and checkpoints",
@@ -1083,7 +1083,7 @@
   "t": "RDS for PostgreSQL, Aurora PostgreSQL, Cloud SQL, Azure Database",
   "u": "cloud/index.html#cloud",
   "s": "Cloud",
-  "k": "RDS Aurora PostgreSQL Cloud SQL Azure Multi-AZ 60-120 s PITR 35 days 6 copies 3 AZs 128 TB"
+  "k": "RDS Aurora PostgreSQL Cloud SQL Azure Multi-AZ 60-120 s PITR 35 days 6 copies 3 AZs 256 TiB"
  },
  {
   "t": "RDS for MySQL, Aurora MySQL, Cloud SQL for MySQL",
@@ -1101,7 +1101,7 @@
   "t": "Aurora storage: 6 copies, 3 AZs",
   "u": "cloud/index.html#cloud",
   "s": "Cloud",
-  "k": "Aurora storage 6 copies 3 AZs 10 GB increments 128 TB"
+  "k": "Aurora storage 6 copies 3 AZs 10 GB increments 256 TiB"
  },
  {
   "t": "RDS Multi-AZ failover: 60-120 s",
@@ -1288,5 +1288,101 @@
   "u": "cloud/index.html#mo-hosting",
   "s": "Cloud",
   "k": "mongodb hosting on-prem EC2 kubernetes operator atlas replica set sharded"
+ },
+ {
+  "t": "Synchronous replication and failover",
+  "u": "decisions/sync-replication-failover/index.html",
+  "s": "Decisions",
+  "k": "sync replication failover quorum RPO RTO split-brain synchronous_commit"
+ },
+ {
+  "t": "Synchronous replication, compared across PostgreSQL, MySQL and MongoDB",
+  "u": "decisions/sync-replication-failover/index.html#compare",
+  "s": "Decisions",
+  "k": "compare synchronous replication mysql semi-sync group replication mongo majority postgres synchronous_commit"
+ },
+ {
+  "t": "Decision record: synchronous replication with quorum",
+  "u": "decisions/sync-replication-failover/index.html#decision",
+  "s": "Decisions",
+  "k": "decision record quorum synchronous_commit ANY 1 standby context options consequences"
+ },
+ {
+  "t": "What: synchronous replication",
+  "u": "decisions/sync-replication-failover/index.html#what",
+  "s": "Decisions",
+  "k": "synchronous replication commit waits standby confirm WAL remote_write remote_apply"
+ },
+ {
+  "t": "Why: async replication loses whatever had not streamed",
+  "u": "decisions/sync-replication-failover/index.html#why",
+  "s": "Decisions",
+  "k": "async replication data loss RPO zero primary dies WAL streamed"
+ },
+ {
+  "t": "How: commit LSN, walreceiver, flush, ack",
+  "u": "decisions/sync-replication-failover/index.html#how",
+  "s": "Decisions",
+  "k": "commit LSN walreceiver flush ack backend wake round trip fsync pg_waldump"
+ },
+ {
+  "t": "When: same-AZ, cross-AZ, cross-region latency",
+  "u": "decisions/sync-replication-failover/index.html#when",
+  "s": "Decisions",
+  "k": "same-AZ cross-AZ cross-region RTT latency group commit serial commit throughput"
+ },
+ {
+  "t": "What breaks: one sync standby down, all writes hang",
+  "u": "decisions/sync-replication-failover/index.html#breaks",
+  "s": "Decisions",
+  "k": "sync standby down writes hang blast radius quorum sync_state pg_stat_replication"
+ },
+ {
+  "t": "Alternatives rejected: MySQL semi-sync, Group Replication, Mongo w:majority",
+  "u": "decisions/sync-replication-failover/index.html#alternatives",
+  "s": "Decisions",
+  "k": "mysql semi-sync group replication mongo majority failover guarantee comparison"
+ },
+ {
+  "t": "Operating it: three metrics, alert thresholds, runbook",
+  "u": "decisions/sync-replication-failover/index.html#operating",
+  "s": "Decisions",
+  "k": "operating metrics alert thresholds runbook capacity synchronous replication"
+ },
+ {
+  "t": "Version notes: PG 17 checkpointer, MySQL 8.0.30 redo, MongoDB plan cache",
+  "u": "decisions/sync-replication-failover/index.html#versions",
+  "s": "Decisions",
+  "k": "version notes PG 17 checkpointer mysql 8.0.30 redo mongodb plan cache"
+ },
+ {
+  "t": "Postmortem: the binlog purge that took the replica down",
+  "u": "decisions/sync-replication-failover/index.html#postmortem",
+  "s": "Decisions",
+  "k": "postmortem binlog purge replica mysql incident timeline root cause"
+ },
+ {
+  "t": "Anti-patterns and the migration path out of each",
+  "u": "decisions/sync-replication-failover/index.html#anti-patterns",
+  "s": "Decisions",
+  "k": "anti-patterns migration path synchronous replication quorum"
+ },
+ {
+  "t": "Where I am less sure",
+  "u": "decisions/sync-replication-failover/index.html#unsure",
+  "s": "Decisions",
+  "k": "uncertainty assumptions patroni promotion fsync RTT"
+ },
+ {
+  "t": "Tested on: versions, hardware, dataset size, method",
+  "u": "decisions/sync-replication-failover/index.html#tested",
+  "s": "Decisions",
+  "k": "tested on benchmark versions hardware dataset method"
+ },
+ {
+  "t": "Appendix: derivations, raw output, benchmark method, sources",
+  "u": "decisions/sync-replication-failover/index.html#appendix",
+  "s": "Decisions",
+  "k": "appendix derivations raw output benchmark method sources ARIES"
  }
 ]

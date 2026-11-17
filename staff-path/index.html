@@ -14,7 +14,7 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/sync-replication-failover/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
@@ -51,10 +51,10 @@
     <h3>2. B+ tree lookup: finding one key among millions</h3>
     <div class="problem"><b class="label">Problem</b><div><p>A sequential scan of a 10-million-row table reads ~1,250,000 pages. A B+ tree lookup of the same table reads 3.</p><small>The derivation is arithmetic, not convention: an 8 KB internal page holds roughly 400 key-pointer pairs (fanout ≈ 400), so depth = log<sub>400</sub>(rows). 400² = 160,000 rows at depth 2; 400³ = 64 million at depth 3; 400⁴ = 25.6 billion at depth 4. Internal pages hold only guide keys; leaf pages hold keys plus row pointers. That is the entire mechanism, every index behavior on this page, including the ESR rule in the reference atlas, follows from how these pages store keys.</small></div></div>
     <div class="growth">
-      <div class="g"><b>10K rows</b>Scan: 125 pages, 5–20 ms. Passes every test.</div>
-      <div class="g"><b>1M rows</b>Scan: 12,500 pages, 0.5–2 s. Users start noticing.</div>
-      <div class="g hot"><b>500K–2M rows</b>The transition zone: scan cost crosses the timeout budget while traffic is also at its highest.</div>
-      <div class="g hot"><b>10M rows</b>Scan: ~3–8 s per query. An incident, not a slowdown.</div>
+      <div class="g"><b>10K rows</b>Scan: 125 pages, 5-20 ms. Passes every test.</div>
+      <div class="g"><b>1M rows</b>Scan: 12,500 pages, 0.5-2 s. Users start noticing.</div>
+      <div class="g hot"><b>500K-2M rows</b>The transition zone: scan cost crosses the timeout budget while traffic is also at its highest.</div>
+      <div class="g hot"><b>10M rows</b>Scan: ~3-8 s per query. An incident, not a slowdown.</div>
     </div>
     <p>Type a number and watch the lookup walk: root, internal, leaf. Only 3 pages are read, no matter how big the table file gets.</p>
     <div class="btree-wrap"><div class="btree">
@@ -73,7 +73,7 @@
     <div class="controls">
       <label style="font-size:13.5px;font-weight:600">Find key <input type="number" id="findKey" value="48" min="1" max="100"></label>
       <button class="btn primary" id="findBtn">Find it</button>
-      <span class="mono" id="findMsg" style="font-size:12.5px;color:var(--muted)">3 page reads, vs scanning every page of the table file</span>
+      <span class="mono" id="findMsg" style="font-size:12.5px;color:var(--muted)">4 buffers, vs scanning every page of the table file</span>
     </div>
     <div class="controls"><label style="font-size:13.5px;font-weight:600">Table size: <span class="mono" id="rowLabel">1,000,000</span> rows</label>
       <input type="range" id="rowRange" min="3" max="9" step="1" value="6" style="flex:1;min-width:140px">
@@ -126,7 +126,7 @@
 </div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
-  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
