@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="The full beginner course: vocabulary, teams, runbook, one insert end to end, read, update, delete, crash, three scenarios, a quiz, and eight incident cards."/>
+<link rel="icon" href="data:,"/>
+<title>Start here: the full beginner course · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<section><div class="wrap">
+  <h1>Start here</h1>
+  <p class="sub">The full beginner course, in order. Vocabulary first, then the insert, then the incidents.</p>
+  <p class="lede">I run production databases for a living. PostgreSQL, MySQL, MongoDB, Aurora. Ten years of it.</p>
+  <p class="lede">Most of what I know about how databases work, I learned the expensive way. A page at 2 AM. A query that was fine yesterday and slow today. A disk that filled up while nobody was watching. A replica that was three seconds behind and a user staring at data they had just saved.</p>
+  <p class="lede">Nobody handed me a page that started with the files on disk. So I wrote one. This site teaches three databases the way they actually exist on a server: a process, a block of memory, and a directory of files. If you know where the bytes sit, the performance follows. If you do not, you are guessing, and guessing is how you end up restarting a database at 2 AM hoping the problem goes away.</p>
+  <p class="lede">It goes from zero to staff level. Start at the top if you are new. Skip to the incident cards if something is broken right now.</p>
+  <div class="hooknum">
+    <div class="hn"><b>3 page reads</b><span>An index lookup at 10M rows: root → internal → leaf. At 1 billion rows it is 4. Tree depth grows logarithmically; scan cost grows linearly. That asymmetry is the whole subject of this page.</span></div>
+    <div class="hn"><b>1,250,000 pages</b><span>The same lookup with no index: a sequential scan of a 10 GB table file at 8 KB per page. At 3 GB/s of NVMe throughput that is 3.3 seconds of pure I/O before a single row is evaluated.</span></div>
+    <div class="hn"><b>1 fsync</b><span>What a commit actually costs: one sequential write of the log record, forced to disk. Not the data page. The log. <span class="mono">pg_wal</span>, <span class="mono">ib_logfile0</span>, <span class="mono">WiredTigerLog.*</span>. Everything else is deferred.</span></div>
+  </div>
+  <h2 id="rules">Three rules that run every database on this site</h2>
+  <div class="jobs">
+    <div class="job"><div class="num">1</div><h3>Durability is an ordering rule, not a feature</h3><p>The log record reaches disk before the data page is required to. That one ordering rule is why a commit survives a power cut that kills everything in memory. Recovery is replay, and replay needs only the log.</p><div class="real">PG: pg_wal/ · MySQL: ib_logfile0 (redo) · MongoDB: journal/WiredTigerLog.*</div></div>
+    <div class="job"><div class="num">2</div><h3>Lookup cost is page count, nothing else</h3><p>Rows live in fixed-size pages: 8 KB in PostgreSQL, 16 KB in InnoDB. An index is a sorted structure that cuts a lookup from N pages to roughly log<sub>fanout</sub>(N) pages. At a fanout near 400, each extra tree level covers about 400 times more data.</p><div class="real">PG: base/16384/16397 · MySQL: shop/users.ibd · MongoDB: collection-*.wt</div></div>
+    <div class="job"><div class="num">3</div><h3>MVCC trades disk for non-blocking reads</h3><p>Old row versions stay around until no open snapshot can still see them, so readers never wait for writers. The cost is deferred, not gone. Every old version is cleanup debt, collected by VACUUM, purge, or WiredTiger reconciliation. One long transaction can block all three.</p><div class="real">PG: old tuples + VACUUM · MySQL: undo_001/undo_002 · MongoDB: timestamped versions in cache</div></div>
+  </div>
+</div></section>
+<div class="wrap"><section id="glossary" style="padding-bottom:0">
+  <div class="kicker">Vocabulary: each term with its physical referent</div>
+  <h2 style="font-size:24px">Six terms. Every one of them is a file, a size, or a number.</h2>
+  <div class="glossary" style="margin-top:16px">
+    <div class="gitem"><b>Page</b><span>The fixed-size chunk a database reads and writes. Never one row at a time. Always a whole page.</span><span class="mono">PostgreSQL: 8 KB · InnoDB: 16 KB · WiredTiger: variable blocks, compressed</span></div>
+    <div class="gitem"><b>Write-ahead log (WAL)</b><span>The log file where every change is recorded <i>before</i> the data file changes. "Write-ahead" is the whole trick.</span><span class="mono">PG: pg_wal/ · InnoDB: redo log · WiredTiger: journal/</span></div>
+    <div class="gitem"><b>Index (B+ tree)</b><span>A sorted structure that maps a key to the exact page holding the row, in about 3 jumps instead of a full scan.</span><span class="mono">PG: its own file in base/ · MySQL: inside the .ibd · MongoDB: index-*.wt</span></div>
+    <div class="gitem"><b>Transaction</b><span>A group of changes that either all commit or all roll back. COMMIT means the log record is forced to disk.</span><span class="mono">BEGIN; … COMMIT; · tracked by xid (PG), trx id (InnoDB), txnNumber (MongoDB)</span></div>
+    <div class="gitem"><b>Checkpoint</b><span>The moment dirty pages in memory are written to their real data files, so the log before that point can be recycled.</span><span class="mono">PG: checkpoint · InnoDB: checkpoint LSN · WiredTiger: every ~60 s</span></div>
+    <div class="gitem"><b>Replica</b><span>A second server that replays the main server's log and ends up with identical data. The delay is called lag.</span><span class="mono">PG: streams WAL · MySQL: replays binlog · MongoDB: tails the oplog</span></div>
+  </div>
+</section></div>
+<section id="start-here"><div class="wrap">
+  <div class="kicker">Start here · for the beginner</div>
+  <h2>What each database actually is</h2>
+  <p class="sub">Three programs, one job: keep data in files on disk, serve it from memory, and prove that a commit survived. They differ in exactly three physical choices: how the data file is organized, how many logs there are, and where old row versions live. Every behavior difference in the rest of this page follows from those three choices. Start with the one plain line per engine. The architecture, the log files, the people, and the outage parameters follow.</p>
+
+  <div class="herocta" style="margin-bottom:22px"><a class="btn primary" href="../postgresql/index.html">PostgreSQL, in one line →</a><a class="btn" href="../mysql/index.html">MySQL · InnoDB →</a><a class="btn" href="../mongodb/index.html">MongoDB · WiredTiger →</a></div>
+<h3 style="margin:26px 0 4px;font-size:19px">Who manages what, on-prem</h3>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">On-prem, three teams touch the same server. Most 2 AM arguments are boundary disputes. So here are the boundaries, plainly. The DBA owns everything the database process does. The sysadmin owns the machine it runs on. Storage owns the bytes underneath both.</p>
+  <div class="splitgrid" style="margin-bottom:22px">
+    <div class="splitcard"><h4>Database administrator (DBA)</h4><ul>
+      <li>Installs and configures the engine; owns every parameter in the tables below</li>
+      <li>Schema, indexes, and query performance; reviews plans for new queries</li>
+      <li>Backups, point-in-time recovery, and restore tests</li>
+      <li>Replication topology, lag, failover decisions</li>
+      <li>Users, roles, and access inside the database</li>
+      <li>Cleanup health: autovacuum / purge / checkpoint tuning</li></ul></div>
+    <div class="splitcard"><h4>Sysadmin / OS team</h4><ul>
+      <li>The machine or VM: CPU, RAM, OS patching, kernel limits (open files, huge pages)</li>
+      <li>Filesystems mounted with the right options; the data directory exists and is owned by the DB user</li>
+      <li>Process supervision (systemd), NTP/time sync, DNS</li>
+      <li>Network between app, primary, and replicas; firewall rules</li>
+      <li>Host-level monitoring: CPU steal, memory pressure, I/O wait</li></ul></div>
+    <div class="splitcard"><h4>Storage team</h4><ul>
+      <li>The volumes themselves: RAID / SAN / cloud disks, IOPS and throughput provisioning</li>
+      <li>Separate volumes where it matters: log files (WAL / redo / journal) vs data files</li>
+      <li>Snapshots at the storage layer, and their retention</li>
+      <li>Disk expansion when the DBA's growth forecast says so</li>
+      <li>Latency evidence when the DBA says "the disk is slow": device-level stats to prove or disprove it</li></ul></div>
+  </div>
+  <p style="font-size:14px;color:var(--muted);margin:0 0 22px"><b style="color:var(--ink)">The seams, where incidents actually live:</b> a full disk is a storage problem until the cause turns out to be WAL the DBA's archiving failed to move. A "slow database" is a DBA problem until device latency shows the volume is saturated. Run the check in your layer first, with numbers, before you escalate across the seam.</p>
+
+  <h3 style="margin:26px 0 4px;font-size:19px">The standard outage runbook: same steps, every engine</h3>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Engines differ. The order of operations does not. These eight steps are the checklist triage, expanded into the full incident arc. The step most often skipped is step 7. That is why emergency parameter values are still in production years later.</p>
+  <div class="lab" style="margin-bottom:0">
+    <div class="opflow">
+      <div class="opstep"><div class="dotline"><div class="odot">1</div><div class="oline"></div></div><p><b>Declare and timestamp.</b> Name an incident lead, note the start time, and check what changed in the last hour: deploy, config push, batch job, marketing send. A majority of outages correlate with a change. Find it before touching the database.</p></div>
+      <div class="opstep"><div class="dotline"><div class="odot">2</div><div class="oline"></div></div><p><b>Ask what is running right now.</b> <span class="mono">pg_stat_activity</span> / <span class="mono">SHOW FULL PROCESSLIST</span> / <span class="mono">db.currentOp({active:true})</span>. One query eliminates half of all incident classes before any dashboard is opened.</p></div>
+      <div class="opstep"><div class="dotline"><div class="odot">3</div><div class="oline"></div></div><p><b>Find the blocker and the oldest transaction.</b> Lock chains have a head. Cleanup horizons have an owner. Kill the runaway report or the idle-in-transaction session. Confirm first that it is not a payment mid-flight.</p></div>
+      <div class="opstep"><div class="dotline"><div class="odot">4</div><div class="oline"></div></div><p><b>Take the three vitals.</b> Connections by state, replication lag, and disk broken down by owner (data files vs log files). Three numbers, three incident classes ruled in or out, under a minute.</p></div>
+      <div class="opstep"><div class="dotline"><div class="odot">5</div><div class="oline"></div></div><p><b>Apply the smallest lever that matches the evidence.</b> Kill the blocker, fail over, shed reads to replicas, or raise the one reloadable parameter the evidence names (max_wal_size, redo capacity, oplog size). Restarting is the last resort, not the first. A restart replays the log and often returns the same load to a colder cache.</p></div>
+      <div class="opstep"><div class="dotline"><div class="odot">6</div><div class="oline"></div></div><p><b>Verify recovery with numbers, not relief.</b> Lag draining toward zero, error rate falling, checkpoint age / history list length / dirty bytes moving the right direction. State the values out loud in the incident channel.</p></div>
+      <div class="opstep"><div class="dotline"><div class="odot">7</div><div class="oline"></div></div><p><b>Record every change you made.</b> Old value, new value, why, and a scheduled time to revisit. Emergency settings left in place become next quarter's mystery configuration. The flush=2 that ships is always one that was "temporary".</p></div>
+      <div class="opstep"><div class="dotline"><div class="odot">8</div><div class="oline"></div></div><p><b>Postmortem within days.</b> Root cause, blast radius, and the one alert that would have caught it at minute one. Then actually add that alert. An incident without a new alert is scheduled to repeat.</p></div>
+    </div>
+  </div>
+</div></section>
+<section id="insert"><div class="wrap">
+  <div class="kicker">The main event · one insert, start to finish</div>
+  <h2>Follow one row: INSERT INTO users, end to end</h2>
+  <p class="sub">On a healthy system the whole insert returns in about 1 ms. Inside that millisecond, 11 steps run in a fixed order across four places: the log file, the data page, the index, and the replica. Pick an engine, press Play, and step through all 11. The four panels underneath show the state of each place changing. Nothing on this page is asserted without a location you can inspect.</p>
+
+  <div class="lab">
+    <div class="problem"><b class="label">Problem</b><div><p>The order is not an implementation detail. It is the durability guarantee.</p><small>If the data page reached disk before its log record, one reordering, a crash in that window leaves a page describing a change that recovery cannot verify or undo. Every engine below enforces the same order: log first, page later, commit only after the log is on disk. The file names differ. The order does not.</small></div></div>
+
+    <div class="seg" id="insSeg">
+      <button aria-pressed="true" data-ie="pg">PostgreSQL</button>
+      <button aria-pressed="false" data-ie="my">MySQL · InnoDB</button>
+      <button aria-pressed="false" data-ie="mo">MongoDB · WiredTiger</button>
+    </div>
+
+    <p class="sqlbar" id="insSql">INSERT INTO users (id, name) VALUES (42, 'Asha');</p>
+    <p style="font-size:13.5px;color:var(--muted);margin:0 0 4px">One new user: id <b class="mono" style="color:var(--ink)">42</b>, name <b class="mono" style="color:var(--ink)">'Asha'</b>. The table already has users 10, 25 and 87. Follow row 42.</p>
+
+    <div class="istages" id="insStages">
+      <div class="istage"><b>1 · App</b>sends the statement<span class="mono" id="st0">libpq / JDBC / driver</span></div>
+      <div class="istage"><b>2 · Server</b>parse, check, find page<span class="mono" id="st1">backend process</span></div>
+      <div class="istage"><b>3 · Log file</b>written FIRST<span class="mono" id="st2">pg_wal/</span></div>
+      <div class="istage"><b>4 · Data page</b>row placed in memory<span class="mono" id="st3">shared_buffers</span></div>
+      <div class="istage"><b>5 · Index</b>key → pointer added<span class="mono" id="st4">users_pkey</span></div>
+      <div class="istage"><b>6 · Replica + disk</b>log replayed, page flushed later<span class="mono" id="st5">checkpoint</span></div>
+    </div>
+
+    <div class="insdetail">
+      <h4 id="insTitle">Press Play, or tap any step below</h4>
+      <p id="insText">Every step names the real file or memory area it touches, and the four boxes underneath show the state changing for real: what landed in the log file, what is in the data page, what is in the index, and what the replica has.</p>
+    </div>
+
+    <div class="ipanels">
+      <div class="ipanel"><h5 id="ipLogH">Log file: on disk</h5><div id="insLog"><span class="empty">Empty. Nothing written yet.</span></div></div>
+      <div class="ipanel"><h5 id="ipPageH">Data page</h5><div id="insPage"><span class="empty">Existing rows live here. Row 42 is not in yet.</span></div></div>
+      <div class="ipanel"><h5 id="ipIndexH">Index: sorted keys</h5><div id="insIndex"><div class="ikeys"><span>10</span><span>25</span><span>87</span></div><span class="empty" style="display:block;margin-top:6px">42 has no entry yet. A search for 42 would find nothing.</span></div></div>
+      <div class="ipanel"><h5 id="ipRepH">Replica</h5><div id="insReplica"><span class="empty">The replica has users 10, 25, 87, same as the primary. No row 42 yet.</span></div></div>
+    </div>
+
+    <div class="controls">
+      <button class="btn primary" id="insPlay">▶ Play all steps</button>
+      <button class="btn" id="insPrev">← Back</button>
+      <button class="btn" id="insNext">Next step →</button>
+      <button class="btn" id="insReset">↺ Start over</button>
+      <span class="mono" id="insProgress" style="font-size:12.5px;color:var(--muted)">Step 0 of 11</span>
+    </div>
+
+    <div class="isteps" id="insSteps"></div>
+
+    <p style="font-size:14px;color:var(--muted);margin:14px 0 0"><b style="color:var(--ink)">The one moment that matters:</b> the row is truly safe at the COMMIT step, when the <i>log</i> is forced to disk. Not when the data page is written. The page can follow minutes later, at the next checkpoint. Switch databases above and replay it. The file names change (WAL, redo log plus binlog, journal plus oplog). The order of the trick does not.</p>
+    <div class="lab" id="liveSql" style="margin-top:18px">
+      <h3 style="margin:0 0 6px;font-size:17px">Try it live: a real Postgres, in your browser</h3>
+      <p style="font-size:14px;color:var(--muted);margin:0 0 12px">No install, no account. This panel runs a real PostgreSQL in your browser. It starts with the same users table as the walkthrough above, ids 10, 25, and 87. Run the insert, then the select, then the EXPLAIN, and watch the same numbers come out of a real plan.</p>
+      <p id="liveSqlStatus" style="font-size:13.5px;color:var(--muted);margin:0 0 10px">Live Postgres is not started yet. Press the button below.</p>
+      <div class="controls" style="margin-top:0">
+        <button class="btn primary" id="liveSqlStart">Start live Postgres</button>
+        <button class="btn" data-sql="insert">Run the INSERT</button>
+        <button class="btn" data-sql="select">Run the SELECT</button>
+        <button class="btn" data-sql="explain">Run the EXPLAIN</button>
+      </div>
+      <textarea id="liveSqlInput" spellcheck="false">INSERT INTO users (id, name) VALUES (42, 'Asha');</textarea>
+      <div class="controls" style="margin-top:10px"><button class="btn primary" id="liveSqlRun">Run</button></div>
+      <pre id="liveSqlOut">Nothing run yet.</pre>
+      <p style="font-size:13.5px;color:var(--muted);margin:10px 0 0">The same table as a file: <a href="../assets/seed.sql" download>seed.sql</a>. Run it in psql, the mysql client, or mongosh and every example on this site reproduces.</p>
+    </div>
+  </div>
+</div></section>
+<section id="operations" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Every operation · end to end, like the insert</div>
+  <h2>The other three journeys: read, update, delete, and a crash</h2>
+  <p class="sub">Same path as the insert. Parse, index, page, log. Writes append to the log before they modify any page. Reads append to no log at all. Crash recovery is a function of exactly one input, the log written since the last checkpoint. A checkpoint 5 minutes old at 50 MB/s of WAL generation means up to 15 GB of replay before the server accepts a connection. That number, not the crash itself, sets your recovery time.</p>
+  <div class="opgrid">
+    <div class="opcard">
+      <h3>SELECT: reading one row</h3>
+      <p style="margin:0;color:var(--muted);font-size:14px">Problem: Find row 42 without reading the whole table file, and without seeing a half-written row.</p>
+      <div class="sql">SELECT * FROM users WHERE id = 42;</div>
+      <div class="opflow">
+        <div class="opstep"><div class="dotline"><div class="odot">1</div><div class="oline"></div></div><p><b>Parse + plan.</b> The planner checks the catalog and picks a route: index lookup on <span class="mono">users_pkey</span> (~3 page reads) beats scanning the whole table file. <span class="mono">EXPLAIN</span> shows this decision.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">2</div><div class="oline"></div></div><p><b>Index walk.</b> Root page → internal page → leaf page of the index: key 42 → pointer “data page 7, slot 3”. No other pages are touched.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">3</div><div class="oline"></div></div><p><b>Page from memory if possible.</b> Hit in <span class="mono">shared_buffers</span> / buffer pool / WiredTiger cache = instant. Miss = read that one page from the data file (<span class="mono">base/…/16397</span> / <span class="mono">users.ibd</span> / <span class="mono">collection-*.wt</span>) once and cache it.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">4</div><div class="oline"></div></div><p><b>Visibility check (MVCC).</b> Is this row version committed, and was it live at your snapshot? If a newer version exists, follow to the version your snapshot should see.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">5</div><div class="oline"></div></div><p><b>Row returned.</b> Nothing was written: no WAL record, no redo, no binlog event, no journal entry, no oplog entry. Reads leave no trace in any log file.</p></div>
+      </div>
+      <div class="opnote">End state: log files unchanged. Data files unchanged. Indexes unchanged. Replica unchanged. A SELECT writes nothing. Its cost is exactly the pages it read: 3 to 4 on an index hit, the full table on a bad plan.</div>
+    </div>
+    <div class="opcard">
+      <h3>UPDATE: changing row 42's name</h3>
+      <p style="margin:0;color:var(--muted);font-size:14px">Problem: Change a row without anyone ever seeing a half-changed row, and without locking readers out.</p>
+      <div class="sql">UPDATE users SET name='Asha K.' WHERE id=42;</div>
+      <div class="opflow">
+        <div class="opstep"><div class="dotline"><div class="odot">1</div><div class="oline"></div></div><p><b>Find the row first</b>, exactly like SELECT steps 1 to 3: index walk, then page into memory.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">2</div><div class="oline"></div></div><p><b>Lock just that row</b> so two updates can't collide. Readers don't take this lock. They read snapshots instead.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">3</div><div class="oline"></div></div><p><b>Log FIRST.</b> PostgreSQL writes a WAL record with the new tuple. InnoDB writes redo for the page change <i>plus</i> an undo record holding the old values. WiredTiger writes a journal entry.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">4</div><div class="oline"></div></div><p><b>New version created.</b> PostgreSQL: a brand-new tuple in the heap file, old one marked dead. InnoDB: row updated in place in <span class="mono">users.ibd</span>, old version rebuildable from undo. MongoDB: new version in the WiredTiger cache.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">5</div><div class="oline"></div></div><p><b>Indexes fixed only if needed.</b> The id index is untouched. Id did not change. An index on <span class="mono">name</span> gets its 'Asha' entry replaced with 'Asha K.'.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">6</div><div class="oline"></div></div><p><b>COMMIT, log forced to disk, visible.</b> The old version stays until no snapshot needs it, then VACUUM / purge removes it. The replica replays the same change from the WAL / binlog / oplog.</p></div>
+      </div>
+      <div class="opnote">Compare to INSERT: same road, one extra idea. The old version must survive until old readers finish.</div>
+    </div>
+    <div class="opcard">
+      <h3>DELETE: removing row 42</h3>
+      <p style="margin:0;color:var(--muted);font-size:14px">Problem: Remove a row instantly for new readers, but not while an old reader still needs it.</p>
+      <div class="sql">DELETE FROM users WHERE id = 42;</div>
+      <div class="opflow">
+        <div class="opstep"><div class="dotline"><div class="odot">1</div><div class="oline"></div></div><p><b>Find + lock the row</b> via the index, same as UPDATE steps 1-2.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">2</div><div class="oline"></div></div><p><b>Log FIRST.</b> The delete is recorded: WAL record, redo plus binlog event, journal plus oplog entry. Including enough of the old row to undo it or replay it on a replica.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">3</div><div class="oline"></div></div><p><b>The row is only <i>marked</i> deleted, not erased.</b> PostgreSQL stamps <span class="mono">xmax</span> on the tuple. InnoDB sets a delete flag on the record. WiredTiger removes it from the visible version chain. The bytes are still in the file.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">4</div><div class="oline"></div></div><p><b>COMMIT, log on disk, new readers see nothing.</b> A search for 42 returns “not found”. Readers who started earlier still see the row, correctly, from their snapshot.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">5</div><div class="oline"></div></div><p><b>The replica replays the delete</b> from its WAL stream / binlog / oplog and marks its copy the same way.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">6</div><div class="oline"></div></div><p><b>Much later: real erasure.</b> When no snapshot can still see it, VACUUM / purge / the next WiredTiger checkpoint removes the row bytes and its index entries.</p></div>
+      </div>
+      <div class="opnote">This is why a DELETE of 10 million rows returns in seconds and the file does not shrink by one byte. Step 3 writes one stamp per row. Step 6, the physical removal, is deferred to a background process. Its throughput decides when the space comes back. A table that is deleted from heavily and never vacuumed or purged grows forever while its live row count stays flat.</div>
+    </div>
+    <div class="opcard">
+      <h3>CRASH + RESTART: the log files earn their keep</h3>
+      <p style="margin:0;color:var(--muted);font-size:14px">Problem: Power cuts mid-work. Some transactions said “saved”, some were half-done. Sort it out perfectly on restart.</p>
+      <div class="sql">-- power cut --  →  restart the database</div>
+      <div class="opflow">
+        <div class="opstep"><div class="dotline"><div class="odot">1</div><div class="oline"></div></div><p><b>Memory is gone.</b> Every dirty page that never reached its data file is lost: <span class="mono">shared_buffers</span>, buffer pool, WiredTiger cache, all empty. This is expected, and fine.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">2</div><div class="oline"></div></div><p><b>Find the last checkpoint.</b> PostgreSQL reads <span class="mono">global/pg_control</span> for the checkpoint's WAL position. InnoDB finds the checkpoint LSN in the redo log. WiredTiger reads its metadata in <span class="mono">WiredTiger.wt</span>. Everything before that point is already in the data files.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">3</div><div class="oline"></div></div><p><b>Replay (redo) the log after the checkpoint,</b> in order: <span class="mono">pg_wal</span> segments / <span class="mono">ib_logfile0/1</span> / <span class="mono">journal/WiredTigerLog.*</span>. Every committed change is rebuilt, page by page.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">4</div><div class="oline"></div></div><p><b>Undo the unfinished.</b> InnoDB rolls back uncommitted transactions from its undo records. PostgreSQL simply never marks them committed in <span class="mono">pg_xact</span>, so their tuples stay invisible. Either way, no COMMIT record in the log means it never happened.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">5</div><div class="oline"></div></div><p><b>Open for business.</b> Committed = present, uncommitted = gone, nothing half-way. Only now are new connections accepted.</p></div>
+        <div class="opstep"><div class="dotline"><div class="odot">6</div><div class="oline"></div></div><p><b>Replicas re-sync</b> from wherever they stopped: WAL LSN (PostgreSQL), GTID (MySQL), oplog timestamp (MongoDB).</p></div>
+      </div>
+      <div class="opnote">The rule that makes all of this work is INSERT step 5. The log reaches disk before the data page ever needs to.</div>
+    </div>
+  </div>
+</div></section>
+<section id="architect" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Real examples</div>
+  <h2>3 real problems, 3 different answers</h2>
+  <p class="sub">Each workload has a dominant cost. Correctness under concurrency, read volume, or write distribution. Each engine's layout prices those costs differently. The settings named are the ones that move the number.</p>
+  <div class="scen">
+    <div class="scencard"><h4>Payments: handling money</h4>
+      <p class="prob">Problem: Never lose or double-count a single payment.</p>
+      <p><b style="color:var(--ink)">Answer: PostgreSQL.</b> Strongest correctness defaults, and any question can be asked of the data later.</p>
+      <ul><li>Append-only ledger table; never UPDATE a posted entry</li><li>UNIQUE constraint on the payment reference, so a retry can't double-charge</li><li>Synchronous standby: <span class="mono">synchronous_commit = on</span> + a sync replica in <span class="mono">pg_stat_replication</span></li><li>Base backups + WAL archiving, and restore tests on a schedule</li></ul></div>
+    <div class="scencard"><h4>Product catalogue: lots of browsing</h4>
+      <p class="prob">Problem: 200,000 people browsing at once, almost nobody buying.</p>
+      <p><b style="color:var(--ink)">Answer: MySQL + read replicas, or MongoDB</b> if every product has totally different attributes.</p>
+      <ul><li>Covering indexes for the top 5 queries. Check for “Using index” in <span class="mono">EXPLAIN</span></li><li>Reads served from replicas replaying <span class="mono">mysql-bin.*</span>; a few seconds of lag is acceptable for browsing</li><li>Sequential product IDs so inserts append neatly in the <span class="mono">.ibd</span> files</li><li>Cache hot pages in the buffer pool: size <span class="mono">innodb_buffer_pool_size</span> first</li></ul></div>
+    <div class="scencard"><h4>User profiles: users in 40 countries</h4>
+      <p class="prob">Problem: Data must be fast and close to each user, all over the world.</p>
+      <p><b style="color:var(--ink)">Answer: MongoDB, sharded by region.</b> Each region's shard holds its own users' documents.</p>
+      <ul><li>Shard key = <span class="mono">{ region: 1, _id: 1 }</span>, so a profile lookup routes to exactly one shard</li><li>Writes with <span class="mono">writeConcern: { w: 'majority', j: true }</span>. Majority plus journal before “saved”.</li><li>One document per profile, shaped like the profile screen reads it</li><li>Watch the oplog window (<span class="mono">rs.printReplicationInfo()</span>) before any planned downtime</li></ul></div>
+  </div>
+
+  <h2 style="margin-top:36px">Quick check: did it click?</h2>
+  <p class="sub">6 questions, each about a real file or log you met above. Tap an answer.</p>
+  <div id="quiz"></div>
+  <p class="mono" id="quizScore" style="font-size:14px"></p>
+</div></section>
+<section id="hurting"><div class="wrap">
+  <div class="kicker">Real world · symptom first</div>
+  <h2>When the app starts hurting</h2>
+  <p class="sub">The app reports symptoms in its own words: p99 latency, pool exhaustion, random 500s. The database holds the cause in exactly three places. What is running right now (<span class="mono">pg_stat_activity</span> / <span class="mono">SHOW PROCESSLIST</span> / <span class="mono">db.currentOp()</span>). What is slow in total (<span class="mono">pg_stat_statements</span> / slow log / profiler). And why one query costs what it costs (<span class="mono">EXPLAIN ANALYZE</span> / <span class="mono">explain("executionStats")</span>). Run them in that order. Every card below follows it.</p>
+  <div class="incgrid">
+
+    <div class="incident">
+      <span class="tag all">All 3 · most common</span>
+      <h3>1 · Pages that were fast are now slow. No deploy, no traffic spike</h3>
+      <p class="appsees"><b>App sees:</b> p99 goes 60 ms → 3 s. Timeouts on product / checkout pages. DB CPU high, app CPU normal.</p>
+      <p class="inside"><b>Inside the DB:</b> Usually a missing or unused index. The planner stops using the B+ tree and scans the whole table file, page by page: <span class="mono">base/…</span>, <span class="mono">users.ibd</span>, or <span class="mono">collection-*.wt</span>. Every page it reads evicts a hot page from <span class="mono">shared_buffers</span>, the buffer pool, or the WiredTiger cache. The growth curve is the tell. At 10K rows the scan was 5 to 20 ms and invisible. At 1M rows it is 0.5 to 2 s. The incident happens somewhere between 500K and 2M rows, with no deploy and no code change. Only data volume crossed a threshold. Or stats went stale after a bulk load, so the planner <i>thinks</i> a scan is cheaper. <b>Blast radius:</b> the scan does not only slow its own query. Every page it reads evicts a cached page another query needed, so unrelated endpoints degrade at the same time.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“Add CPU / bigger instance.” “Restart it.” “Add an index on every column in the WHERE.” All three mask it for a day and make writes slower.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Find the top query first, then read its plan. Look at rows examined versus rows returned. 1,000,000 examined for 1 returned means a missing index.<div class="lookcmd">-- PG
+SELECT query, calls, mean_exec_time
+  FROM pg_stat_statements
+  ORDER BY mean_exec_time DESC LIMIT 10;
+EXPLAIN (ANALYZE, BUFFERS) SELECT …;
+
+-- MySQL
+SHOW FULL PROCESSLIST;
+EXPLAIN SELECT …;  -- rows + Extra
+
+// MongoDB
+db.users.find({email:"…"})
+  .explain("executionStats")
+// totalDocsExamined vs nReturned</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Add the <i>one</i> index the plan asks for, or refresh stats with <span class="mono">ANALYZE</span>. Then verify the plan flips to an index scan. Drop unused indexes. <b>Prevent:</b> slow-query log on from day one. Alert on <span class="mono">pg_stat_statements</span> mean time. Review plans in code review for new queries.</p>
+      <p class="backlink">Why it happens → <a href="../staff-path/index.html#labs">B+ tree diagram</a> · <a href="../staff-path/index.html#reference">Planner &amp; statistics cards</a></p>
+    </div>
+
+    <div class="incident">
+      <span class="tag all">All 3</span>
+      <h3>2 · “Connection pool exhausted”: app queues, DB looks idle</h3>
+      <p class="appsees"><b>App sees:</b> Requests hang waiting for a connection, then 500. DB CPU is low. Restarting the app “fixes” it for an hour.</p>
+      <p class="inside"><b>Inside the DB:</b> Every connection costs a process or thread plus memory plus bookkeeping. A few long or leaked transactions hold connections while doing nothing (<span class="mono">idle in transaction</span>). The DB is not busy. The app is starved of slots.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“Raise <span class="mono">max_connections</span> to 5,000.” That increases memory and lock contention and makes a real overload worse.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Count connections by state first. Lots of idle-in-transaction means an app leak or a missing commit, not a sizing problem.<div class="lookcmd">-- PG: who is holding what?
+SELECT state, count(*) FROM pg_stat_activity
+  GROUP BY state;
+SELECT pid, now()-xact_start AS age, query
+  FROM pg_stat_activity
+  WHERE state='idle in transaction'
+  ORDER BY age DESC;
+
+-- MySQL
+SHOW PROCESSLIST;  -- long Sleep / Query
+SELECT COUNT(*) FROM information_schema.processlist;
+
+-- MongoDB
+db.serverStatus().connections
+db.currentOp({active:true})</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Put a pooler in front (PgBouncer, ProxySQL, driver <span class="mono">maxPoolSize</span>), set statement and idle-transaction timeouts, and fix the code path that leaks transactions. Size the pool from DB cores, not app instances. <b>Prevent:</b> alert on connections by state, not just total.</p>
+      <p class="backlink">Why it happens → <a href="../staff-path/index.html#reference">Connection pooling card</a> · <a href="../staff-path/index.html#labs">What a transaction holds open</a></p>
+    </div>
+
+    <div class="incident">
+      <span class="tag all">All 3</span>
+      <h3>3 · Random failures: deadlocks and lock waits</h3>
+      <p class="appsees"><b>App sees:</b> Sporadic “deadlock detected, retry” errors, or one request hangs for 30 s then succeeds. Worse at peak, fine in tests.</p>
+      <p class="inside"><b>Inside the DB:</b> Two transactions lock the same rows in opposite order (A locks row 1 then 2, B locks 2 then 1), or one long transaction holds a row lock while everyone else queues. The engine kills one victim, correctly. The app must retry.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“Increase the lock timeout” or “set isolation to the weakest level.” Longer waits just make the queue longer.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Find the blocker, not the blocked. One PID is usually at the head of every chain.<div class="lookcmd">-- PG: blocker → blocked pairs
+SELECT pid, pg_blocking_pids(pid) AS blocked_by,
+       query, wait_event_type
+  FROM pg_stat_activity WHERE wait_event_type='Lock';
+
+-- MySQL: read the last deadlock in full
+SHOW ENGINE INNODB STATUS\G
+-- section: LATEST DETECTED DEADLOCK
+SELECT * FROM performance_schema.data_lock_waits;
+
+-- MongoDB
+db.currentOp({waitingForLock:true})</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Always lock rows in the same order (sort IDs before updating), keep transactions short, add the index so the update touches fewer rows, and retry deadlocks in the app with jitter. <b>Prevent:</b> log lock waits over 1 s, alert on deadlock rate.</p>
+      <p class="backlink">Why it happens → <a href="../staff-path/index.html#labs">MVCC diagram</a> · <a href="#operations">UPDATE journey</a></p>
+    </div>
+
+    <div class="incident">
+      <span class="tag all">All 3</span>
+      <h3>4 · Stale reads: “I saved it, refreshed, and it's old”</h3>
+      <p class="appsees"><b>App sees:</b> User edits a profile, saves, reloads, old value. A minute later it's correct. Support calls it “data loss.” It isn't.</p>
+      <p class="inside"><b>Inside the DB:</b> Writes go to the primary, reads go to a replica. The replica replays the log (WAL stream, <span class="mono">mysql-bin.*</span>, <span class="mono">local.oplog.rs</span>) and is seconds behind under load. The read hit a replica that had not replayed that commit yet.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“Send all reads to the primary.” It fixes it and wastes the replicas you bought for scale.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Measure lag at the moment of the complaint, and check <i>why</i>: write burst, long query on the replica, or single-threaded apply.<div class="lookcmd">-- PG
+SELECT client_addr, state, replay_lag,
+       pg_size_pretty(pg_wal_lsn_diff(
+         pg_current_wal_lsn(), replay_lsn)) AS behind
+  FROM pg_stat_replication;
+
+-- MySQL
+SHOW REPLICA STATUS\G
+-- Seconds_Behind_Source, Replica_SQL_Running
+
+-- MongoDB
+rs.status()  // optime lag per member
+rs.printSecondaryReplicationInfo()</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Read-your-own-write routing. After a write, read that user's data from the primary for a few seconds. Replicas serve browsing and search, where staleness is fine. Fix the lag cause if it is structural. <b>Prevent:</b> alert on lag &gt; 2 s. Never route “just wrote it” reads to replicas blindly.</p>
+      <p class="backlink">Why it happens → <a href="../reference/index.html#logs-pattern">Binlog &amp; oplog cards</a> · <a href="../staff-path/index.html#lvl4">Level 4: copies</a></p>
+    </div>
+
+    <div class="incident">
+      <span class="tag pg">PostgreSQL</span><span class="tag my">MySQL</span>
+      <h3>5 · Everything slows down over days. Disk grows, rows do not.</h3>
+      <p class="appsees"><b>App sees:</b> Gradual slowdown all week. Table has the same live rows but the file is 5× bigger. A restart or a quiet weekend doesn't help.</p>
+      <p class="inside"><b>Inside the DB:</b> Bloat from a pinned snapshot. One long or idle transaction stops cleanup. PostgreSQL <span class="mono">VACUUM</span> cannot remove dead tuples, so the heap file bloats. InnoDB purge cannot drop undo, so the history list grows and every read walks a longer version chain. The cause is one forgotten transaction, often a report or an idle app server.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“Run <span class="mono">VACUUM FULL</span> tonight” (locks the table) or “just restart.” It reclaims space once and the bloat returns next week.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Find the oldest open transaction first. That is the bug. Then measure the bloat it caused.<div class="lookcmd">-- PG: oldest transaction + dead tuples
+SELECT pid, now()-xact_start AS age, state, query
+  FROM pg_stat_activity WHERE xact_start IS NOT NULL
+  ORDER BY xact_start LIMIT 5;
+SELECT relname, n_dead_tup, last_autovacuum
+  FROM pg_stat_user_tables ORDER BY n_dead_tup DESC;
+
+-- MySQL: undo backlog
+SHOW ENGINE INNODB STATUS\G
+-- TRANSACTIONS: History list length
+-- &gt;10k and growing = purge is blocked</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Kill or fix the long transaction, set <span class="mono">idle_in_transaction_session_timeout</span> and <span class="mono">statement_timeout</span>, run reports on a replica, and tune autovacuum per hot table instead of globally. <b>Prevent:</b> alert on oldest transaction age &gt; 5 min and on <span class="mono">n_dead_tup</span> / history list growth.</p>
+      <p class="backlink">Why it happens → <a href="../staff-path/index.html#reference">VACUUM &amp; undo cards</a> · <a href="../staff-path/index.html#labs">MVCC: why old versions linger</a></p>
+    </div>
+
+    <div class="incident">
+      <span class="tag all">All 3</span>
+      <h3>6 · Disk full: writes fail, database goes read-only</h3>
+      <p class="appsees"><b>App sees:</b> Inserts start failing, then the DB refuses writes entirely. Often at 2 AM, always “suddenly”. It never is.</p>
+      <p class="inside"><b>Inside the DB:</b> Three usual fillers. Logs that cannot be purged (WAL or binlog kept because a replica is down or archiving is failing), bloat (card 5), or a genuinely unbounded table (events, audit, sessions never deleted). Deleting log files by hand corrupts recovery. The engine must release them.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“<span class="mono">rm</span> the old WAL / binlog files to free space now.” Never do this. You can destroy crash recovery and replication in one command.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Break the disk down by owner before touching anything: data, WAL/binlog, temp, bloat.<div class="lookcmd">$ du -sh $PGDATA/pg_wal $PGDATA/base
+-- PG: biggest relations + WAL held by whom?
+SELECT pg_size_pretty(pg_total_relation_size(relid))
+  FROM pg_catalog.pg_statio_user_tables
+  ORDER BY pg_total_relation_size(relid) DESC LIMIT 10;
+SELECT * FROM pg_stat_replication; -- dead replica?
+
+-- MySQL
+SHOW BINARY LOGS;  -- how far back, how big?
+SHOW VARIABLES LIKE 'binlog_expire_logs_seconds';
+
+-- MongoDB
+db.stats()  // per-db storageSize
+rs.printReplicationInfo()  // oplog size</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Fix the holder. Revive or remove the dead replica, repair WAL archiving. Set log retention by time and size. Partition time-series tables so old months drop as files. Alert at 70 percent, not 98 percent. <b>Prevent:</b> a disk growth-rate alert. “Full in 3 days at this rate” beats “full now.”</p>
+      <p class="backlink">Why it happens → <a href="../postgresql/index.html#files">Files on disk</a> · <a href="../reference/index.html#logs-pattern">The five log files</a></p>
+    </div>
+
+    <div class="incident">
+      <span class="tag all">App design</span>
+      <h3>7 · One page, 500 queries: the N+1 problem</h3>
+      <p class="appsees"><b>App sees:</b> A list page with 100 items takes 100× longer than a detail page. Each query is 1 ms. The total is seconds. DB “QPS” looks enormous.</p>
+      <p class="inside"><b>Inside the DB:</b> Nothing is broken in the DB. The app runs 1 query for the list, then 1 query per item for its author, price, status. Every round trip pays parse, plan, pool checkout, and network. The DB is doing exactly what it was asked, 500 times.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“The database is slow, scale it up.” The query is 1 ms. A bigger DB runs the same 500 round trips.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Look at <span class="mono">calls</span>, not just time. One query shape with 500k calls per hour is the fingerprint.<div class="lookcmd">-- PG: same shape, absurd call count
+SELECT query, calls, mean_exec_time
+  FROM pg_stat_statements ORDER BY calls DESC LIMIT 10;
+
+-- MySQL
+SELECT DIGEST_TEXT, COUNT_STAR
+  FROM performance_schema.events_statements_summary_by_digest
+  ORDER BY COUNT_STAR DESC LIMIT 10;
+
+// MongoDB: profiler, same shape repeated
+db.system.profile.find({ns:"shop.orders"})
+  .sort({ts:-1}).limit(5)</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Fetch in one query: a SQL <span class="mono">JOIN</span> or <span class="mono">WHERE id IN (…)</span>, an ORM eager-load, a DataLoader batch, or MongoDB <span class="mono">$lookup</span> or one <span class="mono">$in</span> query. <b>Prevent:</b> count queries per request in the app (APM), set a budget (say 10 per page) and fail CI over it.</p>
+      <p class="backlink">Why it happens → <a href="#operations">SELECT journey: cost per round trip</a></p>
+    </div>
+
+    <div class="incident">
+      <span class="tag mo">MongoDB</span><span class="tag all">All 3</span>
+      <h3>8 · One tenant / one product / one shard is hot, the rest is fine</h3>
+      <p class="appsees"><b>App sees:</b> One big customer's dashboard times out; everyone else is fast. Or one flash-sale product page melts while the catalogue is fine. One node is at 100%, the rest idle.</p>
+      <p class="inside"><b>Inside the DB:</b> Load is concentrated, not large. All writes hit one row (a counter), one page range, or one shard chunk. A monotonic shard key sends every new write to the same shard. Or one tenant is 100× the others and shares their tables and indexes.</p>
+      <div class="vsgrid">
+        <div class="vsbox usual"><h4>DBAs usually suggest</h4>“Add more shards / nodes.” New nodes sit idle. The hot key still routes to the same place.</div>
+        <div class="vsbox actual"><h4>What to actually check</h4>Distribution, not totals: per-shard load, per-key lock waits, which single row everyone updates.<div class="lookcmd">-- PG/MySQL: lock waits concentrated on one row?
+SELECT * FROM pg_stat_activity
+  WHERE wait_event_type='Lock';
+-- + slow log grouped by literal id
+
+-- MongoDB: is traffic even across shards?
+sh.status()          // chunk distribution
+db.users.getShardDistribution()
+mongostat --discover // per-node rates side by side
+db.currentOp({secs_running:{$gt:5}})</div></div>
+      </div>
+      <p class="fix"><b>Fix that lasts:</b> Spread the key. Bucket counters (write to 1 of 32 counter rows and sum on read), hash-prefix a monotonic shard key, give the whale tenant its own database or shard. Cache the hot read. <b>Prevent:</b> choose shard and partition keys from the query pattern before launch. See the design map below.</p>
+      <p class="backlink">Why it happens → <a href="../staff-path/index.html#reference">Shard key card</a> · <a href="../staff-path/index.html#lvl5">Level 5: splitting</a></p>
+    </div>
+
+  </div>
+  <p style="font-size:14px;color:var(--muted);margin:16px 0 0"><b style="color:var(--ink)">The pattern in all eight:</b> the usual suggestion treats the loudest symptom. Add hardware, raise a limit, restart. The check that works measures first. <span class="mono">pg_stat_activity</span>, <span class="mono">SHOW PROCESSLIST</span>, <span class="mono">db.currentOp()</span> for what is running right now. The slow log and <span class="mono">pg_stat_statements</span> for what is slow in total. <span class="mono">EXPLAIN ANALYZE</span> for why this one query. Run them in that order.</p>
+</div></section>
+<section id="design" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Design doc · which app sits where</div>
+  <h2>Pick the database from the workload, not the fashion</h2>
+  <p class="sub">"Which database?" is the wrong question. "Which workload, at what volume, with what correctness requirement?" is the one you can answer. Each workload below is stated with the property that decides it: access pattern, consistency requirement, retention shape. When two workloads with incompatible properties share one engine, the failure does not appear at launch. It appears in the incident cards above, at the volume where the properties start to conflict.</p>
+
+  <div class="problem"><b class="label">Problem</b><div><p>One database forced to serve OLTP, analytics, search, and cache workloads degrades all four. Measurably, and in a predictable order.</p><small>The analytical scan evicts the OLTP working set first (incident #1), then its long snapshot pins cleanup (incident #5), then its result set pressures the pool (incident #2). Match each workload to its natural home first. Argue about vendors second.</small></div></div>
+
+  <div class="workgrid">
+    <div class="workcard"><h4>OLTP: orders, payments, bookings, accounts</h4><p class="fit">→ PostgreSQL or MySQL (relational, ACID)</p><p>Many small reads and writes, strict correctness, joins across entities, constraints that must hold under concurrency. This is the home workload of everything above.</p><p class="ex">Real examples: checkout &amp; ledger, airline reservations, SaaS billing. Start here for almost every product.</p></div>
+    <div class="workcard"><h4>Analytics: dashboards, reports, BI</h4><p class="fit">→ A warehouse / columnar store (or a replica, if small)</p><p>Scans billions of rows, sums a few columns, tolerates minutes-old data. Columnar storage plus a separate replica keeps scans off the OLTP primary. Running them on the primary is incidents 1 and 5 waiting to happen.</p><p class="ex">Real examples: revenue dashboards, funnel reports. Small scale: read replica + partitioning. Large: sync OLTP → warehouse by WAL/binlog CDC.</p></div>
+    <div class="workcard"><h4>Full-text search: “find products like…”</h4><p class="fit">→ Elasticsearch / OpenSearch, or Postgres FTS if modest</p><p>Search needs an inverted index (word → documents), ranking, typos, facets. A B+ tree on a text column is not that. Postgres <span class="mono">tsvector</span> + GIN is genuinely fine until ranking and facets get serious.</p><p class="ex">Real examples: product search, log search, support-ticket search. Source of truth stays in the OLTP DB; the search index is derived and rebuildable.</p></div>
+    <div class="workcard"><h4>Cache &amp; sessions: sub-millisecond, disposable</h4><p class="fit">→ Redis / Memcached. Never the source of truth</p><p>Session tokens, rate-limit counters, hot product pages. In-memory, TTL on everything. Loss is an inconvenience, not a disaster. If losing it loses money or users, it does not belong here alone.</p><p class="ex">Real examples: login sessions, shopping-cart cache, leaderboard (Redis sorted sets).</p></div>
+    <div class="workcard"><h4>Queues &amp; background jobs</h4><p class="fit">→ A real queue (SQS, Kafka, Redis Streams). Postgres can do small scale</p><p>Jobs need at-least-once delivery, retries, and ordering trade-offs. Postgres <span class="mono">SELECT … FOR UPDATE SKIP LOCKED</span> is a legitimate queue up to thousands of jobs a minute and saves an extra system. Beyond that, or for event streaming, use the dedicated tool.</p><p class="ex">Real examples: email sending, image processing, event pipelines (Kafka when many consumers replay the same events).</p></div>
+    <div class="workcard"><h4>Time series: metrics, IoT, events over time</h4><p class="fit">→ Partitioned Postgres / TimescaleDB / a TSDB</p><p>Append-mostly. Queries are always “last N hours” or “by day”. Old data compresses or drops. Time partitioning makes retention a file drop, not a billion-row DELETE (which is bloat, card 5).</p><p class="ex">Real examples: sensor readings, clickstream, application metrics. Key design point: partition + retention policy on day one.</p></div>
+    <div class="workcard"><h4>Documents: catalogues, profiles, content</h4><p class="fit">→ MongoDB, or Postgres JSONB if the rest is relational</p><p>Records whose fields genuinely differ per item, read whole as one aggregate. If you constantly join documents back together, you wanted relational. If only <i>some</i> fields vary, JSONB in Postgres often beats a second database.</p><p class="ex">Real examples: product catalogue with per-category attributes, user profiles, CMS content.</p></div>
+    <div class="workcard"><h4>Graph: relationships are the query</h4><p class="fit">→ Neo4j / a graph store, recursive SQL if shallow</p><p>“Friends of friends who bought X”, fraud rings, dependency trees. Traversals that are one query in a graph store are recursive joins in SQL. Depth 2 to 3: a Postgres recursive CTE is fine. Deep, constant traversal: a dedicated graph DB.</p><p class="ex">Real examples: recommendations, fraud detection, org/permission hierarchies.</p></div>
+  </div>
+
+  <h2 style="margin-top:36px;font-size:26px">Same app, three answers: an online store</h2>
+  <p class="sub">One store: products, orders, payments, seller dashboard. All three engines <i>can</i> run it. Here is when each is the right call, honestly stated.</p>
+  <div class="cmp">
+    <div class="cmpcol pg"><header>Pick PostgreSQL when…</header><p class="best">Correctness and questions-you-haven't-asked-yet matter most.</p><dl>
+      <dt>Why it fits</dt><dd>Orders, payments and inventory in one ACID database, rich SQL for the seller dashboard, JSONB for the few product attributes that vary. No second DB needed early.</dd>
+      <dt>You get</dt><dd>Strongest constraints, best planner, partitioning and logical replication when you outgrow one box.</dd>
+      <dt>Watch out</dt><dd>Connection counts (front with PgBouncer), autovacuum on the hot orders table.</dd></dl></div>
+    <div class="cmpcol my"><header>Pick MySQL when…</header><p class="best">The workload is mostly lookups by ID at very large web scale.</p><dl>
+      <dt>Why it fits</dt><dd>Product page = PK lookup in <span class="mono">products.ibd</span>, read replicas are operationally simple, and the Vitess path exists if you ever need true sharding.</dd>
+      <dt>You get</dt><dd>Huge operational ecosystem, fast simple reads, GTID replication.</dd>
+      <dt>Watch out</dt><dd>Weaker for complex analytical SQL on the same box; random UUID PKs hurt (use sequential IDs).</dd></dl></div>
+    <div class="cmpcol mo"><header>Pick MongoDB when…</header><p class="best">The catalogue is the product, and it refuses to fit a fixed schema.</p><dl>
+      <dt>Why it fits</dt><dd>Each product is one document shaped like its page; sharding by region is built in when one store becomes forty countries.</dd>
+      <dt>You get</dt><dd>Flexible documents, built-in replica sets + elections, native sharding.</dd>
+      <dt>Watch out</dt><dd>Money and inventory still want transactions and joins. Model orders as aggregates carefully. The shard key choice is near-permanent.</dd></dl></div>
+  </div>
+
+  <h2 style="margin-top:36px;font-size:26px">When to split across two databases</h2>
+  <p class="sub">Splitting is not failure. Forcing one engine to do a job it is shaped wrong for is. The rule that keeps splits safe: <b style="color:var(--ink)">one source of truth. Every other copy is derived and rebuildable.</b></p>
+  <div class="splitgrid">
+    <div class="splitcard"><h4>OLTP + Search</h4><p>Postgres/MySQL holds orders and products (truth). Elasticsearch holds the search index, fed by WAL/binlog change capture. Search can lag seconds and can be rebuilt from the source at any time.</p><p><b style="color:var(--ink)">Split when:</b> search needs ranking, facets, typo tolerance beyond FTS.</p></div>
+    <div class="splitcard"><h4>OLTP + Analytics</h4><p>Transactions on the primary; a replica or warehouse takes dashboards and reports. Analysts can run a 10-minute scan without causing incident #1 on checkout.</p><p><b style="color:var(--ink)">Split when:</b> the first dashboard query slows a customer-facing page. Not before.</p></div>
+    <div class="splitcard"><h4>Any DB + Redis</h4><p>Sessions, rate limits, and the 20 hottest pages live in Redis; the relational/document DB stays the truth. Redis dying means a slow minute, not lost data.</p><p><b style="color:var(--ink)">Split when:</b> the same read repeats thousands of times per minute and tolerates being seconds stale.</p></div>
+  </div>
+  <p style="font-size:14px;color:var(--muted);margin:14px 0 0"><b style="color:var(--ink)">Don't split</b> on day one, and do not split on a benchmark. Every additional database adds a backup regime, a monitoring surface, a deploy pipeline, and a sync path with its own lag and failure modes. The split is justified by a measured number: a dashboard query demonstrably evicting the checkout working set, a search requirement FTS measurably cannot meet. Never by anticipation.</p>
+</div></section>
+<section id="reading"><div class="wrap">
+  <div class="kicker">Further reading</div>
+  <h2>These are the books and blogs this site leans on</h2>
+  <p class="sub">Read them when you want the full story behind a page here.</p>
+  <ol style="font-size:15.5px;line-height:1.75;max-width:760px">
+    <li><b>Designing Data-Intensive Applications, 2nd edition</b>, Martin Kleppmann and Chris Riccomini, O'Reilly, 2026. The book to read first if you read one. Replication, partitioning, transactions, consistency, and stream processing, all as trade-offs instead of recipes. <a href="https://dataintensive.net/">dataintensive.net</a></li>
+    <li><b>Database Internals</b>, Alex Petrov, O'Reilly, 2019. The deep dive this site is closest to. B-tree and log-structured storage engines, page cache, write-ahead log, and how clusters reach consistency. Read it after Kleppmann, when you want the implementation. <a href="https://www.goodreads.com/book/show/44647144-database-internals">goodreads.com</a></li>
+    <li><b>Use The Index, Luke</b>, Markus Winand. Free online, the web edition of his book SQL Performance Explained. The fastest way to stop writing slow queries. B-trees from the leaf nodes up, then exactly how the WHERE clause, joins, and sorting use an index or fail to. <a href="https://use-the-index-luke.com/">use-the-index-luke.com</a></li>
+    <li><b>PostgreSQL 14 Internals</b>, Egor Rogov, Postgres Pro, 2023. Free PDF. The best single source on how Postgres actually works: MVCC, buffer cache, WAL, locking, the planner, and every index type. If one page on this site made you curious, this book is the next step. <a href="https://postgrespro.com/community/books/internals">postgrespro.com</a></li>
+    <li><b>The Art of PostgreSQL, 2nd edition</b>, Dimitri Fontaine, 2026 update. The practical one. How to write SQL that does the work instead of thousands of lines of application code, with real datasets to run it against. <a href="https://theartofpostgresql.com/">theartofpostgresql.com</a></li>
+    <li><b>Building with Patterns</b>, Daniel Coupal and Ken W. Alger, MongoDB blog. Twelve schema design patterns (polymorphic, attribute, bucket, computed, subset, outlier, and more) with the trade-off of each. Read this before you design a MongoDB schema, not after. <a href="https://www.mongodb.com/company/blog/building-with-patterns-a-summary">mongodb.com</a></li>
+  </ol>
+  <p style="font-size:14px;color:var(--muted);margin:16px 0 0"><b style="color:var(--ink)">Before you leave, check this:</b> pick your slowest query, run <span class="mono">EXPLAIN (ANALYZE, BUFFERS)</span> on it, and count the pages it reads. That number tells you whether you have an index problem or a volume problem.</p>
+</div></section>
+<footer><div class="wrap">
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering. Every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script type="module" src="../assets/js/pglite-panel.js"></script>
+</body>
+</html>
