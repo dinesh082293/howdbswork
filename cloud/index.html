@@ -83,6 +83,56 @@ spec:
     size: 20Gi</div>
   </div>
   <h4 style="margin:22px 0 8px;font-size:16px">Side by side: who does what</h4>
+  <div class="cmp cmp-4">
+    <div class="cmp-col cmp-ink">
+      <div class="cmp-head">On-prem<small>A server you own</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">S</span></div>
+        <b>Full control, no per-hour rent</b><p>Every extension, every parameter, every file.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>You, OS and engine.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>You. Base backup plus a WAL archive you monitor and restore-test.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>You, Patroni or a runbook. Minutes if rehearsed, hours if not.</p></div>
+    </div>
+    <div class="cmp-col cmp-amber">
+      <div class="cmp-head">EC2<small>A VM you rent</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">V</span><span class="marr">→</span><span class="mn">V</span></div>
+        <b>Same control, no hardware</b><p>A machine in minutes, resized or thrown away.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>You, OS and engine.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>You, same as on-prem, plus EBS snapshots.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>You, by runbook: Patroni, your orchestrator, or a runbook.</p></div>
+    </div>
+    <div class="cmp-col cmp-teal">
+      <div class="cmp-head">Kubernetes<small>Declared in YAML</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">P</span><span class="mn hot">P</span><span class="mn hot">P</span></div>
+        <b>Database like everything else</b><p>Declared in YAML, run by an operator.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>The operator provisions; you own version upgrades.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>Barman Cloud plugin, backups and point-in-time recovery.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>The operator, automated failover.</p></div>
+    </div>
+    <div class="cmp-col cmp-pg">
+      <div class="cmp-head">Managed cloud<small>No host at all</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">M</span><span class="marr">→</span><span class="mn dead">H</span></div>
+        <b>The provider runs it</b><p>Provisioning, patching, backups, failover handled.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>The provider.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>Automated backups, point-in-time recovery, up to 35 days on RDS.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>The provider, Multi-AZ in 60 to 120 seconds, Aurora under 30.</p></div>
+    </div>
+  </div>
   <div class="diagram"><p class="dcap">Where it lives</p>
     <div class="dflow">
       <div class="dbox"><b>on-prem</b>a server you own, Postgres installed on it</div><span class="darrow">→</span>
@@ -165,6 +215,44 @@ spec:
     instances: 1</div>
   </div>
   <h4 style="margin:22px 0 8px;font-size:16px">Side by side: who does what</h4>
+  <div class="cmp">
+    <div class="cmp-col cmp-ink">
+      <div class="cmp-head">On-prem<small>A server you own</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">S</span></div>
+        <b>Same control, no hardware</b><p>Full control, and no per-hour rent.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>You, OS and engine.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>You. Snapshots plus binlog-based point-in-time recovery, built and monitored by you.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>You, your orchestrator or your runbook.</p></div>
+    </div>
+    <div class="cmp-col cmp-teal">
+      <div class="cmp-head">Kubernetes<small>Declared in YAML</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">P</span><span class="mn hot">P</span><span class="mn hot">P</span></div>
+        <b>Clusters declared in YAML</b><p>Failover and backups automated by the operator.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>The operator runs the cluster lifecycle.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>XtraBackup through the operator.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>Orchestrator, or the operator's automation.</p></div>
+    </div>
+    <div class="cmp-col cmp-pg">
+      <div class="cmp-head">Managed cloud<small>No host at all</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">M</span><span class="marr">→</span><span class="mn dead">H</span></div>
+        <b>Backups, replicas, failover handled</b><p>Replica provisioning and Multi-AZ failover mechanics.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>The provider.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>Automated snapshots plus binlog-based point-in-time recovery.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>The provider, Multi-AZ in 60 to 120 seconds, Aurora in tens of seconds.</p></div>
+    </div>
+  </div>
   <div class="diagram"><p class="dcap">Where it lives</p>
     <div class="dflow">
       <div class="dbox"><b>on-prem</b>a server you own, MySQL installed on it</div><span class="darrow">→</span>
@@ -236,6 +324,44 @@ spec:
   version: 8.0.0</div>
   </div>
   <h4 style="margin:22px 0 8px;font-size:16px">Side by side: who does what</h4>
+  <div class="cmp">
+    <div class="cmp-col cmp-ink">
+      <div class="cmp-head">On-prem<small>A server you own</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">S</span></div>
+        <b>Same control, no hardware</b><p>Full control, and no per-hour rent.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>You, OS and engine.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>You. Snapshots and backups, built and monitored by you.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>You, by runbook.</p></div>
+    </div>
+    <div class="cmp-col cmp-teal">
+      <div class="cmp-head">Kubernetes<small>Declared in YAML</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">P</span><span class="mn hot">P</span><span class="mn hot">P</span></div>
+        <b>Replica sets and sharded clusters in YAML</b><p>Declared like everything else, run by an operator.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>The operator automates provisioning and member management.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>The operator's backup jobs.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>The operator.</p></div>
+    </div>
+    <div class="cmp-col cmp-pg">
+      <div class="cmp-head">Managed cloud<small>Atlas, no host at all</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">M</span><span class="marr">→</span><span class="mn dead">H</span></div>
+        <b>Replica set and sharded cluster operations handled</b><p>Elections, member replacement, balancer supervision.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Who patches</b><p>The provider.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Who backs up</b><p>Continuous cloud backups with point-in-time recovery, recovery point as low as 1 minute.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Who fails over</b><p>Automatic, three-node replica set by default.</p></div>
+    </div>
+  </div>
   <div class="diagram"><p class="dcap">Where it lives</p>
     <div class="dflow">
       <div class="dbox"><b>on-prem</b>a server you own, mongod installed on it</div><span class="darrow">→</span>

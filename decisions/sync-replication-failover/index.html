@@ -61,6 +61,50 @@ details summary:hover{color:var(--teal)}
   <div class="kicker">Cross-engine comparison</div>
   <h2>The same decision, three engines</h2>
   <p class="sub">Read the row for the mode you run, not the engine you like.</p>
+  <div class="cmp">
+    <div class="cmp-col cmp-amber">
+      <div class="cmp-head">Async<small>No wait, no witness</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn hot">P</span><span class="marr">→</span><span class="mn dead">S</span></div>
+        <b>No wait</b><p>The primary returns the moment its own WAL is safe.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>COMMIT returns after</b><p>Local WAL fsync. Nobody else is asked.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>What the ACK means</b><p>No ACK. Nobody confirms anything.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Typical use</b><p>Fastest commits. The price is the lag window.</p>
+        <div class="cmp-bar"><span class="cmp-track"><span class="cmp-fill warn" style="width:100%"></span></span><span class="mono">10,000 lost</span></div>
+        <p>At 2,000 commits/s and 5 s of lag.</p></div>
+    </div>
+    <div class="cmp-col cmp-teal">
+      <div class="cmp-head">Sync, one ACK<small>One standby confirms</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn">P</span><span class="marr">→</span><span class="mn hot">S1</span></div>
+        <b>One standby confirms</b><p>The commit waits for one standby to flush.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>COMMIT returns after</b><p>Local flush plus one standby flush.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>What the ACK means</b><p>The standby flushed the WAL to its disk.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Typical use</b><p>One failure at a time, nothing acknowledged is lost.</p>
+        <div class="cmp-bar"><span class="cmp-track"><span class="cmp-fill" style="width:2%"></span></span><span class="mono">0 lost</span></div>
+        <p>For acknowledged writes, one failure at a time.</p></div>
+    </div>
+    <div class="cmp-col cmp-mo">
+      <div class="cmp-head">Majority<small>A majority agrees</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mn">P</span><span class="mn hot">S1</span><span class="mn hot">S2</span></div>
+        <b>A majority agrees</b><p>Two of three members hold the write durable.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>COMMIT returns after</b><p>A majority journals it. Two of three, durable.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>What the ACK means</b><p>A majority has it durable. A minority cannot undo it.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Typical use</b><p>Acknowledged writes survive any minority failure.</p>
+        <div class="cmp-bar"><span class="cmp-track"><span class="cmp-fill" style="width:2%"></span></span><span class="mono">0 lost</span></div>
+        <p>For acknowledged writes, any minority failure.</p></div>
+    </div>
+  </div>
   <table class="breaks"><thead><tr><th>Mode</th><th>COMMIT returns after</th><th>RPO for acknowledged writes</th><th>RTO, typical</th><th>Split-brain behavior</th><th>What the ACK means</th></tr></thead><tbody>
     <tr><td>PostgreSQL async</td><td>Local WAL fsync</td><td>Write rate x lag. At 2,000 commits/s and 5 s of lag, 10,000 transactions.</td><td>Promote the standby and replay its backlog. Seconds to minutes.</td><td>Nothing built in. The old primary must be fenced or two primaries accept writes.</td><td>No ACK. Nobody confirms.</td></tr>
     <tr><td>PostgreSQL sync, <span class="mono">on</span>, <span class="mono">ANY 1 (s1, s2)</span></td><td>Local flush plus one standby flush</td><td>0 for one failure at a time. The standby has the WAL on disk before the commit returns. Either standby may hold the latest commit, so promote the one with the highest flush LSN. If the primary and that standby fail together, the acknowledged writes on it are lost.</td><td>Promote the most advanced standby by LSN. Tens of seconds with Patroni on defaults, longer by hand. See section 4 for the step by step.</td><td>Quorum survives one standby loss. The old primary still needs fencing.</td><td>The standby flushed the WAL to its disk.</td></tr>

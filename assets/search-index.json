@@ -1492,5 +1492,23 @@
   "u": "index.html#sitemap",
   "s": "Home",
   "k": "site map where to start path beginner staff decisions stories cheat sheet reference cloud"
+ },
+ {
+  "t": "Three engines, side by side",
+  "u": "index.html#engines-compare",
+  "s": "Home",
+  "k": "compare postgresql mysql mongodb engine side by side file log index lookup"
+ },
+ {
+  "t": "The same decision, three modes: async, sync, majority",
+  "u": "decisions/sync-replication-failover/index.html#compare",
+  "s": "Decisions",
+  "k": "compare async sync majority quorum commit returns ACK RPO lost"
+ },
+ {
+  "t": "Four ways to run it: on-prem, EC2, Kubernetes, managed",
+  "u": "cloud/index.html#pg-hosting",
+  "s": "Cloud",
+  "k": "compare hosting on-prem EC2 kubernetes managed who patches backs up fails over"
  }
 ]
