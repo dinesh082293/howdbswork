@@ -52,7 +52,8 @@ jobs:
         run: |
           mkdir -p lab-output
           docker exec ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 -c "INSERT INTO users (name, email, status, amount) VALUES ('Lab', 'lab@example.com', 'active', 1.00);"
-          docker exec ci-pg bash -c "ls /var/lib/postgresql/data/pg_wal/00000001000000000000000* | tail -1 | xargs -I{} pg_waldump {} > /tmp/pg_waldump.txt"
+          SEG=$(docker exec ci-pg psql -U postgres -d shop -t -A -c "SELECT pg_walfile_name(pg_current_wal_lsn());")
+          docker exec ci-pg bash -c "pg_waldump /var/lib/postgresql/data/pg_wal/$SEG > /tmp/pg_waldump.txt"
           docker cp ci-pg:/tmp/pg_waldump.txt lab-output/pg_waldump.txt
 
       - name: Capture mysqlbinlog on a real binlog
@@ -67,6 +68,12 @@ jobs:
         run: |
           docker exec ci-mo mongosh --quiet shop --eval 'db.users.insertOne({ _id: 999, name: "Lab", email: "lab@example.com", status: "active", amount: 1 })'
           docker exec ci-mo mongosh --quiet local --eval 'printjson(db.oplog.rs.find({ns: "shop.users"}).sort({$natural: -1}).limit(3).toArray())' > lab-output/oplog.txt
+
+      - name: Check captures are non-empty
+        run: |
+          test -s lab-output/pg_waldump.txt
+          test -s lab-output/mysqlbinlog.txt
+          test -s lab-output/oplog.txt
 
       - name: Upload captured lab output
         if: always()
