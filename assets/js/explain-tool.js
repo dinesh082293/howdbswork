@@ -342,7 +342,7 @@
         text: 'Check how big this table is, because a Seq Scan on a large table reads every page.',
         links: [
           { href: '../staff-path/index.html#lvl2', label: 'Staff path level 2' },
-          { href: '../index.html#hurting', label: 'What hurts' }
+          { href: '../start-here/index.html#hurting', label: 'What hurts' }
         ]
       });
     }
