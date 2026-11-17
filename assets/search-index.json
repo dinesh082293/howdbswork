@@ -1510,5 +1510,71 @@
   "u": "cloud/index.html#pg-hosting",
   "s": "Cloud",
   "k": "compare hosting on-prem EC2 kubernetes managed who patches backs up fails over"
+ },
+ {
+  "t": "10 database concepts, explained in a library",
+  "u": "concepts/index.html",
+  "s": "Concepts",
+  "k": "concepts library beginner index normalization join transaction acid deadlock partitioning sharding replication read replica"
+ },
+ {
+  "t": "Index: the card catalog",
+  "u": "concepts/index.html#index",
+  "s": "Concepts",
+  "k": "index B+ tree lookup card catalog 4 buffers 0.05 ms scan"
+ },
+ {
+  "t": "Normalization: one fact, one place",
+  "u": "concepts/index.html#normalization",
+  "s": "Concepts",
+  "k": "normalization one fact one place author card duplicate"
+ },
+ {
+  "t": "JOIN: two tables on a shared key",
+  "u": "concepts/index.html#join",
+  "s": "Concepts",
+  "k": "join shared key members loans match"
+ },
+ {
+  "t": "Transaction: commit together or roll back together",
+  "u": "concepts/index.html#transaction",
+  "s": "Concepts",
+  "k": "transaction commit rollback all or nothing checkout"
+ },
+ {
+  "t": "ACID: the four promises",
+  "u": "concepts/index.html#acid",
+  "s": "Concepts",
+  "k": "acid atomic consistent isolated durable promises"
+ },
+ {
+  "t": "Deadlock: a circle of waiting",
+  "u": "concepts/index.html#deadlock",
+  "s": "Concepts",
+  "k": "deadlock waiting circle victim rollback"
+ },
+ {
+  "t": "Partitioning: one table, split into parts",
+  "u": "concepts/index.html#partitioning",
+  "s": "Concepts",
+  "k": "partitioning split table shelves genre prune"
+ },
+ {
+  "t": "Sharding: partitioning across machines",
+  "u": "concepts/index.html#sharding",
+  "s": "Concepts",
+  "k": "sharding branch libraries range key cross shard"
+ },
+ {
+  "t": "Replication: a copy that keeps the doors open",
+  "u": "concepts/index.html#replication",
+  "s": "Concepts",
+  "k": "replication replica primary log copy failover"
+ },
+ {
+  "t": "Read replica: writes to the primary, reads to the copies",
+  "u": "concepts/index.html#read-replica",
+  "s": "Concepts",
+  "k": "read replica lag primary writes reads behind"
  }
 ]

@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Ten database concepts, one picture and one line each, told with books and shelves: index, normalization, join, transaction, ACID, deadlock, partitioning, sharding, replication, read replica."/>
+<link rel="icon" href="data:,"/>
+<title>10 database concepts, explained in a library · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<section><div class="wrap">
+  <h1>10 database concepts, explained in a library</h1>
+  <p class="sub">One picture and one line each. No prior knowledge. Five minutes.</p>
+  <p class="lede">A database is a library. Tables are shelves. Rows are books. The card catalog is the index, the loan desk is where transactions happen, and the branch libraries are the shards.</p>
+  <p class="lede">Learn the library version of each concept, and the database version is the same job with files instead of paper. When a term below feels abstract, picture the shelf.</p>
+  <div class="lib-grid">
+    <div class="lib-card lib-structure" id="index">
+      <div class="lib-kicker">Structure</div>
+      <h3><span class="lib-num">1.</span>Index</h3>
+      <div class="lib-mini">
+        <div class="lib-books"><i style="height:30px"></i><i style="height:38px"></i><i style="height:26px"></i><i style="height:42px"></i><i style="height:34px"></i><i class="hot" style="height:52px"></i><i style="height:28px"></i><i style="height:40px"></i><i style="height:32px"></i></div>
+        <div class="lib-cap">WHERE title = 'Dune': 1 lookup, 4 buffers, 0.05 ms. Without the catalog: a scan of every shelf, 3 to 8 seconds.</div>
+      </div>
+      <p class="lib-line">An index is the card catalog. It trades a little disk and a little write cost for lookups that stay fast as the shelves fill.</p>
+      <p class="lib-link"><a href="../staff-path/index.html#btreeWidget">Watch the catalog work, step by step →</a></p>
+    </div>
+    <div class="lib-card lib-structure" id="normalization">
+      <div class="lib-kicker">Structure</div>
+      <h3><span class="lib-num">2.</span>Normalization</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">HP1 · Rowling, UK</span><span class="lib-chip">HP2 · Rowling, UK</span><span class="lib-chip">HP3 · Rowling, UK</span></div>
+        <div class="lib-cap" style="margin:6px 0">The author is written on every book. Fix a spelling, fix it three times.</div>
+        <div class="lib-row"><span class="lib-arrow">→</span><span class="lib-chip">books: HP1 · a1</span><span class="lib-chip good">authors: a1 · Rowling, UK</span></div>
+        <div class="lib-cap" style="margin-top:6px">Now the name lives in one place.</div>
+      </div>
+      <p class="lib-line">One fact, one place. The author's name lives on a single author card, so a correction has exactly one place to land.</p>
+    </div>
+    <div class="lib-card lib-structure" id="join">
+      <div class="lib-kicker">Structure</div>
+      <h3><span class="lib-num">3.</span>JOIN</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">members: 1 · Asha</span><span class="lib-chip">loans: 1 · Dune</span><span class="lib-arrow">→</span><span class="lib-chip good">Asha · Dune</span></div>
+        <div class="lib-cap" style="margin-top:6px">Two lists, matched on the shared key member_id. The result is one row per match.</div>
+      </div>
+      <p class="lib-line">A join matches two tables on a shared key. The key is what makes it cheap. Without a key, it reads both tables end to end.</p>
+    </div>
+    <div class="lib-card lib-transactions" id="transaction">
+      <div class="lib-kicker">Transactions</div>
+      <h3><span class="lib-num">4.</span>Transaction</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">Book 1</span><span class="lib-chip">Book 2</span><span class="lib-chip">Book 3</span><span class="lib-arrow">→</span><span class="lib-chip good">One checkout</span></div>
+        <div class="lib-cap" style="margin-top:6px">Borrow 3 books. Either all three leave with you, or none do.</div>
+      </div>
+      <p class="lib-line">A transaction groups steps so they commit together or roll back together. There is no half-borrowed state.</p>
+      <p class="lib-link"><a href="../decisions/sync-replication-failover/index.html">What a commit waits for before it returns →</a></p>
+    </div>
+    <div class="lib-card lib-transactions" id="acid">
+      <div class="lib-kicker">Transactions</div>
+      <h3><span class="lib-num">5.</span>ACID</h3>
+      <div class="lib-mini">
+        <div class="lib-tiles">
+          <div class="lib-tile"><b>A</b><span>Atomic<br>all or nothing</span></div>
+          <div class="lib-tile"><b>C</b><span>Consistent<br>rules always hold</span></div>
+          <div class="lib-tile"><b>I</b><span>Isolated<br>no interference</span></div>
+          <div class="lib-tile"><b>D</b><span>Durable<br>survives a crash</span></div>
+        </div>
+        <div class="lib-cap" style="margin-top:8px">The four promises a transaction makes. Break one, and the other three stop meaning anything.</div>
+      </div>
+      <p class="lib-line">Four promises, one line each. Durable is the promise the log pays for: the record hits disk before the commit returns.</p>
+    </div>
+    <div class="lib-card lib-transactions" id="deadlock">
+      <div class="lib-kicker">Transactions</div>
+      <h3><span class="lib-num">6.</span>Deadlock</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">T1 holds Book 1</span><span class="lib-arrow">wants Book 2 →</span><span class="lib-chip">T2 holds Book 2</span></div>
+        <div class="lib-row" style="margin-top:6px"><span class="lib-chip">T2 holds Book 2</span><span class="lib-arrow">wants Book 1 →</span><span class="lib-chip">T1 holds Book 1</span></div>
+        <div class="lib-cap" style="margin-top:6px">Each waits on the other. Neither can move. Waiting...</div>
+      </div>
+      <p class="lib-line">A deadlock is a circle of waiting. Nobody can move, so the database picks one transaction, rolls it back, and lets the other finish.</p>
+    </div>
+    <div class="lib-card lib-scaling" id="partitioning">
+      <div class="lib-kicker">Scaling</div>
+      <h3><span class="lib-num">7.</span>Partitioning</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">Fiction</span><span class="lib-chip good">Science</span><span class="lib-chip">History</span></div>
+        <div class="lib-cap" style="margin-top:6px">One table, three shelves, same server. WHERE genre = 'Science' reads one shelf, not three.</div>
+      </div>
+      <p class="lib-line">Partitioning splits one table into parts on the same server. A query that names the part reads only that part.</p>
+    </div>
+    <div class="lib-card lib-scaling" id="sharding">
+      <div class="lib-kicker">Scaling</div>
+      <h3><span class="lib-num">8.</span>Sharding</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">Branch 1 · A-H</span><span class="lib-chip">Branch 2 · I-P</span><span class="lib-chip">Branch 3 · Q-Z</span></div>
+        <div class="lib-cap" style="margin-top:6px">Dune lives at Branch 1. Nothing else is searched, and nothing else needs to be.</div>
+      </div>
+      <p class="lib-line">Sharding is partitioning across machines. It buys room to grow, and the price is that a query spanning branches is a query across the network.</p>
+      <p class="lib-link"><a href="../stories/index.html#notion-reshard">The re-shard, told as it happened →</a></p>
+    </div>
+    <div class="lib-card lib-scaling" id="replication">
+      <div class="lib-kicker">Scaling</div>
+      <h3><span class="lib-num">9.</span>Replication</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">Library A · primary</span><span class="lib-arrow">copies →</span><span class="lib-chip good">Library B · copy</span></div>
+        <div class="lib-cap" style="margin-top:6px">Library A goes down. Library B keeps lending, because it holds the same books.</div>
+      </div>
+      <p class="lib-line">A replica replays the primary's log, so it holds the same books. When the primary fails, the copy is what keeps the doors open.</p>
+      <p class="lib-link"><a href="../decisions/sync-replication-failover/index.html">Sync, async, and what each loses →</a></p>
+    </div>
+    <div class="lib-card lib-scaling" id="read-replica">
+      <div class="lib-kicker">Scaling</div>
+      <h3><span class="lib-num">10.</span>Read Replica</h3>
+      <div class="lib-mini">
+        <div class="lib-row"><span class="lib-chip">Writer → Primary</span><span class="lib-chip good">Readers → Reading room copy</span></div>
+        <div class="lib-cap" style="margin-top:6px">The copy can trail the original by seconds. That lag is the price of the split.</div>
+      </div>
+      <p class="lib-line">Writes go to the primary, reads go to the copies. The split only works if your readers can live with a copy a few seconds behind.</p>
+      <p class="lib-link"><a href="../decisions/sync-replication-failover/index.html">How far behind a copy can fall →</a></p>
+    </div>
+  </div>
+  <p class="sub">That is the vocabulary. Next: <a href="../start-here/index.html">Start here</a>, one insert end to end, then the three rules that run every database on this site.</p>
+</div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer>
+</body>
+</html>
