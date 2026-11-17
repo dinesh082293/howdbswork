@@ -51,12 +51,14 @@ jobs:
       - name: Capture pg_waldump on a real commit
         run: |
           mkdir -p lab-output
+          START=$(docker exec ci-pg psql -U postgres -d shop -t -A -c "SELECT pg_current_wal_lsn();")
           docker exec ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 -c "INSERT INTO users (name, email, status, amount) VALUES ('Lab', 'lab@example.com', 'active', 1.00);"
           PGDATA=$(docker exec ci-pg psql -U postgres -d shop -t -A -c "SHOW data_directory;")
           SEG=$(docker exec ci-pg psql -U postgres -d shop -t -A -c "SELECT pg_walfile_name(pg_current_wal_lsn());")
-          echo "PGDATA=$PGDATA SEG=$SEG"
+          END=$(docker exec ci-pg psql -U postgres -d shop -t -A -c "SELECT pg_current_wal_lsn();")
+          echo "PGDATA=$PGDATA SEG=$SEG START=$START END=$END"
           docker exec ci-pg ls "$PGDATA/pg_wal/"
-          docker exec ci-pg pg_waldump "$PGDATA/pg_wal/$SEG" > lab-output/pg_waldump.txt
+          docker exec ci-pg pg_waldump --start "$START" --end "$END" "$PGDATA/pg_wal/$SEG" > lab-output/pg_waldump.txt
 
       - name: Capture mysqlbinlog on a real binlog
         run: |
