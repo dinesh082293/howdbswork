@@ -52,24 +52,91 @@
   <div class="kicker">Architecture · one picture per engine</div>
   <h2>Same job, same shape, different files</h2>
   <p class="sub">Every engine on this site does the same four things in the same order: a client connects, the change lands in memory, the log records it first, and the data files catch up later. The three pictures are drawn the same way on purpose, so the comparison lands. The names inside them are the real file and memory names. The log box is the one that matters: COMMIT returns only after the log is on disk.</p>
-  <div class="diagram"><p class="dcap">PostgreSQL</p><div class="dflow">
-    <div class="dbox"><b>Client</b>backend per connection</div><span class="darrow">→</span>
-    <div class="dbox"><b>Memory</b>shared_buffers</div><span class="darrow">→</span>
-    <div class="dbox good"><b>Log, first</b>WAL in pg_wal/</div><span class="darrow">→</span>
-    <div class="dbox"><b>Data, later</b>base/ files, 8 KB pages</div>
-  </div></div>
-  <div class="diagram"><p class="dcap">MySQL · InnoDB</p><div class="dflow">
-    <div class="dbox"><b>Client</b>thread per connection</div><span class="darrow">→</span>
-    <div class="dbox"><b>Memory</b>buffer pool</div><span class="darrow">→</span>
-    <div class="dbox good"><b>Log, first</b>redo #ib_redo0 + binlog</div><span class="darrow">→</span>
-    <div class="dbox"><b>Data, later</b>users.ibd, 16 KB pages</div>
-  </div></div>
-  <div class="diagram"><p class="dcap">MongoDB · WiredTiger</p><div class="dflow">
-    <div class="dbox"><b>Client</b>driver connection</div><span class="darrow">→</span>
-    <div class="dbox"><b>Memory</b>WiredTiger cache</div><span class="darrow">→</span>
-    <div class="dbox good"><b>Log, first</b>journal + oplog</div><span class="darrow">→</span>
-    <div class="dbox"><b>Data, later</b>collection-*.wt files</div>
-  </div></div>
+  <div class="arch arch-pg">
+    <div class="arch-title">PostgreSQL</div>
+    <div class="arch-layer"><div class="arch-label">Clients</div><div class="arch-boxes">
+      <div class="arch-box"><b>App sessions</b><span>One connection, one backend process.</span></div>
+      <div class="arch-box"><b>PgBouncer</b><span>Pools connections. The fix for pool exhaustion.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Processes</div><div class="arch-boxes">
+      <div class="arch-box"><b>Postmaster</b><span>Listens on the port, forks a backend per connection.</span></div>
+      <div class="arch-box"><b>Backend</b><span>Runs one session's queries.</span></div>
+      <div class="arch-box"><b>WAL writer</b><span>Fsyncs WAL records to pg_wal/.</span></div>
+      <div class="arch-box"><b>Checkpointer</b><span>Flushes dirty pages on checkpoint.</span></div>
+      <div class="arch-box"><b>Bgwriter</b><span>Writes dirty pages between checkpoints.</span></div>
+      <div class="arch-box"><b>Autovacuum workers</b><span>Remove dead tuples, freeze old transaction IDs.</span></div>
+      <div class="arch-box"><b>Archiver</b><span>Copies finished WAL segments to the archive.</span></div>
+      <div class="arch-box"><b>WAL sender</b><span>Streams WAL to standbys.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Memory</div><div class="arch-boxes">
+      <div class="arch-box"><b>shared_buffers</b><span>Page cache, about 25% of RAM, 8 KB pages.</span></div>
+      <div class="arch-box"><b>WAL buffers</b><span>WAL records wait here before the fsync.</span></div>
+      <div class="arch-box"><b>work_mem</b><span>Per sort or hash operation, not per connection.</span></div>
+      <div class="arch-box"><b>maintenance_work_mem</b><span>Vacuum and index builds.</span></div>
+      <div class="arch-box"><b>OS page cache</b><span>The second cache, under shared_buffers.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Disk</div><div class="arch-boxes">
+      <div class="arch-box"><b>base/</b><span>Tables and indexes, 8 KB pages.</span></div>
+      <div class="arch-box good"><b>pg_wal/</b><span>16 MB segments. The log, written first.</span></div>
+      <div class="arch-box"><b>pg_xact/</b><span>Commit status per transaction.</span></div>
+      <div class="arch-box"><b>global/pg_control</b><span>Checkpoint and control info.</span></div>
+      <div class="arch-box"><b>WAL archive</b><span>Finished segments, for point-in-time recovery.</span></div>
+    </div></div>
+  </div>
+  <div class="arch arch-my">
+    <div class="arch-title">MySQL · InnoDB</div>
+    <div class="arch-layer"><div class="arch-label">Clients</div><div class="arch-boxes">
+      <div class="arch-box"><b>App connections</b><span>One thread per connection.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Processes</div><div class="arch-boxes">
+      <div class="arch-box"><b>mysqld</b><span>One process. All threads live inside it.</span></div>
+      <div class="arch-box"><b>Connection threads</b><span>Run queries.</span></div>
+      <div class="arch-box"><b>Page cleaner threads</b><span>Flush dirty pages to the .ibd files.</span></div>
+      <div class="arch-box"><b>Purge thread</b><span>Deletes undo records no reader still needs.</span></div>
+      <div class="arch-box"><b>Log writer threads</b><span>Flush the redo log buffer.</span></div>
+      <div class="arch-box"><b>I/O threads</b><span>Move pages between buffer pool and disk.</span></div>
+      <div class="arch-box"><b>Replication threads</b><span>I/O thread pulls the binlog, SQL thread applies it.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Memory</div><div class="arch-boxes">
+      <div class="arch-box"><b>Buffer pool</b><span>Most of the RAM budget, 16 KB pages.</span></div>
+      <div class="arch-box"><b>Change buffer</b><span>Deferred secondary-index writes, inside the pool.</span></div>
+      <div class="arch-box"><b>Adaptive hash index</b><span>In-memory hash for hot lookups.</span></div>
+      <div class="arch-box"><b>Log buffer</b><span>Redo records wait here before the flush.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Disk</div><div class="arch-boxes">
+      <div class="arch-box"><b>users.ibd</b><span>The table is the clustered index.</span></div>
+      <div class="arch-box good"><b>#ib_redo0-31</b><span>The redo ring, 32 files. The log, written first.</span></div>
+      <div class="arch-box"><b>mysql-bin.*</b><span>Logical record. Replicas replay it.</span></div>
+      <div class="arch-box"><b>undo_001/002</b><span>Undo logs, the old row versions.</span></div>
+      <div class="arch-box"><b>ibdata1</b><span>System tablespace, holds the doublewrite buffer.</span></div>
+      <div class="arch-box"><b>mysql.ibd</b><span>The data dictionary.</span></div>
+    </div></div>
+  </div>
+  <div class="arch arch-mo">
+    <div class="arch-title">MongoDB · WiredTiger</div>
+    <div class="arch-layer"><div class="arch-label">Clients</div><div class="arch-boxes">
+      <div class="arch-box"><b>Driver connections</b><span>One connection per session.</span></div>
+      <div class="arch-box"><b>mongos routers</b><span>Route queries, when sharded.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Processes</div><div class="arch-boxes">
+      <div class="arch-box"><b>mongod</b><span>One per replica set member.</span></div>
+      <div class="arch-box"><b>Primary</b><span>Orders all writes into the oplog.</span></div>
+      <div class="arch-box"><b>Secondaries</b><span>Tail the oplog, apply in the same order.</span></div>
+      <div class="arch-box"><b>Checkpoint thread</b><span>WiredTiger checkpoints about every 60 s.</span></div>
+      <div class="arch-box"><b>Balancer</b><span>Moves chunks between shards, when sharded.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Memory</div><div class="arch-boxes">
+      <div class="arch-box"><b>WiredTiger cache</b><span>About 50% of RAM minus 1 GB, uncompressed data.</span></div>
+      <div class="arch-box"><b>OS filesystem cache</b><span>The second cache, under the WiredTiger cache.</span></div>
+    </div></div>
+    <div class="arch-layer"><div class="arch-label">Disk</div><div class="arch-boxes">
+      <div class="arch-box"><b>collection-*.wt</b><span>Compressed blocks, one file per collection.</span></div>
+      <div class="arch-box"><b>index-*.wt</b><span>One file per index.</span></div>
+      <div class="arch-box good"><b>journal/WiredTigerLog.*</b><span>The write-ahead log. Covers the 60 s gap.</span></div>
+      <div class="arch-box"><b>local.oplog.rs</b><span>The oplog, a capped collection.</span></div>
+      <div class="arch-box"><b>_mdb_catalog.wt</b><span>Maps collection names to files.</span></div>
+    </div></div>
+  </div>
   <p class="sub">Follow one insert through these boxes, and watch it cross each one: <a href="start-here/index.html#insert">Follow one insert, end to end →</a></p>
 </div></section>
 <section id="paths" style="padding-top:6px"><div class="wrap">
@@ -81,6 +148,52 @@
     <div class="job"><div class="num">2 hr</div><h3>The full guided path</h3><p>Six levels. Eighteen problem and diagram pairs. Zero to staff level.</p><div class="real"><a href="staff-path/index.html#path">Guided path: zero to architect →</a></div></div>
   </div>
   <p class="sub">Decisions: <a href="decisions/sync-replication-failover/index.html">Synchronous replication and failover</a>, what a commit waits for before it returns.</p>
+</div></section>
+<section id="engines-compare" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Compare · the three engines</div>
+  <h2>Three engines, side by side</h2>
+  <p class="sub">Same rows, same shape. Read across a row to see how the same job differs, read down a column to see one engine whole.</p>
+  <div class="cmp">
+    <div class="cmp-col cmp-pg">
+      <div class="cmp-head">PostgreSQL<small>Heap pages and WAL</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mb" style="height:30px"></span><span class="mb" style="height:22px"></span><span class="mb" style="height:26px"></span><span class="mb" style="height:18px"></span><span class="mb" style="height:24px"></span></div>
+        <b>One file per table</b><p>8 KB heap pages in base/, one file per table.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Durability log</b><p>Write-ahead log in pg_wal/, 16 MB segments. COMMIT waits for the fsync.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Lookup</b><p>B+ tree, 4 buffers: root, internal, leaf, heap. One row, 0.05 ms.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Typical use</b><p>Strictest guarantees: ledgers, anything that must not lose a commit.</p></div>
+      <a class="cmp-link" href="postgresql/index.html">PostgreSQL, files and logs →</a>
+    </div>
+    <div class="cmp-col cmp-my">
+      <div class="cmp-head">MySQL<small>InnoDB, clustered</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mb" style="height:26px"></span><span class="mb" style="height:30px"></span><span class="mb" style="height:20px"></span><span class="mb" style="height:28px"></span></div>
+        <b>The table is the index</b><p>16 KB pages in users.ibd, rows in primary-key order.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Durability log</b><p>32 redo files, #ib_redo0 to #ib_redo31, plus the binlog for replication.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Lookup</b><p>Clustered index: a primary-key lookup is one walk. A secondary match costs a second hop.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Typical use</b><p>Web apps at write scale: sessions, orders, feeds.</p></div>
+      <a class="cmp-link" href="mysql/index.html">MySQL, files and logs →</a>
+    </div>
+    <div class="cmp-col cmp-mo">
+      <div class="cmp-head">MongoDB<small>WiredTiger</small></div>
+      <div class="cmp-row"><span class="cmp-kicker">Use</span>
+        <div class="cmp-mini"><span class="mb" style="height:22px"></span><span class="mb" style="height:28px"></span><span class="mb" style="height:16px"></span><span class="mb dim" style="height:24px"></span></div>
+        <b>One file per collection</b><p>Compressed blocks in collection-*.wt. The cache holds the raw form.</p></div>
+      <div class="cmp-row"><span class="cmp-num">01</span>
+        <b>Durability log</b><p>Journal fsyncs first, the oplog streams to secondaries.</p></div>
+      <div class="cmp-row"><span class="cmp-num">02</span>
+        <b>Lookup</b><p>Compound index, ESR order: equality, sort, range, or the sort breaks.</p></div>
+      <div class="cmp-row"><span class="cmp-num">03</span>
+        <b>Typical use</b><p>Flexible documents: catalogs, content, replica sets.</p></div>
+      <a class="cmp-link" href="mongodb/index.html">MongoDB, files and logs →</a>
+    </div>
+  </div>
 </div></section>
 <section id="sitemap" style="padding-top:6px"><div class="wrap">
   <div class="kicker">The whole site · one picture</div>
@@ -110,6 +223,8 @@
   <h2>What changed, and when</h2>
   <p class="sub">I update this log when the site changes. New pages first. Small fixes do not get a line.</p>
   <ul style="font-size:15px;line-height:1.8;max-width:760px">
+    <li><b>Nov 17, 2026:</b> architecture is now a full layered picture per engine: every process, memory area, and file as its own box, with the write path and the read path traced through it, on home and on each engine page. The log box is marked, because the log is written first.</li>
+    <li><b>Nov 17, 2026:</b> comparisons now look like the Process vs Thread vs Async graphic: three columns, one color each, a tiny diagram in every row, numbered steps, and a bar for the one number that matters. The three engines on home, the three durability modes on Decisions, and the four ways to run each engine on Cloud.</li>
     <li><b>Nov 17, 2026:</b> the site is now playable, not just readable: a B+ tree you can search, insert, delete, and range-scan step by step, an animated failover on the Decisions page, an EXPLAIN visualizer that names the slowest step, and a table-growth slider. Every engine page has a diagram for every concept, and the home page has a map of the whole site.</li>
     <li><b>Nov 17, 2026:</b> Start here now has a graphic for every concept too, including the 4 buffers vs 1,250,000 pages chart, drawn to scale.</li>
     <li><b>Nov 17, 2026:</b> the Decisions page now has a graphic for every concept, diagrams, bar charts, and summary tables, not just text.</li>

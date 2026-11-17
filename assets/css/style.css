@@ -470,3 +470,59 @@ select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;backgro
 .plan-tree .plan-node .plan-node{margin:10px 0 4px 18px;border-left:3px solid var(--line)}
 .plan-node.plan-villain{border:2px solid #dc2626;background:color-mix(in srgb,#dc2626 7%,var(--surface))}
 .plan-node.plan-villain p:first-child{color:#dc2626}
+
+/* Added Nov 17, 2026: compare cards, the Process vs Thread vs Async layout.
+   Three or four columns, identical rows, one color per column. Every row has
+   a tiny diagram, a bold label, and one line. Works in light and dark mode. */
+.cmp{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 16px}
+.cmp-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.cmp-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.cmp{grid-template-columns:1fr}.cmp-4{grid-template-columns:1fr}}
+.cmp-col{background:var(--surface);border:1px solid var(--line);border-top:4px solid var(--cc,var(--teal));border-radius:var(--radius);padding:0 0 14px;overflow:hidden}
+.cmp-pg{--cc:var(--pg);--cc-bg:var(--pg-bg)}
+.cmp-my{--cc:var(--my);--cc-bg:var(--my-bg)}
+.cmp-mo{--cc:var(--mo);--cc-bg:var(--mo-bg)}
+.cmp-teal{--cc:var(--teal);--cc-bg:var(--teal-bg)}
+.cmp-amber{--cc:var(--my);--cc-bg:var(--my-bg)}
+.cmp-ink{--cc:var(--ink);--cc-bg:var(--surface2)}
+.cmp-head{padding:14px 16px 0;font-size:19px;font-weight:800;color:var(--cc)}
+.cmp-head small{display:block;font-size:12.5px;font-weight:500;color:var(--muted);margin-top:2px}
+.cmp-row{padding:12px 16px 0;border-top:1px dashed var(--line);margin-top:12px}
+.cmp-kicker{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cmp-mini{display:flex;gap:4px;align-items:flex-end;min-height:30px;margin:8px 0}
+.cmp-mini .mb{width:9px;border-radius:2px;background:var(--cc);opacity:.9;flex:none}
+.cmp-mini .mb.dim{opacity:.3}
+.cmp-mini .mn{width:24px;height:24px;border:2px solid var(--cc);border-radius:7px;display:grid;place-items:center;font-size:11px;font-weight:800;color:var(--cc);flex:none}
+.cmp-mini .mn.hot{background:var(--cc);color:#fff}
+.cmp-mini .mn.dead{border-color:var(--muted);color:var(--muted);opacity:.55}
+.cmp-mini .marr{align-self:center;color:var(--muted);font-weight:700}
+.cmp-row b{display:block;font-size:15.5px;line-height:1.3}
+.cmp-row p{margin:2px 0 0;font-size:13.5px;color:var(--muted);line-height:1.5}
+.cmp-num{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
+.cmp-bar{display:flex;align-items:center;gap:8px;margin-top:8px}
+.cmp-track{flex:1;height:12px;background:var(--surface2);border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.cmp-fill{display:block;height:100%;background:var(--cc)}
+.cmp-fill.warn{background:var(--problem-line)}
+.cmp-bar .mono{flex:none;font-size:12px;font-weight:600}
+.cmp-link{display:block;padding:12px 16px 0;font-size:14px;font-weight:600}
+
+/* Added Nov 17, 2026: layered architecture diagrams. One band per layer,
+   every component its own box with a one-line role. The log box is marked
+   good, because the log is written first. Works in light and dark mode. */
+.arch{border:1px solid var(--line);border-radius:var(--radius);background:var(--surface);overflow:hidden;margin:0 0 14px}
+.arch-pg{--cc:var(--pg)}
+.arch-my{--cc:var(--my)}
+.arch-mo{--cc:var(--mo)}
+.arch-title{padding:12px 14px 0;font-size:16px;font-weight:800;color:var(--cc)}
+.arch-layer{display:grid;grid-template-columns:104px 1fr;border-top:1px dashed var(--line)}
+.arch-layer:first-child{border-top:0}
+@media(max-width:640px){.arch-layer{grid-template-columns:1fr}.arch-label{padding:10px 14px 0}}
+.arch-label{padding:14px 0 14px 14px;font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.arch-boxes{display:flex;flex-wrap:wrap;gap:8px;padding:12px 14px}
+.arch-box{border:1px solid var(--line);border-left:4px solid var(--cc,var(--teal));border-radius:10px;padding:8px 10px;background:var(--surface2);min-width:150px;max-width:250px;flex:1 1 150px}
+.arch-box b{display:block;font-size:13.5px;line-height:1.3}
+.arch-box span{font-size:12.5px;color:var(--muted);line-height:1.45;display:block;margin-top:2px}
+.arch-box.good{background:var(--teal-bg);border-left-color:var(--teal)}
+.arch-flow{border-top:1px dashed var(--line);padding:12px 14px;font-size:13.5px;line-height:1.7}
+.arch-flow b{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:6px}
+.arch-flow .mono{font-size:12.5px}
