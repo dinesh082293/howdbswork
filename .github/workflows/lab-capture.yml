@@ -58,8 +58,10 @@ jobs:
       - name: Capture mysqlbinlog on a real binlog
         run: |
           docker exec ci-my mysql -uroot -prootpass shop -e "INSERT INTO users (name, email, status, amount) VALUES ('Lab', 'lab@example.com', 'active', 1.00);"
-          docker exec ci-my bash -c "ls /var/lib/mysql/mysql-bin.00000* | tail -1 | xargs -I{} mysqlbinlog {} > /tmp/mysqlbinlog.txt"
-          docker cp ci-my:/tmp/mysqlbinlog.txt lab-output/mysqlbinlog.txt
+          BINLOG=$(docker exec ci-my bash -c "ls /var/lib/mysql/mysql-bin.00000* | tail -1")
+          docker cp "ci-my:$BINLOG" /tmp/latest-binlog
+          sudo apt-get update -qq && sudo apt-get install -y -qq mysql-client
+          mysqlbinlog /tmp/latest-binlog > lab-output/mysqlbinlog.txt
 
       - name: Capture a real oplog read
         run: |
@@ -67,6 +69,7 @@ jobs:
           docker exec ci-mo mongosh --quiet local --eval 'printjson(db.oplog.rs.find({ns: "shop.users"}).sort({$natural: -1}).limit(3).toArray())' > lab-output/oplog.txt
 
       - name: Upload captured lab output
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lab-capture
