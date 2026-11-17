@@ -6,231 +6,237 @@
   "k": "home postgresql mysql mongodb wal redo binlog journal oplog pages index"
  },
  {
+  "t": "Start here: the full beginner course",
+  "u": "start-here/index.html",
+  "s": "Start here",
+  "k": "start here beginner course glossary insert walkthrough operations incidents quiz"
+ },
+ {
   "t": "Durability is an ordering rule, not a feature",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#rules",
+  "s": "Start here",
   "k": "durability log first commit fsync pg_wal ib_logfile0 WiredTigerLog"
  },
  {
   "t": "Lookup cost is page count, nothing else",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#rules",
+  "s": "Start here",
   "k": "lookup index B+ tree pages 8 KB 16 KB slow query sequential scan"
  },
  {
   "t": "MVCC trades disk for non-blocking reads",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#rules",
+  "s": "Start here",
   "k": "MVCC old versions vacuum purge snapshot readers writers"
  },
  {
   "t": "Page",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#glossary",
+  "s": "Start here",
   "k": "page 8 KB 16 KB fixed size read write"
  },
  {
   "t": "Write-ahead log (WAL)",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#glossary",
+  "s": "Start here",
   "k": "WAL write-ahead log pg_wal redo journal before data file"
  },
  {
   "t": "Index (B+ tree)",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#glossary",
+  "s": "Start here",
   "k": "index B+ tree sorted key page lookup 3 page reads"
  },
  {
   "t": "Transaction",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#glossary",
+  "s": "Start here",
   "k": "transaction BEGIN COMMIT xid trx id txnNumber"
  },
  {
   "t": "Checkpoint",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#glossary",
+  "s": "Start here",
   "k": "checkpoint dirty pages flush log recycle checkpoint_timeout"
  },
  {
   "t": "Replica",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#glossary",
+  "s": "Start here",
   "k": "replica lag replay WAL binlog oplog secondary"
  },
  {
   "t": "Six terms. Every one of them is a file, a size, or a number.",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#glossary",
+  "s": "Start here",
   "k": "glossary page WAL index transaction checkpoint replica vocabulary"
  },
  {
   "t": "What each database actually is",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#start-here",
+  "s": "Start here",
   "k": "beginner start here postgresql mysql mongodb architecture"
  },
  {
   "t": "Who manages what, on-prem",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#start-here",
+  "s": "Start here",
   "k": "DBA sysadmin storage team responsibilities on-prem"
  },
  {
   "t": "The standard outage runbook: same steps, every engine",
-  "u": "index.html#start-here",
-  "s": "Home",
+  "u": "start-here/index.html#start-here",
+  "s": "Start here",
   "k": "outage runbook incident triage declare blocker vitals postmortem"
  },
  {
   "t": "Follow one row: INSERT INTO users, end to end",
-  "u": "index.html#insert",
-  "s": "Home",
+  "u": "start-here/index.html#insert",
+  "s": "Start here",
   "k": "insert users 42 Asha log first data page index replica commit"
  },
  {
   "t": "SELECT: reading one row",
-  "u": "index.html#operations",
-  "s": "Home",
+  "u": "start-here/index.html#operations",
+  "s": "Start here",
   "k": "SELECT read index lookup EXPLAIN page shared_buffers visibility MVCC"
  },
  {
   "t": "UPDATE: changing row 42's name",
-  "u": "index.html#operations",
-  "s": "Home",
+  "u": "start-here/index.html#operations",
+  "s": "Start here",
   "k": "UPDATE new version lock log first WAL redo undo journal index"
  },
  {
   "t": "DELETE: removing row 42",
-  "u": "index.html#operations",
-  "s": "Home",
+  "u": "start-here/index.html#operations",
+  "s": "Start here",
   "k": "DELETE mark deleted xmax delete flag snapshot vacuum purge"
  },
  {
   "t": "CRASH + RESTART: the log files earn their keep",
-  "u": "index.html#operations",
-  "s": "Home",
+  "u": "start-here/index.html#operations",
+  "s": "Start here",
   "k": "crash restart recovery replay redo undo pg_control checkpoint LSN"
  },
  {
   "t": "3 real problems, 3 different answers",
-  "u": "index.html#architect",
-  "s": "Home",
+  "u": "start-here/index.html#architect",
+  "s": "Start here",
   "k": "payments catalogue profiles workload postgres mysql mongodb sharding"
  },
  {
   "t": "Payments: handling money",
-  "u": "index.html#architect",
-  "s": "Home",
+  "u": "start-here/index.html#architect",
+  "s": "Start here",
   "k": "payments ledger UNIQUE synchronous_commit synchronous standby WAL archiving"
  },
  {
   "t": "Product catalogue: lots of browsing",
-  "u": "index.html#architect",
-  "s": "Home",
+  "u": "start-here/index.html#architect",
+  "s": "Start here",
   "k": "catalogue read replicas covering index EXPLAIN buffer pool mysql-bin"
  },
  {
   "t": "User profiles: users in 40 countries",
-  "u": "index.html#architect",
-  "s": "Home",
+  "u": "start-here/index.html#architect",
+  "s": "Start here",
   "k": "profiles sharded region shard key writeConcern majority oplog"
  },
  {
   "t": "Quick check: did it click?",
-  "u": "index.html#architect",
-  "s": "Home",
+  "u": "start-here/index.html#architect",
+  "s": "Start here",
   "k": "quiz questions files logs"
  },
  {
   "t": "When the app starts hurting",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "incidents symptoms slow query pool exhausted deadlock stale reads bloat disk full N+1 hot shard"
  },
  {
   "t": "1. Pages that were fast are now slow. No deploy, no traffic spike",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "slow query missing index sequential scan pg_stat_statements EXPLAIN ANALYZE BUFFERS stale stats"
  },
  {
   "t": "2. Connection pool exhausted: app queues, DB looks idle",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "connection pool exhausted pool exhausted max_connections idle in transaction PgBouncer ProxySQL maxPoolSize"
  },
  {
   "t": "3. Random failures: deadlocks and lock waits",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "deadlock lock waits retry pg_blocking_pids SHOW ENGINE INNODB STATUS data_lock_waits"
  },
  {
   "t": "4. Stale reads: I saved it, refreshed, and it is old",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "stale reads replica lag replay_lag Seconds_Behind_Source optime read-your-own-write"
  },
  {
   "t": "Replica lag",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "replica lag stale reads pg_stat_replication SHOW REPLICA STATUS rs.status replay_lag"
  },
  {
   "t": "5. Everything slows down over days. Disk grows, rows do not.",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "bloat dead tuples vacuum purge history list long transaction n_dead_tup"
  },
  {
   "t": "Bloat from dead tuples and a pinned snapshot",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "bloat vacuum dead tuples n_dead_tup history list purge idle in transaction"
  },
  {
   "t": "6. Disk full: writes fail, database goes read-only",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "disk full disk grows WAL binlog cannot purge du pg_wal base retention 70 percent"
  },
  {
   "t": "7. One page, 500 queries: the N+1 problem",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "N+1 one page 500 queries pg_stat_statements calls JOIN WHERE id IN eager load DataLoader $lookup $in"
  },
  {
   "t": "8. One tenant, one product, one shard is hot, the rest is fine",
-  "u": "index.html#hurting",
-  "s": "Home",
+  "u": "start-here/index.html#hurting",
+  "s": "Start here",
   "k": "hot shard hot tenant hot key monotonic shard key bucket counters sh.status getShardDistribution mongostat"
  },
  {
   "t": "Pick the database from the workload, not the fashion",
-  "u": "index.html#design",
-  "s": "Home",
+  "u": "start-here/index.html#design",
+  "s": "Start here",
   "k": "design workload OLTP analytics full-text search cache queues time series documents graph"
  },
  {
   "t": "Same app, three answers: an online store",
-  "u": "index.html#design",
-  "s": "Home",
+  "u": "start-here/index.html#design",
+  "s": "Start here",
   "k": "online store design OLTP search analytics"
  },
  {
   "t": "When to split across two databases",
-  "u": "index.html#design",
-  "s": "Home",
+  "u": "start-here/index.html#design",
+  "s": "Start here",
   "k": "split two databases OLTP search analytics Redis"
  },
  {
   "t": "These are the books and blogs this site leans on",
-  "u": "index.html#reading",
-  "s": "Home",
+  "u": "start-here/index.html#reading",
+  "s": "Start here",
   "k": "books blogs further reading Kleppmann Petrov Use The Index Luke Rogov"
  },
  {
@@ -1147,8 +1153,8 @@
  },
  {
   "t": "Try it live: a real Postgres, in your browser",
-  "u": "index.html#liveSql",
-  "s": "Home",
+  "u": "start-here/index.html#liveSql",
+  "s": "Start here",
   "k": "try it live pglite postgres browser insert select explain"
  },
  {
@@ -1162,6 +1168,12 @@
   "u": "index.html#paths",
   "s": "Home",
   "k": "start here path chooser 10 minutes 30 minutes 2 hours guided path"
+ },
+ {
+  "t": "Thirteen times a real database broke",
+  "u": "index.html#stories-strip",
+  "s": "Home",
+  "k": "stories real incidents uber notion adyen figma dropbox github slack shopify"
  },
  {
   "t": "What's new",
