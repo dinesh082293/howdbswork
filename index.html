@@ -20,7 +20,7 @@
 <header class="hero"><div class="wrap">
   <h1>Real databases, <em>explained with real files.</em></h1>
 
-  <div class="oneliner"><span>The number that runs this page</span>One lookup in a 10-million-row table takes 0.4 ms with the right index, or 8 seconds without one. Same data, same hardware, same query. The difference is entirely physical: which pages get read, and how many.</div>
+  <div class="oneliner"><span>The number that runs this page</span>One lookup in a 10-million-row table takes 0.05 ms with the right index, or 3 to 8 seconds without one. Same data, same hardware, same query. The difference is entirely physical: which pages get read, and how many.</div>
 
   <p class="lede">I run production databases for a living. This site is for a DBA or backend engineer who wants to go from zero to staff level, starting from the files on disk.</p>
 
@@ -39,7 +39,7 @@
     <div class="ecard"><h3><span class="dot" style="background:var(--my)"></span>MySQL · InnoDB</h3>
       <p class="plain">Best for fast websites where most lookups are by ID.</p>
       <p>Each table is one <span class="mono">.ibd</span> file that <i>is</i> the primary-key index. Rows are stored in ID order, 16 KB pages. Two logs: redo for crashes, binlog for copies.</p>
-      <span class="mono">Logs: ib_logfile0/1 + mysql-bin.* · Data: shop/users.ibd · Memory: buffer pool</span>
+      <span class="mono">Logs: #innodb_redo/#ib_redo0 + mysql-bin.* · Data: shop/users.ibd · Memory: buffer pool</span>
       <p style="margin:10px 0 0"><a href="mysql/index.html">MySQL · InnoDB →</a></p></div>
     <div class="ecard"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB · WiredTiger</h3>
       <p class="plain">Best when every record looks a bit different.</p>
@@ -76,7 +76,7 @@
   </ul>
 </div></section>
 <footer><div class="wrap">
-  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">ib_logfile0</span> plus <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering. Every number on this page is checkable with the commands given beside it.</p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> plus <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> plus the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering. Every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
