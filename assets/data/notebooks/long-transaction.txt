@@ -1,0 +1,42 @@
+# Notebook 1: what one open transaction costs
+# run at: 2026-11-18 04:25 UTC
+# runner: Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 | 4 vCPU
+# PostgreSQL: 18.7 (Debian 18.7-1.pgdg13+2)
+# MySQL: 8.4.13
+# MongoDB: 8.0.38
+
+## PostgreSQL 18: a REPEATABLE READ snapshot held open while 5 x 100,000 rows are updated
+table size at start: 5784 kB
+session A: BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT count(*) -> 100000
+session B: 5 x UPDATE nb_accounts SET balance = balance + 1  (500,000 new row versions)
+table size now: 29 MB
+session B: VACUUM (VERBOSE) nb_accounts while A is still open:
+  pages: 0 removed, 2655 remain, 2655 scanned (100.00% of total), 0 eagerly scanned
+  tuples: 0 removed, 600000 remain, 500000 are dead but not yet removable
+  removable cutoff: 757, which was 5 XIDs old when operation ended
+dead tuples (pg_stat_user_tables): 700000
+session A: ROLLBACK  (the snapshot is released)
+session B: VACUUM (VERBOSE) nb_accounts again:
+  pages: 0 removed, 2655 remain, 2655 scanned (100.00% of total), 0 eagerly scanned
+  tuples: 500000 removed, 100000 remain, 0 are dead but not yet removable
+  removable cutoff: 762, which was 0 XIDs old when operation ended
+  index "nb_accounts_pkey": pages: 1099 in total, 0 newly deleted, 0 currently deleted, 0 reusable
+table size after VACUUM: 29 MB  <- VACUUM made the space reusable; the file did not shrink
+
+## MySQL 8.4: a consistent snapshot held open while 5 x 100,000 rows are updated
+History list length at start: 6
+session A: START TRANSACTION WITH CONSISTENT SNAPSHOT; SELECT COUNT(*) -> 100000
+session B: 5 x UPDATE nb_accounts SET balance = balance + 1
+History list length after 5 big UPDATEs: 11  <- it counts transactions waiting for purge, not rows
+session B: 20,000 single-row UPDATEs, each its own transaction (12 s)
+History list length while A is still open: 20006
+session A: COMMIT  (the old read view is released)
+   2s after COMMIT, History list length: 0
+
+## MongoDB 8.0: a multi-document transaction left open past the lifetime limit
+transactionLifetimeLimitSeconds default: 60 | set to 10 for this run
+session A: startTransaction; updateOne({_id: 1}, {$inc: {balance: 10}})
+session A: waits 25 s without committing
+session A: commitTransaction -> OperationFailure: Transaction with { txnNumber: 2 } has been aborted.
+serverStatus().transactions.totalAborted: before 0 after 1
+balance now: 100

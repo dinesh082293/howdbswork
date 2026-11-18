@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Two concurrency bugs, lost update and write skew, run as real interleaved sessions on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, with the fixes."/>
+<link rel="icon" href="data:,"/>
+<title>Lost updates and write skew · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Isolation · two sessions, one row</div>
+  <h1>Lost updates and write skew</h1>
+  <p class="qline">Can two correct transactions produce a wrong result?</p>
+  <p class="learn"><b>You will learn:</b> the two concurrency bugs that isolation levels exist to stop, what each engine actually did with them at its default setting, and the fixes.</p>
+  <p class="lede">Isolation levels are usually taught as a table of anomalies. I find it easier to watch them. Every transcript on this page is from <a href="../notebooks/index.html#anomalies">Notebook 4</a>, run 2026-11-18 04:27 UTC: two real sessions, interleaved one step at a time, on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.</p>
+  <div class="scnnav"><a href="#lost-update">1 · Lost update</a><a href="#write-skew">2 · Write skew</a><a href="#fixes">3 · The fixes</a></div>
+</div></header>
+<section id="lost-update"><div class="wrap">
+  <div class="kicker">Anomaly 1</div>
+  <h2>Lost update: two deposits, one survives</h2>
+  <p class="sub">Two sessions read the same balance, 100, and each writes back its own result: 110 and 120. Both deposits should count, for 130. The read-then-write pattern is what loses one.</p>
+  <details class="predict"><summary>Which engines keep both deposits, at their default settings?</summary><p>None of them. PostgreSQL at READ COMMITTED and MySQL at REPEATABLE READ silently kept 120. PostgreSQL at REPEATABLE READ and MongoDB in transactions refused the second write with an error, which keeps 110 and hands the retry to the application.</p></details>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Engine and level</th><th>What happened</th><th>Final</th></tr></thead><tbody>
+    <tr><td>PostgreSQL, READ COMMITTED (default)</td><td>Second write succeeded on a stale read</td><td>120, a deposit lost</td></tr>
+    <tr><td>PostgreSQL, REPEATABLE READ</td><td>"could not serialize access due to concurrent update"</td><td>110, retry needed</td></tr>
+    <tr><td>MySQL, REPEATABLE READ (default)</td><td>Second write succeeded on a stale read</td><td>120, a deposit lost</td></tr>
+    <tr><td>MySQL, SELECT ... FOR UPDATE</td><td>Second session waited, then read 110</td><td>130, correct</td></tr>
+    <tr><td>MongoDB, transactions</td><td>Write conflict on the second update</td><td>110, retry needed</td></tr>
+  </tbody></table></div>
+  <h3 style="font-size:16px;margin:16px 0 6px">PostgreSQL, READ COMMITTED</h3><pre class="nbout"><b>## PostgreSQL 18, lost update, READ COMMITTED (the default)</b>
+  A: SELECT balance -&gt; 100
+  B: SELECT balance -&gt; 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120; COMMIT -&gt; ok
+  final balance: 120  (expected 130 if both deposits count)</pre>
+  <h3 style="font-size:16px;margin:16px 0 6px">PostgreSQL, REPEATABLE READ</h3><pre class="nbout"><b>## PostgreSQL 18, lost update, REPEATABLE READ</b>
+  A: SELECT balance -&gt; 100
+  B: SELECT balance -&gt; 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120 -&gt; ERROR: could not serialize access due to concurrent update
+  final balance: 110  (expected 130 if both deposits count)</pre>
+  <h3 style="font-size:16px;margin:16px 0 6px">MySQL, REPEATABLE READ</h3><pre class="nbout"><b>## MySQL 8.4, lost update, REPEATABLE READ (the default)</b>
+  A: SELECT balance -&gt; 100
+  B: SELECT balance -&gt; 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120; COMMIT -&gt; ok
+  final balance: 120  (expected 130 if both deposits count)</pre>
+  <h3 style="font-size:16px;margin:16px 0 6px">MySQL, with SELECT ... FOR UPDATE</h3><pre class="nbout"><b>## MySQL 8.4, lost update fixed with SELECT ... FOR UPDATE</b>
+  A: SELECT balance FOR UPDATE -&gt; 100
+  B: SELECT balance FOR UPDATE -&gt; still waiting after 1.5 s: True
+  A: UPDATE balance = 110; COMMIT
+  B: ... the SELECT FOR UPDATE returns -&gt; 110
+  B: UPDATE balance = 130; COMMIT -&gt; ok
+  final balance: 130  (expected 130 if both deposits count)</pre>
+  <h3 style="font-size:16px;margin:16px 0 6px">MongoDB, two transactions</h3><pre class="nbout"><b>## MongoDB 8.0, lost update, inside two transactions</b>
+  A: findOne -&gt; balance 100
+  B: findOne -&gt; balance 100
+  A: updateOne balance = 110; commitTransaction
+  B: updateOne balance = 120 -&gt; OperationFailure: Caused by :: Write conflict during plan execution and yielding is disabled. :: Please retry your operation or multi-document transaction.
+  final balance: 110  (expected 130 if both deposits count)</pre>
+  <aside class="myth"><span class="mk">Common myth</span><p class="m">MySQL's REPEATABLE READ prevents lost updates because the snapshot does not change.</p><p class="t">The snapshot applies to plain reads. An UPDATE in InnoDB reads the latest committed row, not the snapshot, so the second session overwrote 110 with its stale 120 and got no error. The run above shows it.</p></aside>
+</div></section>
+<section id="write-skew"><div class="wrap">
+  <div class="kicker">Anomaly 2</div>
+  <h2>Write skew: two doctors go off call</h2>
+  <p class="sub">The rule: at least one doctor on call. Alice and Bob each check that two are on call, then each takes themselves off. They update different rows, so nothing conflicts at the row level, and the rule breaks.</p>
+  <details class="predict"><summary>Which engine and level stops this?</summary><p>Only PostgreSQL at SERIALIZABLE. It tracks what each transaction read, notices the two depend on each other, and fails the second commit. Every other run ended with nobody on call.</p></details>
+  <h3 style="font-size:16px;margin:16px 0 6px">PostgreSQL, REPEATABLE READ</h3><pre class="nbout"><b>## PostgreSQL 18, write skew, REPEATABLE READ</b>
+  A: SELECT count(*) WHERE on_call -&gt; 2
+  B: SELECT count(*) WHERE on_call -&gt; 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -&gt; ok
+  B: COMMIT -&gt; ok
+  doctors on call at the end: 0  (the rule was: at least 1)</pre>
+  <h3 style="font-size:16px;margin:16px 0 6px">PostgreSQL, SERIALIZABLE</h3><pre class="nbout"><b>## PostgreSQL 18, write skew, SERIALIZABLE</b>
+  A: SELECT count(*) WHERE on_call -&gt; 2
+  B: SELECT count(*) WHERE on_call -&gt; 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -&gt; ok
+  B: COMMIT -&gt; ERROR: could not serialize access due to read/write dependencies among transactions
+  doctors on call at the end: 1  (the rule was: at least 1)</pre>
+  <h3 style="font-size:16px;margin:16px 0 6px">MySQL, REPEATABLE READ</h3><pre class="nbout"><b>## MySQL 8.4, write skew, REPEATABLE READ (the default)</b>
+  A: SELECT COUNT(*) WHERE on_call -&gt; 2
+  B: SELECT COUNT(*) WHERE on_call -&gt; 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -&gt; ok
+  B: COMMIT -&gt; ok
+  doctors on call at the end: 0  (the rule was: at least 1)</pre>
+  <h3 style="font-size:16px;margin:16px 0 6px">MongoDB, two transactions</h3><pre class="nbout"><b>## MongoDB 8.0, write skew, inside two transactions</b>
+  A: countDocuments({on_call: true}) -&gt; 2
+  B: countDocuments({on_call: true}) -&gt; 2
+  A: updateOne alice off call
+  B: updateOne bob off call
+  A: commitTransaction -&gt; ok
+  B: commitTransaction -&gt; ok
+  doctors on call at the end: 0  (the rule was: at least 1)</pre>
+</div></section>
+<section id="fixes"><div class="wrap">
+  <div class="kicker">The fixes</div>
+  <h2>What I reach for, in order</h2>
+  <ol class="steplist">
+    <li><b>Make the write relative</b><span>UPDATE accounts SET balance = balance + 10 WHERE id = 1, or $inc in MongoDB. The engine applies it to the current value, so there is no stale read to lose. This fixes lost updates, not write skew.</span></li>
+    <li><b>Lock what you read</b><span>SELECT ... FOR UPDATE in PostgreSQL and MySQL. The second session waits, as the MySQL run above shows. For write skew, lock every row the rule depends on, here both doctors.</span></li>
+    <li><b>Check a version on write</b><span>Keep a version column, and write UPDATE ... SET version = version + 1 WHERE id = 1 AND version = 7. Zero rows updated means someone else got there first. This works the same way in all three engines.</span></li>
+    <li><b>Use SERIALIZABLE and retry</b><span>In PostgreSQL, SERIALIZABLE caught the write skew. The price is that the application must retry failed transactions, and it must have a retry loop before you switch it on.</span></li>
+  </ol>
+  <p class="sub">Steps 1, 3 and 4 are the standard fixes, and only the FOR UPDATE fix in MySQL and SERIALIZABLE in PostgreSQL are part of the notebook run so far. For the theory behind these anomalies, the transactions chapter of <i>Designing Data-Intensive Applications</i> is where I would start, and <a href="../staff-path/index.html#labs">the MVCC lab</a> shows why the snapshot is taken at the first query.</p>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../notebooks/index.html"><div><span>Next</span>Lab notebooks<span>Five experiments on real servers, with the output.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+</body>
+</html>

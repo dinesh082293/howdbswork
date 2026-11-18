@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="A database health check for PostgreSQL and MySQL: durability, performance and cost, written up and ranked by risk."/>
+<link rel="icon" href="data:,"/>
+<title>Work with me · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Work with me</div>
+  <h1>Work with me</h1>
+  <p class="qline">Can you look at my database?</p>
+  <p class="lede">I am a database engineer with more than nine years of running MySQL and PostgreSQL in production, on-premises and on AWS, including high availability with Patroni, etcd, InnoDB Cluster and Group Replication. This site is how I explain the work. If you would rather have me look at your own system, this page says how.</p>
+</div></header>
+<section id="health-check"><div class="wrap">
+  <div class="kicker">The health check</div>
+  <h2>A written review of one database, ranked by risk and by cost</h2>
+  <p class="sub">I read the same things this site teaches you to read, on your system, and write down what I find, in order of what to fix first.</p>
+  <div class="cmp3">
+    <div class="cmp3-col" style="border-top-color:var(--teal)"><h3>Durability and recovery</h3><ol><li>Commit and replication settings, against what a lost write costs you</li><li>Backups and point-in-time recovery, and whether a restore has been tested</li><li>Failover: how it is triggered, and how long it takes</li></ol></div>
+    <div class="cmp3-col" style="border-top-color:var(--teal)"><h3>Performance</h3><ol><li>The top queries by total time, with their plans</li><li>Missing and unused indexes</li><li>Bloat, vacuum or purge backlog, cache hit ratio, connection use</li></ol></div>
+    <div class="cmp3-col" style="border-top-color:var(--teal)"><h3>Cost</h3><ol><li>Instance and storage size against the measured load</li><li>Replicas, I/O, backups and non-production copies</li><li>A safe order for cutting, as on the <a href="../decisions/cost-model/index.html">cost page</a></li></ol></div>
+  </div>
+  <p class="sub">I work with PostgreSQL and MySQL, self-managed or on AWS, including Aurora and RDS.</p>
+</div></section>
+<section id="contact"><div class="wrap">
+  <div class="kicker">How to reach me</div>
+  <h2>Send me a short note</h2>
+  <p class="sub">Message me on <a href="https://www.linkedin.com/in/dineshlakkineni">LinkedIn</a> with the engine and version, roughly how big the database is, and the one thing that worries you most about it.</p>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../decisions/cost-model/index.html"><div><span>Next</span>Why is my database bill huge?<span>The cost review, as a page.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+</body>
+</html>

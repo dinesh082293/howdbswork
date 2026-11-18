@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Column order in an index, covering queries, OFFSET against keyset paging, and N+1, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0."/>
+<link rel="icon" href="data:,"/>
+<title>Queries that look fine and are not · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Queries · for developers</div>
+  <h1>Queries that look fine and are not</h1>
+  <p class="qline">Why is my query slow when it has an index?</p>
+  <p class="learn"><b>You will learn:</b> four query shapes behind many slow pages: column order in an index, covering queries, OFFSET paging and N+1, each measured on PostgreSQL, MySQL and MongoDB.</p>
+  <p class="lede">Every number on this page comes from <a href="../notebooks/index.html#queries">Notebook 5</a>, run 2026-11-18 04:27 UTC on a table of 1,000,000 orders with an index on (customer_id, created_at). The same shape behaved the same way in all three engines, which is the point: these are not engine quirks, they follow from how an index is sorted.</p>
+  <div class="scnnav"><a href="#column-order">1 · Column order</a><a href="#covering">2 · Covering</a><a href="#paging">3 · Paging</a><a href="#n-plus-one">4 · N+1</a></div>
+</div></header>
+<section id="column-order"><div class="wrap">
+  <div class="kicker">Shape 1</div>
+  <h2>Why is my query slow when the index exists?</h2>
+  <p class="sub">The index is on (customer_id, created_at). It is sorted by customer_id first, then by created_at inside each customer. A query that gives both columns narrows to one customer, then reads a range. A query that gives only created_at cannot use that order: the rows for one day are spread across every customer.</p>
+  <pre class="cmdshow">CREATE INDEX ON orders (customer_id, created_at);
+-- uses the index
+SELECT * FROM orders WHERE customer_id = 42 AND created_at &gt;= &#x27;2026-06-01&#x27;;
+-- does not
+SELECT * FROM orders WHERE created_at &gt;= &#x27;2026-11-17&#x27;;</pre>
+  <div class="cmp3">
+ <div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL 18</h3><p style="margin:0;font-size:14.5px">Both columns: Bitmap Index Scan, 48 pages, 0.10 ms.<br>Second column only: <b>Seq Scan, 7,353 pages, 39 ms.</b></p></div>
+ <div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL 8.4</h3><p style="margin:0;font-size:14.5px">Both columns: index range scan, 44 rows, 0.14 ms.<br>Second column only: <b>table scan, 1,000,001 rows read, 224 ms.</b></p></div>
+ <div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB 8.0</h3><p style="margin:0;font-size:14.5px">Both fields: IXSCAN, 44 keys, 1 ms.<br>Second field only: <b>COLLSCAN, 1,000,000 documents, 436 ms.</b></p></div></div>
+  <p class="takeaway">What I do: put the column that is always filtered with equality first, and the range column after it. If a query filters on the second column alone, it needs its own index. The same rule is called ESR (equality, sort, range) in MongoDB.</p>
+</div></section><section id="covering"><div class="wrap">
+  <div class="kicker">Shape 2</div>
+  <h2>Can a query skip the table entirely?</h2>
+  <p class="sub">If every column the query needs is already in the index, the engine can answer from the index and never read the table. PostgreSQL calls it an index-only scan, MySQL a covering index, MongoDB a covered query.</p>
+  <pre class="cmdshow">SELECT customer_id, created_at FROM orders WHERE customer_id = 42;
+// MongoDB: project only indexed fields, and leave out _id
+db.orders.find({customer_id: 42}, {_id: 0, customer_id: 1, created_at: 1})</pre>
+  <div class="cmp3">
+ <div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL 18</h3><p style="margin:0;font-size:14.5px">Index Only Scan, <b>Heap Fetches: 0</b>, 5 pages, 0.06 ms. It depends on the visibility map, so a table that VACUUM has not caught up with will still fetch heap pages.</p></div>
+ <div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL 8.4</h3><p style="margin:0;font-size:14.5px"><b>Covering index lookup</b>, 100 rows, 0.02 ms.</p></div>
+ <div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB 8.0</h3><p style="margin:0;font-size:14.5px"><b>PROJECTION_COVERED</b>, 100 keys, <b>0 documents examined</b>.</p></div></div>
+  <p class="takeaway">What I do: for a hot query that reads a few columns, I add those columns to the index (INCLUDE in PostgreSQL, or simply more columns at the end), and check the plan says covering before I call it done.</p>
+</div></section><section id="paging"><div class="wrap">
+  <div class="kicker">Shape 3</div>
+  <h2>Why does page 25,000 take a hundred times longer than page 1?</h2>
+  <p class="sub">OFFSET does not jump. To skip 500,000 rows, the engine reads them and throws them away. Paging by key remembers where the last page ended, and starts there.</p>
+  <pre class="cmdshow">-- reads 500,020 rows to return 20
+SELECT * FROM orders ORDER BY id LIMIT 20 OFFSET 500000;
+-- reads 20
+SELECT * FROM orders WHERE id &gt; 500000 ORDER BY id LIMIT 20;</pre>
+  <div class="cmp3">
+ <div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL 18</h3><p style="margin:0;font-size:14.5px">OFFSET: <b>500,020 rows through the index, 5,046 pages, 64 ms.</b><br>By key: 20 rows, 4 pages, 0.06 ms.</p></div>
+ <div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL 8.4</h3><p style="margin:0;font-size:14.5px">OFFSET: <b>500,019 rows read, 99 ms.</b><br>By key: 19 rows read, 0.26 ms.</p></div>
+ <div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB 8.0</h3><p style="margin:0;font-size:14.5px">skip: <b>500,020 keys examined, 231 ms.</b><br>By key: 20 keys, under 1 ms.</p></div></div>
+  <p class="takeaway">What I do: page by key (also called keyset or seek paging). The API returns the last id or the last (created_at, id) pair, and the next request starts after it. Jumping to an arbitrary page number is the one thing it cannot do, and few users need that.</p>
+</div></section><section id="n-plus-one"><div class="wrap">
+  <div class="kicker">Shape 4</div>
+  <h2>Why is a fast query making the page slow?</h2>
+  <p class="sub">An ORM loads 100 customers, then runs one more query per customer for their latest order. Each query is fast. The page is slow because it pays 101 network round trips.</p>
+  <pre class="cmdshow">-- 100 round trips
+for id in customer_ids: SELECT max(created_at) FROM orders WHERE customer_id = %s
+-- 1 round trip
+SELECT customer_id, max(created_at) FROM orders
+WHERE customer_id = ANY(%s) GROUP BY customer_id;</pre>
+  <div class="cmp3">
+ <div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL 18</h3><p style="margin:0;font-size:14.5px"><b>100 queries: 20.1 ms. One query: 1.6 ms.</b> Measured from a client on the same machine. Across a network, each round trip costs more, and the gap grows.</p></div>
+ <div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL 8.4</h3><p style="margin:0;font-size:14.5px">Same pattern: one query with IN (...) or a JOIN instead of one per row. Not timed in this run.</p></div>
+ <div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB 8.0</h3><p style="margin:0;font-size:14.5px">Same pattern: one find with <span class="mono">$in</span>, or one aggregation with <span class="mono">$group</span>. Not timed in this run.</p></div></div>
+  <p class="takeaway">What I do: look at the query count per request, not just the slowest query. In the database, N+1 shows up as one statement with a huge call count and a tiny mean time in pg_stat_statements or performance_schema.</p>
+</div></section>
+<section style="padding-top:0"><div class="wrap"><p class="sub">I learned most of this from Markus Winand's <a href="https://use-the-index-luke.com/">Use The Index, Luke</a>, which goes much deeper on indexing for developers. This page adds the same experiments on all three engines, with measured output.</p></div></section>
+<section class="nextpage"><div class="wrap"><a href="../isolation/index.html"><div><span>Next</span>Lost updates and write skew<span>Two sessions, one row, three engines.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+</body>
+</html>

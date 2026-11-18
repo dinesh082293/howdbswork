@@ -1,0 +1,44 @@
+# Notebook 3: one lookup in 1,000,000 rows, without and with an index
+# run at: 2026-11-18 04:26 UTC
+# runner: Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 | 4 vCPU
+# PostgreSQL: 18.7 (Debian 18.7-1.pgdg13+2)
+# MySQL: 8.4.13
+# MongoDB: 8.0.38
+
+## PostgreSQL 18
+table size: 150 MB | 19231 pages of 8 KB
+-- no index on email (parallel query off, to show one plain scan)
+  Seq Scan on nb_users (actual time=40.672..70.484 rows=1.00 loops=1)
+    Filter: (email = 'user500000@example.com'::text)
+    Rows Removed by Filter: 999999
+    Buffers: shared hit=14362 read=4869
+  Planning:
+    Buffers: shared hit=25 read=1
+  Planning Time: 0.122 ms
+  Execution Time: 70.500 ms
+-- after CREATE INDEX nb_users_email ON nb_users (email)
+  Index Scan using nb_users_email on nb_users (actual time=0.027..0.027 rows=1.00 loops=1)
+    Index Cond: (email = 'user500000@example.com'::text)
+    Index Searches: 1
+    Buffers: shared hit=1 read=3
+  Planning:
+    Buffers: shared hit=16 read=1
+  Planning Time: 0.158 ms
+  Execution Time: 0.038 ms
+
+## MySQL 8.4
+-- no index on email
+  -> Filter: (nb_users.email = 'user500000@example.com')  (cost=104422 rows=99032) (actual time=361..509 rows=1 loops=1)
+      -> Table scan on nb_users  (cost=104422 rows=990318) (actual time=0.971..437 rows=1e+6 loops=1)
+  Handler_read_rnd_next (rows read in a scan): 1000001 | Handler_read_key (index lookups): 1 | Handler_read_next: 0
+-- after CREATE INDEX nb_users_email ON nb_users (email)
+  -> Index lookup on nb_users using nb_users_email (email='user500000@example.com')  (cost=0.706 rows=1) (actual time=0.47..0.471 rows=1 loops=1)
+  Handler_read_rnd_next (rows read in a scan): 0 | Handler_read_key (index lookups): 1 | Handler_read_next: 1
+
+## MongoDB 8.0
+-- no index on email
+  plan: COLLSCAN
+  nReturned: 1 | totalKeysExamined: 0 | totalDocsExamined: 1000000 | executionTimeMillis: 436
+-- after createIndex({email: 1})
+  plan: FETCH <- IXSCAN
+  nReturned: 1 | totalKeysExamined: 1 | totalDocsExamined: 1 | executionTimeMillis: 0

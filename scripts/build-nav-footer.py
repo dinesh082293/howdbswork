@@ -14,6 +14,7 @@ month change flows through here instead of being edited per page.
 Run from the site root: python3 scripts/build-nav-footer.py
 """
 import json
+from datetime import datetime
 import re
 import sys
 from pathlib import Path
@@ -35,6 +36,8 @@ def main():
         return 1
 
     data = json.loads((ROOT / "assets/data/engines.json").read_text())
+    upd_path = ROOT / "assets/data/updated.json"
+    updated = json.loads(upd_path.read_text()) if upd_path.exists() else {}
     versions = data["versions"]
     stamp = (
         f"Checked against docs: PostgreSQL {versions['postgresql']}, "
@@ -64,6 +67,11 @@ def main():
             .replace("{{BACK_HOME}}", back_home)
             .replace("{{STAMP_DOCS}}", stamp)
         )
+        rel = str(page.relative_to(ROOT))
+        upd = updated.get(rel)
+        upd_text = (datetime.strptime(upd, "%Y-%m-%d").strftime("%b %d, %Y").replace(" 0", " ")
+                    if upd else data["stamp_month"])
+        footer = footer.replace("{{UPDATED}}", upd_text)
         if "{{" in nav or "{{" in footer:
             print(f"{page}: unreplaced placeholder", file=sys.stderr)
             return 1

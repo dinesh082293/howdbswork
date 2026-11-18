@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Every correction that changed what a page on this site teaches, with the date, what it said and what it says now."/>
+<link rel="icon" href="data:,"/>
+<title>Corrections · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Corrections · what I got wrong, and when I fixed it</div>
+  <h1>Corrections</h1>
+  <p class="qline">What on this site was wrong, and what does it say now?</p>
+  <p class="lede">I check the site against the documentation for PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, and every command on the engine pages runs against real servers in CI. Some mistakes still get through. When I fix one that changes what a page teaches, it goes here, with the date. Typos and wording changes do not get a line.</p>
+</div></header>
+<section><div class="wrap">
+  <div style="overflow-x:auto"><table class="famtable">
+    <thead><tr><th>Date</th><th>Where</th><th>What it said</th><th>What it says now</th></tr></thead>
+    <tbody><tr><td>Nov 17, 2026</td><td>MVCC lab, Staff Path</td><td>The lab showed the snapshot being taken at BEGIN.</td><td>In PostgreSQL at Repeatable Read, and in InnoDB, the snapshot is taken at the first query in the transaction, not at BEGIN. I rewrote the lab, added an isolation level switch and a Reset button, and the log now says when the snapshot is taken.</td></tr><tr><td>Nov 17, 2026</td><td>Transaction ID wraparound, Staff Path</td><td>The ladder of thresholds was incomplete.</td><td>The ladder now reads: autovacuum_freeze_max_age (200 million by default) forces an anti-wraparound vacuum, vacuum_failsafe_age (1.6 billion) turns on the failsafe, and the server refuses new transaction IDs as it nears about 2.1 billion.</td></tr><tr><td>Nov 17, 2026</td><td>Checkpoint spacing, Staff Path</td><td>Checkpoint spacing was described as a fixed interval.</td><td>It is set by checkpoint_timeout and max_wal_size, whichever comes first, and max_wal_size is a soft limit.</td></tr><tr><td>Nov 17, 2026</td><td>synchronous_commit, Staff Path and Start here</td><td>off and local were described as the same thing.</td><td>They are different. off does not wait for the local WAL flush. local waits for the local flush but not for any standby.</td></tr><tr><td>Nov 17, 2026</td><td>MySQL 8.4 defaults, MySQL page and home</td><td>The pages assumed older defaults.</td><td>In MySQL 8.4, innodb_adaptive_hash_index is OFF and innodb_change_buffering is none by default. The doublewrite buffer lives in #ib_*.dblwr files since 8.0.20, not in ibdata1.</td></tr><tr><td>Nov 17, 2026</td><td>MongoDB sorts, MongoDB page and Reference</td><td>A sort over 100 MB was described as failing.</td><td>Since MongoDB 6.0, a blocking sort over 100 MB spills to disk by default.</td></tr><tr><td>Nov 17, 2026</td><td>MongoDB journal, MongoDB page</td><td>The page mentioned storage.journal.enabled as a setting.</td><td>The option was removed in MongoDB 6.1. Journaling is always on.</td></tr><tr><td>Nov 17, 2026</td><td>Sample output, Staff Path</td><td>Some outputs looked like captured runs but were written by hand.</td><td>Every hand-written output now says "sample output". Captured runs say where and when they ran, as on the Decisions and Notebooks pages.</td></tr></tbody>
+  </table></div>
+  <p class="sub" style="margin-top:12px">Found something wrong? Message me on <a href="https://www.linkedin.com/in/dineshlakkineni">LinkedIn</a>, with the page and what you saw. If the fix changes what a page teaches, it lands on this list.</p>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../about/index.html"><div><span>Next</span>About<span>Who writes this site, and why.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+</body>
+</html>
