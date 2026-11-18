@@ -1690,5 +1690,95 @@
   "u": "work-with-me/index.html",
   "s": "Work with me",
   "k": "consulting health check review hire"
+ },
+ {
+  "t": "Application designs: what goes where, and why",
+  "u": "designs/index.html",
+  "s": "Designs",
+  "k": "design application architecture which database where placement picker"
+ },
+ {
+  "t": "Database design doc template",
+  "u": "designs/template/index.html",
+  "s": "Designs",
+  "k": "design doc template workload placement rpo rto"
+ },
+ {
+  "t": "Online store: orders and inventory (design doc)",
+  "u": "designs/store-orders/index.html",
+  "s": "Designs",
+  "k": "orders and inventory where should an online store keep its orders, carts and stock counts?"
+ },
+ {
+  "t": "Payments and ledgers (design doc)",
+  "u": "designs/payments-ledger/index.html",
+  "s": "Designs",
+  "k": "payments and ledgers where should money movements live, and how do i make sure no cent appears or disappears?"
+ },
+ {
+  "t": "User accounts, logins and sessions (design doc)",
+  "u": "designs/accounts-sessions/index.html",
+  "s": "Designs",
+  "k": "accounts and sessions where should user accounts live, and where should sessions and tokens go?"
+ },
+ {
+  "t": "Product catalog with varied attributes (design doc)",
+  "u": "designs/product-catalog/index.html",
+  "s": "Designs",
+  "k": "product catalog where should a catalog go when every product type has different attributes?"
+ },
+ {
+  "t": "Social feed and timelines (design doc)",
+  "u": "designs/social-feed/index.html",
+  "s": "Designs",
+  "k": "social feed how do i build a home timeline that shows posts from everyone i follow?"
+ },
+ {
+  "t": "Chat and messaging (design doc)",
+  "u": "designs/chat-messaging/index.html",
+  "s": "Designs",
+  "k": "chat and messaging where should chat messages go, when there are billions of them and every conversation is read newest first?"
+ },
+ {
+  "t": "IoT, metrics and telemetry (design doc)",
+  "u": "designs/iot-telemetry/index.html",
+  "s": "Designs",
+  "k": "iot and telemetry where should millions of sensor readings per minute go?"
+ },
+ {
+  "t": "Analytics, dashboards and reporting (design doc)",
+  "u": "designs/analytics-reporting/index.html",
+  "s": "Designs",
+  "k": "analytics and reporting where should reports and dashboards run, so they do not slow down the application?"
+ },
+ {
+  "t": "Multi-tenant SaaS (design doc)",
+  "u": "designs/multi-tenant-saas/index.html",
+  "s": "Designs",
+  "k": "multi-tenant saas one database for all customers, one schema each, or one database each?"
+ },
+ {
+  "t": "Bookings and reservations (design doc)",
+  "u": "designs/booking-reservations/index.html",
+  "s": "Designs",
+  "k": "bookings how do i stop two people from booking the same seat, room or time slot?"
+ },
+ {
+  "t": "Leaderboards, counters and rate limits (design doc)",
+  "u": "designs/leaderboards-counters/index.html",
+  "s": "Designs",
+  "k": "leaderboards and counters where should fast-changing counts go: views, likes, scores, rate limits?"
+ },
+ {
+  "t": "Search and AI retrieval (design doc)",
+  "u": "designs/search-ai-retrieval/index.html",
+  "s": "Designs",
+  "k": "search and ai retrieval where should full-text search and vector search for ai features go?"
+ },
+ {
+  "t": "Audit logs and event history (design doc)",
+  "u": "designs/audit-event-log/index.html",
+  "s": "Designs",
+  "k": "audit and event logs where should an append-only history of everything that happened go?"
  }
 ]

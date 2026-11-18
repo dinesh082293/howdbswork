@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Not on the production primary. Copy data to a column store (ClickHouse, BigQuery, Redshift, Snowflake, DuckDB for small cases) through change data capture."/>
+<link rel="icon" href="data:,"/>
+<title>Analytics, dashboards and reporting · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Design doc · Analytics and reporting</div>
+  <h1>Analytics, dashboards and reporting</h1>
+  <p class="qline">Where should reports and dashboards run, so they do not slow down the application?</p>
+  <p class="lede">Applications like this: business dashboards, finance reports, product analytics. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
+  <div class="verdict"><b class="dt">The short answer</b>Not on the production primary. Copy data to a column store (ClickHouse, BigQuery, Redshift, Snowflake, DuckDB for small cases) through change data capture or batch loads, and run reports there.</div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
+</div></header>
+<section id="workload"><div class="wrap">
+  <div class="kicker">1 · The workload</div>
+  <h2>What the application asks of the database</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Dimension</th><th>This application</th></tr></thead><tbody><tr><td><b>Writes</b></td><td>Batch loads or a stream of changes from production.</td></tr><tr><td><b>Reads</b></td><td>Big scans with aggregates over a few columns.</td></tr><tr><td><b>Read to write</b></td><td>Reads are few but each one reads a lot.</td></tr><tr><td><b>Consistency</b></td><td>Minutes behind production is usually fine.</td></tr><tr><td><b>Latency</b></td><td>Seconds for a dashboard, minutes for a heavy report.</td></tr><tr><td><b>Growth</b></td><td>Large. All history, often from several systems.</td></tr></tbody></table></div>
+</div></section>
+<section id="placement"><div class="wrap">
+  <div class="kicker">2 · What goes where</div>
+  <h2>Each kind of data, its store, and why</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Data</th><th>Where it goes</th><th>Why</th></tr></thead><tbody><tr><td><b>Fact tables (orders, events)</b></td><td>A column store</td><td>Reads only the columns a query names, compressed, in parallel.</td></tr><tr><td><b>The application data</b></td><td>Stays in the OLTP database</td><td>The copy must never be able to slow the source down.</td></tr><tr><td><b>The pipeline</b></td><td>Change data capture (Debezium, or the managed equivalent) or scheduled batch exports</td><td>Ships changes without running scans on the primary.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">How each family of store behaves under traffic: <a href="../../families/index.html">Database families</a>.</p>
+</div></section>
+<section id="model"><div class="wrap">
+  <div class="kicker">3 · Data model</div>
+  <h2>The core tables and the queries they serve</h2>
+  <pre class="cmdshow">-- ClickHouse
+CREATE TABLE order_lines (
+  order_id    UInt64,
+  created_at  DateTime,
+  customer_id UInt64,
+  sku         LowCardinality(String),
+  qty         UInt32,
+  price_cents UInt64
+) ENGINE = MergeTree
+PARTITION BY toYYYYMM(created_at)
+ORDER BY (sku, created_at);
+
+SELECT sku, sum(qty * price_cents) / 100 AS revenue
+FROM order_lines
+WHERE created_at &gt;= now() - INTERVAL 30 DAY
+GROUP BY sku ORDER BY revenue DESC LIMIT 20;</pre>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>The sort key is chosen for the most common filter, here sku and time.</li><li>Data arrives in batches. Column stores want thousands of rows per insert.</li><li>Reports read from the copy. The primary only pays for shipping the changes.</li></ul>
+</div></section>
+<section id="growth"><div class="wrap">
+  <div class="kicker">4 · How it grows</div>
+  <h2>Start simple, change one thing at a time</h2>
+  <ol class="steplist"><li><b>A read replica for reports</b><span>Fine for small data. Long reports can conflict with replay on a PostgreSQL standby.</span></li><li><b>Reports scan millions of rows</b><span>A column store fed by CDC or nightly loads.</span></li><li><b>Many sources</b><span>A warehouse or lakehouse with a modeling layer, and dashboards on top.</span></li></ol>
+</div></section>
+<section id="breaks"><div class="wrap">
+  <div class="kicker">5 · What breaks first</div>
+  <h2>The failures to plan for</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>What happens</th><th>What you see</th><th>What I do</th></tr></thead><tbody><tr><td><b>Reports on the primary</b></td><td>The application slows down at report time</td><td>Move them. This is the most common cause of mystery slowdowns on a schedule.</td></tr><tr><td><b>Single-row inserts into a column store</b></td><td>Too many small parts, merges fall behind</td><td>Batch the inserts.</td></tr><tr><td><b>Replica used for both failover and heavy reports</b></td><td>A long query delays replay, and the failover target is behind</td><td>Separate the two roles.</td></tr></tbody></table></div>
+</div></section>
+<section id="alternatives"><div class="wrap">
+  <div class="kicker">6 · Alternatives</div>
+  <h2>What I considered and did not pick</h2>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>More indexes on the primary for reports.</b> Every index slows every write, and the scans still compete for cache.</li><li><b>Exporting CSV files by hand.</b> Works once, then becomes a job nobody owns.</li></ul>
+  <p class="takeaway"><b>Cost.</b> Warehouses bill by data scanned or by compute time. Partition and sort keys that match the common filters are the main lever.</p>
+  <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation and common practice, not from measurements. Where a claim is measured, it links to the <a href="../../notebooks/index.html">notebooks</a>. To write your own version of this doc, start from the <a href="../template/index.html">design doc template</a>.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../template/index.html"><div><span>Next</span>Design doc template<span>Write the same doc for your own application.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>

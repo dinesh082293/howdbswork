@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="A copyable outline for a database design doc: workload, cost of a lost write, placement, model, durability, growth, failures, alternatives and cost."/>
+<link rel="icon" href="data:,"/>
+<title>Database design doc template · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Designs · template</div>
+  <h1>Database design doc template</h1>
+  <p class="qline">What should a database design doc answer before anyone picks a product?</p>
+  <p class="lede">This is the outline every design doc on this site follows. Copy it into your own doc and fill it in for one application or feature. The order matters: the workload comes before the store, and the cost of a lost write comes before the replication setting.</p>
+</div></header>
+<section><div class="wrap">
+  <pre class="cmdshow"># Database design: &lt;application or feature&gt;
+
+Author: &lt;name&gt;    Date: &lt;date&gt;    Status: draft | in review | decided
+
+## 1. What the application does
+One paragraph, in business terms. Who uses it, and what they do.
+
+## 2. The workload
+| Dimension      | Today | In 12 months | How we know |
+|----------------|-------|--------------|-------------|
+| Writes per sec | peak: | peak:        |             |
+| Reads per sec  | peak: | peak:        |             |
+| Data size      |       |              |             |
+| Growth         |       |              |             |
+| Read pattern   | by key / by range / aggregates / text / similarity |
+| Latency target | p99:  |              |             |
+
+## 3. What a lost or wrong write costs
+Money? A retry? Nothing? This decides the commit and replication settings.
+
+## 4. What goes where
+| Data | Store | Source of truth or copy? | Why |
+|------|-------|--------------------------|-----|
+
+## 5. Data model
+Core tables or collections, keys and indexes. The three most frequent queries
+and the index that serves each.
+
+## 6. Rules the database enforces
+Unique constraints, checks, foreign keys, exclusion constraints, row-level security.
+
+## 7. Durability and recovery
+Commit setting, replication (sync or async), backups, point-in-time recovery,
+restore tested on: &lt;date&gt;. RPO: &lt;seconds&gt;. RTO: &lt;minutes&gt;.
+
+## 8. How it grows
+Stage 1 (now), stage 2 (trigger: ...), stage 3 (trigger: ...).
+
+## 9. What breaks first
+| Failure | What we will see | What we will do |
+|---------|------------------|-----------------|
+
+## 10. Alternatives considered
+| Option | Why not |
+|--------|---------|
+
+## 11. Cost
+Main lines of the bill, and what we will review monthly.
+
+## 12. Open questions
+</pre>
+  <p class="sub">How I use it: I fill in sections 2 and 3 with the team before anyone names a database. Many disagreements about the store are really disagreements about the workload, and those are easier to settle with numbers.</p>
+  <p class="sub">Worked examples: the <a href="../index.html#designs">thirteen design docs</a>.</p>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../index.html"><div><span>Next</span>Application designs<span>Back to the picker and the thirteen design docs.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>

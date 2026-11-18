@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="An append-only table partitioned by time in the relational database, or a stream (Kafka) with a long retention plus a copy in object storage. Never."/>
+<link rel="icon" href="data:,"/>
+<title>Audit logs and event history · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Design doc · Audit and event logs</div>
+  <h1>Audit logs and event history</h1>
+  <p class="qline">Where should an append-only history of everything that happened go?</p>
+  <p class="lede">Applications like this: audit trails, activity history, event sourcing, compliance records. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
+  <div class="verdict"><b class="dt">The short answer</b>An append-only table partitioned by time in the relational database, or a stream (Kafka) with a long retention plus a copy in object storage. Never updated, rarely read, kept for years.</div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
+</div></header>
+<section id="workload"><div class="wrap">
+  <div class="kicker">1 · The workload</div>
+  <h2>What the application asks of the database</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Dimension</th><th>This application</th></tr></thead><tbody><tr><td><b>Writes</b></td><td>Steady. One row per action.</td></tr><tr><td><b>Reads</b></td><td>Rare: investigations, compliance exports, a user's activity page.</td></tr><tr><td><b>Read to write</b></td><td>Very low.</td></tr><tr><td><b>Consistency</b></td><td>The entry must be committed with the action it records.</td></tr><tr><td><b>Latency</b></td><td>Writes must be cheap. Reads can be slow.</td></tr><tr><td><b>Growth</b></td><td>Forever, often by law.</td></tr></tbody></table></div>
+</div></section>
+<section id="placement"><div class="wrap">
+  <div class="kicker">2 · What goes where</div>
+  <h2>Each kind of data, its store, and why</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Data</th><th>Where it goes</th><th>Why</th></tr></thead><tbody><tr><td><b>Recent history</b></td><td>A partitioned table in the same database as the action</td><td>Written in the same transaction, so an action never happens without its record.</td></tr><tr><td><b>Old history</b></td><td>Object storage in Parquet, or a column store</td><td>Cheap, and still queryable by analytics tools.</td></tr><tr><td><b>Event streams for other services</b></td><td>Kafka or a similar log</td><td>Other systems consume the events without querying your database.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">How each family of store behaves under traffic: <a href="../../families/index.html">Database families</a>.</p>
+</div></section>
+<section id="model"><div class="wrap">
+  <div class="kicker">3 · Data model</div>
+  <h2>The core tables and the queries they serve</h2>
+  <pre class="cmdshow">CREATE TABLE audit_log (
+  id         bigint GENERATED ALWAYS AS IDENTITY,
+  at         timestamptz NOT NULL DEFAULT now(),
+  actor_id   bigint NOT NULL,
+  action     text   NOT NULL,
+  target     text   NOT NULL,
+  details    jsonb,
+  PRIMARY KEY (at, id)
+) PARTITION BY RANGE (at);
+
+REVOKE UPDATE, DELETE ON audit_log FROM app_user;</pre>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>The application user can insert but not update or delete. That makes the log append-only by permission, not by convention.</li><li>Partitions by month are detached and exported once they pass the online retention window.</li><li>Only the columns you search on are columns. The rest goes in details.</li></ul>
+</div></section>
+<section id="growth"><div class="wrap">
+  <div class="kicker">4 · How it grows</div>
+  <h2>Start simple, change one thing at a time</h2>
+  <ol class="steplist"><li><b>A table in the main database</b><span>Same transaction as the action.</span></li><li><b>The table dominates storage and backups</b><span>Monthly partitions, export old ones to object storage.</span></li><li><b>Many services produce events</b><span>A shared event stream, with the audit store as one consumer.</span></li></ol>
+</div></section>
+<section id="breaks"><div class="wrap">
+  <div class="kicker">5 · What breaks first</div>
+  <h2>The failures to plan for</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>What happens</th><th>What you see</th><th>What I do</th></tr></thead><tbody><tr><td><b>Audit written after the transaction commits</b></td><td>Actions with no record when the process crashes in between</td><td>Write it in the same transaction, or use the outbox pattern.</td></tr><tr><td><b>One giant unpartitioned table</b></td><td>Backups and vacuum take hours</td><td>Partition by time.</td></tr><tr><td><b>Personal data in the log</b></td><td>A deletion request you cannot honor</td><td>Store references, not personal data, or plan how to redact.</td></tr></tbody></table></div>
+</div></section>
+<section id="alternatives"><div class="wrap">
+  <div class="kicker">6 · Alternatives</div>
+  <h2>What I considered and did not pick</h2>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>Logging to files only.</b> Easy to lose, hard to query, not transactional with the action.</li><li><b>Updating rows with a history column.</b> The history can be overwritten. Append-only rows cannot, if permissions say so.</li></ul>
+  <p class="takeaway"><b>Cost.</b> Keep months online, years in object storage. The online part should be the smallest.</p>
+  <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation and common practice, not from measurements. Where a claim is measured, it links to the <a href="../../notebooks/index.html">notebooks</a>. To write your own version of this doc, start from the <a href="../template/index.html">design doc template</a>.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../leaderboards-counters/index.html"><div><span>Next</span>Leaderboards, counters and rate limits<span>Where should fast-changing counts go: views, likes, scores, rate limits?</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>

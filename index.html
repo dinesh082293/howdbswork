@@ -15,7 +15,7 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="index.html">Home</a><a href="postgresql/index.html">PostgreSQL</a><a href="mysql/index.html">MySQL</a><a href="mongodb/index.html">MongoDB</a><a href="cheat-sheet/index.html">Cheat Sheet</a><a href="staff-path/index.html">Staff Path</a><a href="compare/index.html">Compare</a><a href="labs/index.html">Labs</a><a href="notebooks/index.html">Notebooks</a><a href="families/index.html">Families</a><a href="decisions/index.html">Decisions</a><a href="reference/index.html">Reference</a><a href="cloud/index.html">Cloud</a><a href="stories/index.html">Stories</a><a href="about/index.html">About</a></div>
+  <div class="navlinks"><a href="index.html">Home</a><a href="postgresql/index.html">PostgreSQL</a><a href="mysql/index.html">MySQL</a><a href="mongodb/index.html">MongoDB</a><a href="cheat-sheet/index.html">Cheat Sheet</a><a href="staff-path/index.html">Staff Path</a><a href="compare/index.html">Compare</a><a href="labs/index.html">Labs</a><a href="notebooks/index.html">Notebooks</a><a href="designs/index.html">Designs</a><a href="decisions/index.html">Decisions</a><a href="reference/index.html">Reference</a><a href="cloud/index.html">Cloud</a><a href="stories/index.html">Stories</a><a href="about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
@@ -29,6 +29,7 @@
     <a class="btn primary" href="start-here/index.html#insert">Follow one insert, end to end →</a>
     <a class="btn" href="staff-path/index.html#path">Guided path: zero to architect</a>
     <a class="btn" href="paths/index.html">Find your path</a>
+    <a class="btn" href="designs/index.html">Design an application: what goes where</a>
   </div>
 
   <p style="font-weight:700;margin:0 0 10px">Three engines, one job. Each solves it with a different physical layout, and the layout is the behavior. Once you know where the bytes sit, the performance follows.</p>
@@ -57,7 +58,7 @@
   <div class="pathgrid">
     <a class="pathcard" href="paths/index.html#interview"><h3>I have an interview</h3><p>Nine steps, in the order that builds an answer.</p><span class="go">Open the path →</span></a>
     <a class="pathcard" href="paths/index.html#on-call"><h3>I am on call and something is on fire</h3><p>Name the layer, run the checklist, find the queue.</p><span class="go">Open the path →</span></a>
-    <a class="pathcard" href="paths/index.html#choosing"><h3>I am choosing a database</h3><p>From the workload, to the engine, to the bill.</p><span class="go">Open the path →</span></a>
+    <a class="pathcard" href="designs/index.html"><h3>I am designing an application</h3><p>Thirteen design docs and a picker: what kind of data goes in which database, and why.</p><span class="go">Open the designs →</span></a>
   </div>
   <p class="sub">Prefer to see it run? <a href="notebooks/index.html">Lab notebooks</a> from real servers, <a href="tutorials/index.html">guided tutorials</a> on a PostgreSQL in your browser, or <a href="labs/index.html">break a database in the labs</a>. Want the bigger picture? <a href="families/index.html">Database families</a>, <a href="compare/index.html">same task, three engines</a>, <a href="queries/index.html">queries that look fine and are not</a>, and <a href="isolation/index.html">lost updates and write skew</a>.</p>
 </div></section>
@@ -237,6 +238,7 @@
   <h2>What changed, and when</h2>
   <p class="sub">I update this log when the site changes. New pages first. Small fixes do not get a line.</p>
   <ul style="font-size:15px;line-height:1.8;max-width:760px">
+    <li><b>Nov 18, 2026:</b> application designs: thirteen design docs, one per kind of application (store orders, payments, bookings, accounts, multi-tenant SaaS, catalogs, feeds, search and AI retrieval, chat, telemetry, audit logs, counters, analytics), each with the workload, what goes where and why, the data model, how it grows, what breaks and what I rejected. Plus a picker that suggests where a kind of data should go, and a design doc template to copy.</li>
     <li><b>Nov 18, 2026:</b> lab notebooks: five experiments run on real PostgreSQL 18.7, MySQL 8.4.13 and MongoDB 8.0.38 servers, with the output pasted as captured. New pages built on them: queries that look fine and are not (column order, covering, paging, N+1) and lost updates and write skew, each measured on all three engines. Also new: database families, guided tutorials on a PostgreSQL in your browser, a corrections page, an RSS feed, a "last updated" date on every page, a work-with-me page, and a question to answer before each lab.</li>
     <li><b>Nov 17, 2026:</b> a round of reading changes: a Compare page (same task, three engines: a write, a crash, a lagging replica, a long transaction), a Labs page with four simulations (crash recovery, replica lag, lock pile-up, page count), three reading paths for interviews, incidents and choosing a database, a Decision 10 page on why a database bill is huge, a "common myth" box on the main pages, a question line, a reading time and a next-page link on every page, and print buttons for each engine on the cheat sheet.</li>
     <li><b>Nov 17, 2026:</b> 10 database concepts, explained in a library: index, normalization, join, transaction, ACID, deadlock, partitioning, sharding, replication, read replica, one picture and one line each.</li>
