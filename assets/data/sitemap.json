@@ -1,58 +1,242 @@
 {
-  "_comment": "The site's order. Sections, and the pages in each, in reading order. scripts/build-nav-footer.py builds the nav menus, the breadcrumb, the section index, previous and next links, and the sitemap page from this file.",
-  "sections": [
-    {"id": "learn", "name": "Learn", "blurb": "Start from zero: what happens when you write a row, the words you need, and a path to staff level.", "pages": [
-      ["start-here/index.html", "Start here"],
-      ["concepts/index.html", "Ten concepts"],
-      ["staff-path/index.html", "Staff path, zero to architect"],
-      ["paths/index.html", "Reading paths by goal"]]},
-    {"id": "engines", "name": "Engines", "blurb": "PostgreSQL, MySQL and MongoDB from the files on disk up, then side by side, then the wider landscape.", "pages": [
-      ["postgresql/index.html", "PostgreSQL"],
-      ["mysql/index.html", "MySQL · InnoDB"],
-      ["mongodb/index.html", "MongoDB · WiredTiger"],
-      ["compare/index.html", "Same task, three engines"],
-      ["families/index.html", "Database families"]]},
-    {"id": "practice", "name": "Practice", "blurb": "See it happen: simulations, a real PostgreSQL in your browser, and experiments run on real servers.", "pages": [
-      ["labs/index.html", "Labs"],
-      ["tutorials/index.html", "Guided tutorials"],
-      ["notebooks/index.html", "Lab notebooks"]]},
-    {"id": "design", "name": "Design", "blurb": "What kind of application data goes in which database, and why, as design docs.", "pages": [
-      ["designs/index.html", "Application designs"],
-      ["designs/store-orders/index.html", "Store orders and inventory"],
-      ["designs/payments-ledger/index.html", "Payments and ledgers"],
-      ["designs/booking-reservations/index.html", "Bookings and reservations"],
-      ["designs/accounts-sessions/index.html", "Accounts and sessions"],
-      ["designs/multi-tenant-saas/index.html", "Multi-tenant SaaS"],
-      ["designs/product-catalog/index.html", "Product catalog"],
-      ["designs/social-feed/index.html", "Social feed"],
-      ["designs/search-ai-retrieval/index.html", "Search and AI retrieval"],
-      ["designs/chat-messaging/index.html", "Chat and messaging"],
-      ["designs/iot-telemetry/index.html", "IoT and telemetry"],
-      ["designs/audit-event-log/index.html", "Audit and event logs"],
-      ["designs/leaderboards-counters/index.html", "Leaderboards and counters"],
-      ["designs/analytics-reporting/index.html", "Analytics and reporting"],
-      ["designs/template/index.html", "Design doc template"],
-      ["designs/review/index.html", "Submit a design for review"]]},
-    {"id": "correct", "name": "Get it right", "blurb": "The decisions and habits that decide whether the design holds up: queries, concurrency, durability and cost.", "pages": [
-      ["queries/index.html", "Queries that look fine and are not"],
-      ["isolation/index.html", "Lost updates and write skew"],
-      ["designs/anti-patterns/index.html", "Anti-patterns"],
-      ["decisions/index.html", "Decisions"],
-      ["decisions/sync-replication-failover/index.html", "What a commit waits for"],
-      ["decisions/cost-model/index.html", "Why the bill is huge"]]},
-    {"id": "run", "name": "Run it", "blurb": "Where it runs, how big it must be, how to change it, and what to do when it breaks.", "pages": [
-      ["designs/hosting/index.html", "Where to run the database"],
-      ["cloud/index.html", "On-prem vs cloud, by engine"],
-      ["designs/capacity/index.html", "Capacity calculator"],
-      ["designs/migrations/index.html", "Migration playbooks"],
-      ["cheat-sheet/index.html", "Cheat sheet"],
-      ["reference/index.html", "Reference: plans, logs, checklist"],
-      ["stories/index.html", "Real failures"]]},
-    {"id": "about", "name": "About", "blurb": "Who writes this, what was corrected, what to read next, and how to reach me.", "pages": [
-      ["about/index.html", "About"],
-      ["corrections/index.html", "Corrections"],
-      ["references/index.html", "Reading list"],
-      ["work-with-me/index.html", "Work with me"],
-      ["sitemap/index.html", "All pages"]]}
-  ]
+ "_comment": "The site's order. Sections, and the pages in each, in reading order. scripts/build-nav-footer.py builds the nav menus, the breadcrumb, the section index, previous and next links, and the sitemap page from this file.",
+ "sections": [
+  {
+   "id": "learn",
+   "name": "Learn",
+   "blurb": "Start from zero: what happens when you write a row, the words you need, and a path to staff level.",
+   "pages": [
+    [
+     "start-here/index.html",
+     "Start here"
+    ],
+    [
+     "concepts/index.html",
+     "Ten concepts"
+    ],
+    [
+     "staff-path/index.html",
+     "Staff path, zero to architect"
+    ],
+    [
+     "paths/index.html",
+     "Reading paths by goal"
+    ]
+   ]
+  },
+  {
+   "id": "engines",
+   "name": "Engines",
+   "blurb": "PostgreSQL, MySQL and MongoDB from the files on disk up, then side by side, then the wider landscape.",
+   "pages": [
+    [
+     "postgresql/index.html",
+     "PostgreSQL"
+    ],
+    [
+     "mysql/index.html",
+     "MySQL · InnoDB"
+    ],
+    [
+     "mongodb/index.html",
+     "MongoDB · WiredTiger"
+    ],
+    [
+     "compare/index.html",
+     "Same task, three engines"
+    ],
+    [
+     "families/index.html",
+     "Database families"
+    ]
+   ]
+  },
+  {
+   "id": "practice",
+   "name": "Practice",
+   "blurb": "See it happen: simulations, a real PostgreSQL in your browser, and experiments run on real servers.",
+   "pages": [
+    [
+     "labs/index.html",
+     "Labs"
+    ],
+    [
+     "tutorials/index.html",
+     "Guided tutorials"
+    ],
+    [
+     "notebooks/index.html",
+     "Lab notebooks"
+    ]
+   ]
+  },
+  {
+   "id": "design",
+   "name": "Design",
+   "blurb": "What kind of application data goes in which database, and why, as design docs.",
+   "pages": [
+    [
+     "designs/index.html",
+     "Application designs"
+    ],
+    [
+     "designs/store-orders/index.html",
+     "Store orders and inventory"
+    ],
+    [
+     "designs/payments-ledger/index.html",
+     "Payments and ledgers"
+    ],
+    [
+     "designs/booking-reservations/index.html",
+     "Bookings and reservations"
+    ],
+    [
+     "designs/accounts-sessions/index.html",
+     "Accounts and sessions"
+    ],
+    [
+     "designs/multi-tenant-saas/index.html",
+     "Multi-tenant SaaS"
+    ],
+    [
+     "designs/product-catalog/index.html",
+     "Product catalog"
+    ],
+    [
+     "designs/social-feed/index.html",
+     "Social feed"
+    ],
+    [
+     "designs/search-ai-retrieval/index.html",
+     "Search and AI retrieval"
+    ],
+    [
+     "designs/chat-messaging/index.html",
+     "Chat and messaging"
+    ],
+    [
+     "designs/iot-telemetry/index.html",
+     "IoT and telemetry"
+    ],
+    [
+     "designs/audit-event-log/index.html",
+     "Audit and event logs"
+    ],
+    [
+     "designs/leaderboards-counters/index.html",
+     "Leaderboards and counters"
+    ],
+    [
+     "designs/analytics-reporting/index.html",
+     "Analytics and reporting"
+    ],
+    [
+     "designs/template/index.html",
+     "Design doc template"
+    ],
+    [
+     "designs/review/index.html",
+     "Submit a design for review"
+    ]
+   ]
+  },
+  {
+   "id": "correct",
+   "name": "Get it right",
+   "blurb": "The decisions and habits that decide whether the design holds up: queries, concurrency, durability and cost.",
+   "pages": [
+    [
+     "queries/index.html",
+     "Queries that look fine and are not"
+    ],
+    [
+     "isolation/index.html",
+     "Lost updates and write skew"
+    ],
+    [
+     "designs/anti-patterns/index.html",
+     "Anti-patterns"
+    ],
+    [
+     "decisions/index.html",
+     "Decisions"
+    ],
+    [
+     "decisions/sync-replication-failover/index.html",
+     "What a commit waits for"
+    ],
+    [
+     "decisions/cost-model/index.html",
+     "Why the bill is huge"
+    ]
+   ]
+  },
+  {
+   "id": "run",
+   "name": "Run it",
+   "blurb": "Where it runs, how big it must be, how to change it, and what to do when it breaks.",
+   "pages": [
+    [
+     "designs/hosting/index.html",
+     "Where to run the database"
+    ],
+    [
+     "cloud/index.html",
+     "On-prem vs cloud, by engine"
+    ],
+    [
+     "designs/capacity/index.html",
+     "Capacity calculator"
+    ],
+    [
+     "designs/migrations/index.html",
+     "Migration playbooks"
+    ],
+    [
+     "cheat-sheet/index.html",
+     "Cheat sheet"
+    ],
+    [
+     "reference/index.html",
+     "Reference: plans, logs, checklist"
+    ],
+    [
+     "stories/index.html",
+     "Real failures"
+    ],
+    [
+     "oncall/index.html",
+     "On call tonight"
+    ]
+   ]
+  },
+  {
+   "id": "about",
+   "name": "About",
+   "blurb": "Who writes this, what was corrected, what to read next, and how to reach me.",
+   "pages": [
+    [
+     "about/index.html",
+     "About"
+    ],
+    [
+     "corrections/index.html",
+     "Corrections"
+    ],
+    [
+     "references/index.html",
+     "Reading list"
+    ],
+    [
+     "work-with-me/index.html",
+     "Work with me"
+    ],
+    [
+     "sitemap/index.html",
+     "All pages"
+    ]
+   ]
+  }
+ ]
 }
