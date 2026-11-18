@@ -12,7 +12,7 @@ var LEVELS=[
    growth:[["10 MB of WAL/day","Any default survives. Archiving is a nice-to-have.",0],["~1-2 GB/day","Archiving and retention become real jobs; a missed archive is visible within a day.",0],["Transition: 50-100 MB/min","Checkpoint and archive throughput become the write ceiling. Requested checkpoints appear in pg_stat_checkpointer.",1],["1+ GB/min at peak","WAL generation rate, not table size, not CPU, is the instance's write limit. Sizing is a capacity decision.",1]],
    diagram:[["Backend","writes change",""],["WAL buffer → WAL writer","fsync, sequential","hot"],["pg_wal/000000010000000000000003","16 MB segment, on disk","good"],["COMMIT returns","only after fsync",""],["Checkpoint (later)","page → base/16384/16397",""]],
    why:"Commit latency becomes one sequential fsync instead of random page writes. WAL generation rate (MB/s) is the real write ceiling of the instance, not table size.",
-   tradeoff:"synchronous_commit = on is the safe default. off / local buys latency by risking the last ~3× WAL-writer-delay of commits on an OS crash, acceptable for staging or rebuildable data, never for payments.",
+   tradeoff:"synchronous_commit = on is the safe default. off buys latency by risking the last ~3× wal_writer_delay of commits on an OS crash, acceptable for staging or rebuildable data, never for payments. local still fsyncs the WAL on the primary and only skips waiting for the standby, so a failover can lose commits that a primary restart would not.",
    practice:{out:`$ pg_waldump pg_wal/000000010000000000000003 | head -3
 rmgr: Heap  len (rec/tot): 59/  59, tx: 801, lsn: 0/03A4F8C0
   desc: INSERT off 3 flags 0x00 <span class="c">← the change, recorded before the page</span>
@@ -29,7 +29,7 @@ SELECT pg_current_wal_lsn();  →  0/03A4F928`,
   {eng:"my",title:"MySQL, redo + binlog must agree (two-phase commit)",
    hook:"Two logs record the same transaction in two vocabularies: redo says <i>these bytes of this page changed</i>, the binlog says <i>this transaction happened</i>. If a crash leaves them disagreeing by even <b>one transaction</b>, the source and every replica hold different data, with no error raised anywhere. Two-phase commit exists so the committed-transaction count in both logs is always identical.",
    problem:"InnoDB and the binary log are two separate logs; a crash must never leave a row in one and not the other.",
-   growth:[["Dev / staging","Settings barely matter; crashes are free lessons.",0],["Real traffic, safe settings","flush=1 + sync_binlog=1: full safety, commit cost = 2 fsyncs.",0],["Transition: someone benchmarks with flush=2","Throughput looks 20-30% better in the load test. The config ships.",1],["First OS crash in production","Up to ~1 s of commits missing from one or both logs. Replicas diverge silently; PITR replays a history that never happened.",1]],
+   growth:[["Dev / staging","Settings barely matter; crashes are free lessons.",0],["Real traffic, safe settings","flush=1 + sync_binlog=1: full safety, commit cost = 2 fsyncs.",0],["Transition: someone benchmarks with flush=2","Throughput looks better in the load test. The config ships.",1],["First OS crash in production","Up to ~1 s of commits missing from one or both logs. Replicas diverge silently; PITR replays a history that never happened.",1]],
    diagram:[["InnoDB redo buffer","page changes",""],["#innodb_redo/#ib_redo0","crash recovery","hot"],["mysql-bin.000007 + GTID","replication + PITR","hot"],["2PC: prepare → binlog fsync → commit","innodb_flush_log_at_trx_commit=1, sync_binlog=1","good"]],
    why:"Redo rebuilds pages on this server; the binlog rebuilds data on other servers. The internal two-phase commit is what keeps replicas and point-in-time recovery consistent with the engine.",
    tradeoff:"flush=1 + sync_binlog=1 is the only fully safe pair. flush=2 or sync_binlog=0 trades durability for throughput, the classic silent data-loss setting found in inherited configs.",
@@ -179,7 +179,7 @@ FROM pg_stat_user_tables ORDER BY n_tup_upd DESC;
    growth:[["Indexes fit in the buffer pool","Change buffer mostly idle; inserts read pages that are already cached.",0],["Cold secondary indexes, steady inserts","Ibuf grows; merges happen in the background as pages cycle through.",0],["Transition: write burst, then a read storm","Every read of a cold page first merges its backlog of buffered changes. Read latency spikes with no change to the read queries.",1],["Production","Post-burst slowdowns get misdiagnosed as 'the reads got slower', and someone disables the change buffer, making the original write problem permanent.",1]],
    diagram:[["Secondary index insert","page not in buffer pool",""],["Change buffer (in ibdata1)","change recorded, no read","good"],["Later: page read / purge / merge","buffered changes applied in bulk",""],["Adaptive hash index","hot search patterns → hash → row pointer","hot"]],
    why:"The change buffer turns random I/O into sequential merge work for non-unique secondary indexes. The adaptive hash index (AHI) silently accelerates repeated exact-match lookups on hot pages.",
-   tradeoff:"Change buffer can consume up to 25% of the buffer pool and its merge cost lands on later reads. AHI costs memory and can become a latch hotspot; it helps point lookups, never range scans.",
+   tradeoff:"Change buffer can consume up to 25% of the buffer pool and its merge cost lands on later reads. AHI costs memory and can become a latch hotspot; it helps point lookups, never range scans. MySQL 8.4 changed both defaults: innodb_adaptive_hash_index is OFF and innodb_change_buffering is none, so on a stock 8.4 server neither does anything until you enable it. The output below is from a server with both enabled.",
    practice:{out:`SHOW ENGINE INNODB STATUS\\G  (INSERT BUFFER AND ADAPTIVE HASH INDEX)
 Ibuf size 1, free list len 6192, seg size 6194  <span class="c">← buffered changes waiting to merge</span>
 Hash table size 4425293, node heap has 812 buffer(s)
@@ -197,13 +197,13 @@ Hash table size 4425293, node heap has 812 buffer(s)
    story:[["Notion, VACUUM stalled","../stories/index.html#notion-sharding"],["Notion, the DMS copy came back three times the size","../stories/index.html#notion-dms"]],
    hook:"Transaction IDs are a <b>32-bit counter: 4.29 billion values</b>, and PostgreSQL treats half that space as 'the past'. A table whose oldest unfrozen transaction ages toward <b>~2.1 billion</b> approaches the point where the database refuses new writes to protect the data. Freezing is not housekeeping, it is recycling the finite counter every future write depends on.",
    problem:"Dead tuples are reusable space only after vacuum, and every transaction ID is borrowed from a finite 32-bit counter that must be recycled by freezing.",
-   growth:[["Normal load","Autovacuum freezes as it goes. age(relfrozenxid) stays in the low millions.",0],["Busy tables","Per-table scale factors matter; the biggest table needs its own autovacuum settings.",0],["Transition: one idle-in-transaction session lives for days","Vacuum's horizon is pinned. Dead tuples stop being removable; relfrozenxid age climbs steadily, week over week.",1],["~200M from the limit","Anti-wraparound vacuum arrives as an emergency: aggressive, I/O-heavy, uninvited. Past the limit, writes stop by design.",1]],
+   growth:[["Normal load","Autovacuum freezes as it goes. age(relfrozenxid) stays in the low millions.",0],["Busy tables","Per-table scale factors matter; the biggest table needs its own autovacuum settings.",0],["Transition: one idle-in-transaction session lives for days","Vacuum's horizon is pinned. Dead tuples stop being removable; relfrozenxid age climbs steadily, week over week.",1],["Age 200M, then 1.6B, then ~2.1B","Anti-wraparound vacuum starts at autovacuum_freeze_max_age (200M): aggressive, I/O-heavy, uninvited. The failsafe (vacuum_failsafe_age, 1.6B) makes vacuum drop its throttling and skip non-essential work. Near ~2.1B, writes stop by design.",1]],
    diagram:[["Dead tuples","from UPDATE / DELETE",""],["Autovacuum workers","space reusable + visibility map set",""],["Freeze: xmin → frozen","before age 200M (autovacuum_freeze_max_age)","good"],["Not frozen in time","wraparound risk at ~2.1B xids","hot"]],
    why:"Wraparound is the one PostgreSQL failure that can force a read-only shutdown to protect data. Freeze progress on old, cold tables is a staff-level operational duty, not trivia.",
    tradeoff:"Aggressive per-table autovacuum (lower scale factor on hot tables) spends steady I/O to avoid bloat cliffs. Global-only tuning always loses on the biggest table.",
    practice:{out:`SELECT datname, age(datfrozenxid) FROM pg_database ORDER BY 2 DESC;
- appdb | 1,204,551,930  <span class="flag">← past 1 billion: anti-wraparound territory, act now</span>
- appdb |    84,120,553  <span class="good">← healthy: freeze is keeping up</span>
+ orders_db | 1,204,551,930  <span class="flag">← 6× autovacuum_freeze_max_age (200M): freezing is far behind and the 1.6B failsafe is next. Act now</span>
+ appdb     |    84,120,553  <span class="good">← healthy: freeze is keeping up</span>
 
 SELECT pid, now()-xact_start AS age, state FROM pg_stat_activity
 WHERE xact_start IS NOT NULL ORDER BY xact_start LIMIT 5;
@@ -236,7 +236,7 @@ ORDER BY trx_started LIMIT 5;  <span class="c">← oldest first: the top row is 
    mistake:"Hunting slow queries one by one while a single 6-hour transaction is pinning purge for the whole instance.",
    metric:"History list length above ~10k and still growing. The oldest trx_started in innodb_trx names the culprit."},
   {eng:"mo",title:"MongoDB, WiredTiger checkpoints and snapshot timestamps",
-   hook:"Crash recovery time is a division: <b>journal written since the last checkpoint ÷ replay speed</b>. Checkpoints run about every 60 seconds; at 50 MB/s of writes that is up to <b>~3 GB of journal to replay</b> before the node serves again. Separately, a snapshot held open for 1 hour pins every version created in that hour, cleanup of all of them waits for one reader.",
+   hook:"Crash recovery time is a division: <b>journal written since the last checkpoint ÷ replay speed</b>. Checkpoints run about every 60 seconds or after about 2 GB of journal, whichever comes first; at 50 MB/s the 60 second gap would be 3 GB, so the size trigger caps it at <b>~2 GB of journal to replay</b> before the node serves again. Separately, a snapshot held open for 1 hour pins every version created in that hour, cleanup of all of them waits for one reader.",
    problem:"The .wt files are only consistent at checkpoints; between them, versions live in cache at timestamps, and a long-lived snapshot pins all of them.",
    growth:[["Normal operation","Checkpoints complete in seconds; pinned timestamps are seconds old.",0],["Longer aggregations","Oldest pinned timestamp ages to minutes during reports. Cache absorbs it.",0],["Transition: a snapshot lives for hours","Versions cannot be freed; cache fills with un-reclaimable data; eviction pressure (Level 1) starts stalling application threads.",1],["Crash in this state","Recovery replays up to a checkpoint interval of journal, minutes of downtime sized by write rate, not by database size.",1]],
    diagram:[["Writes","timestamped versions in cache",""],["Checkpoint (~60 s)","stable blocks → collection-*.wt","good"],["WiredTiger.wt","metadata: last stable checkpoint",""],["Journal","covers everything since checkpoint","hot"]],
@@ -316,9 +316,9 @@ ls $dbPath/rollback/  <span class="c">← any file here = writes that were ackno
  ]},
  {t:"Level 5, Scale: size the log, split the data, bound the window",problem:"One server ends three ways: the log cannot recycle, the data must split, or a copy falls outside the window where catching up is possible.",take:"Scale work is window math: WAL generated per checkpoint, chunks balanced per shard, oplog hours per outage. If you cannot state the window, you do not know your headroom.",pairs:[
   {eng:"pg",title:"PostgreSQL, WAL sizing: max_wal_size is a checkpoint budget",
-   hook:"Checkpoint frequency is a division: <b><span class='mono'>max_wal_size</span> ÷ WAL rate</b>. At 100 MB/min of WAL, a 1 GB budget forces a checkpoint every <b>10 minutes</b> of writes, and every checkpoint re-flushes the same hot pages. Raise the budget to 16 GB and the interval becomes <b>~2.7 hours</b>: the same total data written, spread evenly as background I/O instead of arriving in storms.",
+   hook:"Checkpoint spacing is set by whichever trigger fires first: <b>checkpoint_timeout</b> (default 5 min) or the size trigger, <b>max_wal_size ÷ WAL rate</b>. PostgreSQL treats max_wal_size as a soft limit and starts size-triggered checkpoints before the budget is full, so the intervals below are upper bounds. At 1 GB/min of WAL, a 1 GB budget forces a checkpoint about every <b>minute</b>, and every one re-flushes the same hot pages. Raise the budget to 16 GB and the size trigger moves out to about <b>16 minutes</b>, so the 5 minute timer takes over: steady timed checkpoints instead of a storm of requested ones.",
    problem:"WAL segments can only be recycled after a checkpoint; write faster than checkpoints complete and the safety log becomes the outage.",
-   growth:[["MB of WAL/day","Defaults are fine. Checkpoints are timed, an hour apart.",0],["GB/day","Requested checkpoints appear in pg_stat_checkpointer. Still self-managing, at a price in I/O smoothness.",0],["Transition: hundreds of MB/min","Checkpoint I/O competes with query I/O every few minutes. Latency spikes align with checkpoint starts.",1],["Archive failure at this rate","pg_wal grows unbounded, GB per hour, until the filesystem fills and the primary panics, by design.",1]],
+   growth:[["MB of WAL/day","Defaults are fine. Checkpoints are timed, every 5 minutes (checkpoint_timeout), and cheap because little is dirty.",0],["GB/day","Requested checkpoints appear in pg_stat_checkpointer. Still self-managing, at a price in I/O smoothness.",0],["Transition: hundreds of MB/min","Checkpoint I/O competes with query I/O every few minutes. Latency spikes align with checkpoint starts.",1],["Archive failure at this rate","pg_wal grows unbounded, GB per hour, until the filesystem fills and the primary panics, by design.",1]],
    diagram:[["Write rate","WAL generated per minute",""],["max_wal_size / checkpoint_timeout","whichever hits first triggers checkpoint","hot"],["Checkpoint writes dirty pages","segments before it recycle","good"],["Budget too small","requested checkpoints, I/O storms","hot"]],
    why:"Checkpoint tuning is the most effective PostgreSQL write tuning there is: it converts random write bursts into steady background I/O, or fails to.",
    tradeoff:"Large max_wal_size (tens of GB on busy primaries) smooths I/O but lengthens crash recovery and the disk pg_wal can consume before recycling.",
@@ -330,7 +330,7 @@ SELECT pg_size_pretty(sum(size)) FROM pg_ls_waldir();
    detect:"SELECT num_timed, num_requested FROM pg_stat_checkpointer;  -- requested vs timed\nSELECT pg_size_pretty(sum(size)) FROM pg_ls_waldir();",
    root:"<span class='mono'>max_wal_size</span> left at an install-era default (1 GB thinking) while the write rate grew by orders of magnitude, or archiving broke, removing the only exit for segments.",
    blast:"Either checkpoint I/O storms every few minutes indefinitely, or the terminal case: <span class='mono'>pg_wal</span> fills the filesystem and the primary panics and stops, a full write outage caused by the durability log itself.",
-   mit:"Size <span class='mono'>max_wal_size</span> to hold 1-2 hours of peak WAL; alert on the requested:timed checkpoint ratio and on <span class='mono'>pg_wal</span> as a share of its filesystem; treat any archive failure as urgent at high write rates.",
+   mit:"Size max_wal_size so the checkpoint_timeout timer, not the size trigger, normally starts checkpoints: at least checkpoint_timeout times your peak WAL rate, plus margin (at 1 GB/min and a 5 minute timeout, 10 GB or more); alert on the requested:timed checkpoint ratio and on <span class='mono'>pg_wal</span> as a share of its filesystem; treat any archive failure as urgent at high write rates.",
    mistake:"Setting max_wal_size once at install (often 1 GB default-era thinking) for a primary writing hundreds of MB per minute.",
    metric:"Ratio of requested to timed checkpoints, and peak pg_wal size as a share of the filesystem."},
   {eng:"mo",title:"MongoDB, chunk migration and jumbo chunks",
@@ -395,7 +395,7 @@ function renderPair(P){
    '<div class="sm"><h5>Mechanism, derived from the layout</h5><p>'+P.why+'</p></div>'+
    '<div class="sm"><h5>The tradeoff</h5><p>'+P.tradeoff+'</p></div>'+
    '</div>'+
-   '<div class="practice"><h5>In Practice, real output, red flags named</h5><pre class="evidence">'+P.practice.out+'</pre><p class="evnote">'+P.practice.note+'</p><div class="lookcmd">'+P.detect+'</div></div>'+
+   '<div class="practice"><h5>In Practice, sample output, red flags named</h5><pre class="evidence">'+P.practice.out+'</pre><p class="evnote">'+P.practice.note+'</p><div class="lookcmd">'+P.detect+'</div></div>'+
    '<div class="wib"><h5>Where it breaks</h5><p><b>Root cause:</b> '+P.root+'</p><p><b>Blast radius:</b> '+P.blast+'</p><p><b>Mitigation:</b> '+P.mit+'</p></div>'+
    '<div class="staffmeta">'+
    '<div class="sm warn"><h5>Common staff-level mistake</h5><p>'+P.mistake+'</p></div>'+
@@ -470,10 +470,10 @@ function fmt(n){return n.toLocaleString('en-US')}
 if(document.getElementById('rowRange')){document.getElementById('rowRange').addEventListener('input',function(e){
   var rows=Math.pow(10,+e.target.value);
   document.getElementById('rowLabel').textContent=fmt(rows);
-  var depth=Math.max(2,Math.ceil(Math.log(rows/20)/Math.log(400))+1);
+  var depth=Math.max(2,Math.ceil(Math.log(rows)/Math.log(400)));
   document.getElementById('depthLabel').textContent='tree depth ≈ '+depth;
-  var scanPages=Math.round(rows/80);
-  var scanSecs=scanPages/12500;
+  var scanPages=Math.round(rows/8);
+  var scanSecs=scanPages/375000;
   var scanTxt;
   if(scanSecs<1){scanTxt=Math.round(scanSecs*1000)+' ms';}
   else if(scanSecs<60){scanTxt='about '+scanSecs.toFixed(scanSecs<10?1:0)+' s';}
@@ -489,23 +489,45 @@ if(document.getElementById('rowRange')){document.getElementById('rowRange').addE
   if(sl){sl.textContent=fmt(scanPages)+' pages · '+scanTxt;}
 });
 }
-var tx={a:false,b:false,committed:100,pending:null,bSnap:null};
+var tx={a:false,b:false,committed:100,pending:null,bSnap:null,iso:'rr'};
 var logEl=document.getElementById('mvccLog');
 function log(m){logEl.textContent=m}
+function setB(txt){document.querySelector('#versB b').textContent=txt}
 function renderVers(){
   var html='<div class="ver">Version 1 · balance = 100 · committed ✓</div>';
   if(tx.pending!==null) html+='<div class="ver">Version 2 · balance = '+tx.pending+' · written by A · uncommitted (only A can see it)</div>';
   else if(tx.committed!==100) html+='<div class="ver">Version 2 · balance = '+tx.committed+' · written by A · committed ✓ (version 1 kept until no snapshot needs it, then removed by VACUUM / purge)</div>';
   document.getElementById('versA').innerHTML=html;
 }
-if(document.getElementById('versA')){document.querySelectorAll('[data-tx]').forEach(function(btn){
+function resetMvcc(){
+  tx.a=false;tx.b=false;tx.committed=100;tx.pending=null;tx.bSnap=null;
+  setB('-');renderVers();
+  log('Reset. Pick an isolation level for B, then run the steps. To see the difference, B must SELECT before A commits.');
+}
+if(document.getElementById('versA')){
+  var isoSel=document.getElementById('mvccIso');
+  if(isoSel){isoSel.addEventListener('change',function(){tx.iso=isoSel.value;resetMvcc();});}
+  var rs=document.getElementById('mvccReset');
+  if(rs){rs.addEventListener('click',resetMvcc);}
+  document.querySelectorAll('[data-tx]').forEach(function(btn){
   btn.addEventListener('click',function(){
     var a=btn.getAttribute('data-tx');
-    if(a==='a-begin'){tx.a=true;log('A began. A\'s snapshot sees the balance as committed now: '+tx.committed+'.');}
-    if(a==='b-begin'){tx.b=true;tx.bSnap=tx.committed;document.querySelector('#versB b').textContent='snapshot frozen at '+tx.bSnap;log('B began and took a snapshot at balance '+tx.bSnap+'. Whatever commits later, B keeps reading this version.');}
-    if(a==='a-write'){ if(!tx.a){log('BEGIN A first (button 1).');return;} tx.pending=150; renderVers(); log('A updated: a NEW version (150) was created and the change written to the log. Version 1 (100) was NOT overwritten, so B is not disturbed.');}
-    if(a==='a-commit'){ if(tx.pending===null){log('Nothing to commit yet, let A run the UPDATE first.');return;} tx.committed=150; tx.pending=null; tx.a=false; renderVers(); log('A committed: the commit record is forced to the log on disk. New transactions now see 150. B, which began earlier, still sees its snapshot. Version 1 will be removed once no snapshot can see it.');}
-    if(a==='b-read'){ if(!tx.b){log('BEGIN B first, so B holds a snapshot.');return;} document.querySelector('#versB b').textContent=tx.bSnap+' (snapshot)'; log('B reads: '+tx.bSnap+', even though the latest committed value is '+tx.committed+'. No locking, no waiting, no wrong total. That is snapshot isolation.');}
+    if(a==='a-begin'){tx.a=true;log('A began.');}
+    if(a==='b-begin'){tx.b=true;tx.bSnap=null;setB('began, no snapshot yet');log('B began. In PostgreSQL and InnoDB the snapshot is not taken at BEGIN. It is taken at B\'s first query (Repeatable Read) or at every query (Read Committed).');}
+    if(a==='a-write'){ if(!tx.a){log('BEGIN A first (button 1).');return;} tx.pending=150; renderVers(); log('A updated: a NEW version (150) was created and the change written to the log. Version 1 (100) was NOT overwritten, so a reader of version 1 is not disturbed.');}
+    if(a==='a-commit'){ if(tx.pending===null){log('Nothing to commit yet, let A run the UPDATE first.');return;} tx.committed=150; tx.pending=null; tx.a=false; renderVers(); log('A committed: the commit record is forced to the log on disk. Any query that takes a snapshot from now on sees 150.');}
+    if(a==='b-read'){
+      if(!tx.b){log('BEGIN B first.');return;}
+      if(tx.iso==='rr'){
+        var first=(tx.bSnap===null);
+        if(first){tx.bSnap=tx.committed;}
+        setB(tx.bSnap+' (snapshot'+(first?' taken now':' from B\'s first SELECT')+')');
+        log(first?('B\'s first SELECT took the snapshot: balance '+tx.bSnap+'. Under Repeatable Read, every later SELECT in this transaction reads this same snapshot, whatever commits afterwards.'):('B reads '+tx.bSnap+' again, even though the latest committed value is '+tx.committed+'. Repeatable Read: one snapshot per transaction. No locking, no waiting.'));
+      } else {
+        setB(tx.committed+' (fresh snapshot for this statement)');
+        log('Read Committed: each statement gets a fresh snapshot, so B reads '+tx.committed+', the latest committed value. A second SELECT after A commits would see 150.');
+      }
+    }
   });
 });
 renderVers();}
@@ -523,7 +545,7 @@ var REFS=[
  ["pg","Safety","VACUUM & autovacuum","UPDATE and DELETE leave dead row versions behind; something must reclaim them or files bloat forever.","VACUUM marks dead-tuple space reusable and updates the visibility map; autovacuum runs it automatically per table. If it falls behind, tables and indexes bloat, and in the extreme, transaction ID wraparound forces a shutdown. Never disable it.","Check: SELECT relname, n_dead_tup FROM pg_stat_user_tables;"],
  ["my","Safety","Undo log & purge","Readers need old row versions, and failed transactions need to be undone, both come from the same place.","InnoDB writes undo records (in undo_001/undo_002 tablespaces) before modifying a row. A reader's snapshot rebuilds old versions from them; rollback replays them in reverse. The purge thread deletes undo only when no open transaction can still need it, one long transaction makes undo grow without bound.","Watch: “History list length” in SHOW ENGINE INNODB STATUS"],
  ["mo","Safety","Oplog size & the replication window","A secondary that was down must be able to catch up without copying the whole database.","Secondaries catch up by replaying local.oplog.rs, a capped collection. If downtime exceeds the window the oplog covers (size ÷ write rate), the needed entries have rolled off and the member must do a full initial sync.","Try: rs.printReplicationInfo(), 'log length start to end' is your window"],
- ["all","Safety","Isolation levels","When two transactions touch the same rows, someone must decide what each is allowed to see.","Levels trade surprises for speed: Read Committed (fresh snapshot per statement), Repeatable Read (one snapshot per transaction), Serializable (as if transactions ran one at a time; PostgreSQL may abort one to keep that promise). Know your engine's default before debugging 'weird reads'.","Defaults: PG Read Committed · InnoDB Repeatable Read · Mongo snapshot (primary)"],
+ ["all","Safety","Isolation levels","When two transactions touch the same rows, someone must decide what each is allowed to see.","Levels trade surprises for speed: Read Committed (fresh snapshot per statement), Repeatable Read (one snapshot per transaction), Serializable (as if transactions ran one at a time; PostgreSQL may abort one to keep that promise). Know your engine's default before debugging 'weird reads'.","Defaults: PG Read Committed · InnoDB Repeatable Read · MongoDB read concern local (snapshot only when requested)"],
  ["pg","Copies","Streaming vs logical replication","Sometimes you need an exact clone; sometimes you need only some tables, on a different version.","Streaming replication ships WAL bytes, the standby must be the same version and ends up byte-identical. Logical replication decodes WAL into per-table row changes, use it for major-version upgrades and selective copies.","Check: pg_stat_replication · pg_stat_subscription"],
  ["my","Copies","Binlog + GTID","A replica must always know exactly which transactions it has applied, no guessing after a failover.","Every transaction committed with the binlog on gets a GTID (server UUID + sequence). A replica records the GTIDs it has executed, so reconnecting or promoting is arithmetic, not archaeology. Use ROW binlog format for exactness.","Try: SHOW REPLICA STATUS\\G · SELECT @@gtid_executed;"],
  ["mo","Copies","Elections & majority write concern","If the primary dies at 3 AM, the replica set must recover without a human.","Members heartbeat each other; if the primary is unreachable, the most up-to-date secondaries elect a new one. writeConcern w:'majority' means an acknowledged write exists on a majority of members, so it survives any single election. Pair with j:true for journal durability.","Try: rs.conf() · rs.status() · { writeConcern: { w: 'majority', j: true } }"],
@@ -560,7 +582,7 @@ var REF_EXTRA={
 "Slow query logs":{d:["Every statement","Over threshold → logged","Digest → top by total time"],tr:"Logging everything costs overhead; logging nothing costs blindness. Threshold + digest review is the working compromise.",br:"Fixing by mean time instead of total time. Detect: pg_stat_statements / events_statements_summary_by_digest ordered by total, not average."},
 "WAL & checkpoints":{d:["Dirty pages in shared_buffers","Checkpoint","WAL segments recycle"],tr:"Frequent checkpoints = I/O storms; rare = slow recovery and a huge pg_wal. max_wal_size is the budget knob.",br:"num_requested outnumbering num_timed. Detect: pg_stat_checkpointer and pg_ls_waldir() size."},
 "Redo log & doublewrite buffer":{d:["Dirty page flush","Doublewrite copy first","Real place second, torn page recoverable"],tr:"Doublewrite costs an extra write per flush to make torn pages impossible to serve; disabling it on non-atomic storage is gambling.",br:"Checkpoint age near redo capacity → flush stalls. Detect: SHOW ENGINE INNODB STATUS LOG + FILE I/O sections."},
-"Journal & checkpoints":{d:["Write","journal/WiredTigerLog.*","Checkpoint ~60 s makes .wt consistent"],tr:"Journal group-commit batches fsyncs (up to 100 ms window); j:true removes the batching risk for that write at latency cost.",br:"Crash loses up to the checkpoint gap when journaling is off or misdirected. Detect: ls journal/ and storage.journal.enabled in getCmdLineOpts."},
+"Journal & checkpoints":{d:["Write","journal/WiredTigerLog.*","Checkpoint ~60 s makes .wt consistent"],tr:"Journal group-commit batches fsyncs (up to 100 ms window); j:true removes the batching risk for that write at latency cost.",br:"Journal files on a full or contended volume stall commits. Detect: du -sh journal/ and journal commit latency in db.serverStatus().wiredTiger.log. Journaling cannot be turned off since MongoDB 6.1."},
 "Statistics & the planner":{d:["Table changes","ANALYZE refreshes histograms","Planner costs plans from fresh stats"],tr:"Auto-analyze lags after bulk loads; manual ANALYZE after a big import is cheaper than a night of wrong plans.",br:"Plan flips to seq scan the morning after a bulk load. Detect: compare EXPLAIN estimated vs actual rows; check last_analyze in pg_stat_user_tables."}
 };
 var refFilter='all';
