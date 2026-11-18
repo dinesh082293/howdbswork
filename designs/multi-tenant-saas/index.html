@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Start with a shared schema and a tenant_id on every row, enforced by row-level security in PostgreSQL or by a mandatory filter in the data layer. Move."/>
+<link rel="icon" href="data:,"/>
+<title>Multi-tenant SaaS · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Design doc · Multi-tenant SaaS</div>
+  <h1>Multi-tenant SaaS</h1>
+  <p class="qline">One database for all customers, one schema each, or one database each?</p>
+  <p class="lede">Applications like this: B2B software where each customer is a company with its own users and data. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
+  <div class="verdict"><b class="dt">The short answer</b>Start with a shared schema and a tenant_id on every row, enforced by row-level security in PostgreSQL or by a mandatory filter in the data layer. Move very large tenants to their own database when they need it.</div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
+</div></header>
+<section id="workload"><div class="wrap">
+  <div class="kicker">1 · The workload</div>
+  <h2>What the application asks of the database</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Dimension</th><th>This application</th></tr></thead><tbody><tr><td><b>Writes</b></td><td>Varies by tenant. A few tenants usually produce most of the load.</td></tr><tr><td><b>Reads</b></td><td>Always inside one tenant.</td></tr><tr><td><b>Read to write</b></td><td>Typical application mix.</td></tr><tr><td><b>Consistency</b></td><td>Strict inside a tenant. Tenants never see each other's data.</td></tr><tr><td><b>Latency</b></td><td>Interactive.</td></tr><tr><td><b>Growth</b></td><td>By number of tenants, plus a few that grow very large.</td></tr></tbody></table></div>
+</div></section>
+<section id="placement"><div class="wrap">
+  <div class="kicker">2 · What goes where</div>
+  <h2>Each kind of data, its store, and why</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Data</th><th>Where it goes</th><th>Why</th></tr></thead><tbody><tr><td><b>All tenants, shared tables</b></td><td>PostgreSQL or MySQL</td><td>One schema to migrate, one pool of connections, cheap to add a tenant.</td></tr><tr><td><b>Very large or regulated tenants</b></td><td>Their own database, same schema</td><td>Isolation of load and data, at the cost of more databases to operate.</td></tr><tr><td><b>Per-tenant settings and routing</b></td><td>A small catalog table</td><td>Says which database each tenant lives in.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">How each family of store behaves under traffic: <a href="../../families/index.html">Database families</a>.</p>
+</div></section>
+<section id="model"><div class="wrap">
+  <div class="kicker">3 · Data model</div>
+  <h2>The core tables and the queries they serve</h2>
+  <pre class="cmdshow">CREATE TABLE projects (
+  tenant_id bigint NOT NULL,
+  id        bigint NOT NULL,
+  name      text NOT NULL,
+  PRIMARY KEY (tenant_id, id)
+);
+
+ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+CREATE POLICY tenant_isolation ON projects
+  USING (tenant_id = current_setting(&#x27;app.tenant_id&#x27;)::bigint);
+
+-- the application sets the tenant at the start of each request
+SET app.tenant_id = &#x27;42&#x27;;</pre>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>tenant_id leads every primary key and index, so each tenant's data clusters together and every query starts with it.</li><li>Row-level security makes a forgotten WHERE clause return nothing instead of another customer's data. Superusers and roles with BYPASSRLS always bypass it, and so does the table owner unless the table has FORCE ROW LEVEL SECURITY, so the application must not connect as either.</li><li>MySQL has no row-level security, so the filter must be enforced in the data access layer, and tested.</li></ul>
+</div></section>
+<section id="growth"><div class="wrap">
+  <div class="kicker">4 · How it grows</div>
+  <h2>Start simple, change one thing at a time</h2>
+  <ol class="steplist"><li><b>Shared schema</b><span>Cheapest and simplest. Fine for thousands of small tenants.</span></li><li><b>A few tenants dominate</b><span>Move them to their own databases, routed by the catalog table.</span></li><li><b>Many large tenants</b><span>Shard by tenant_id across several databases. Citus (for PostgreSQL) and Vitess (for MySQL) do this.</span></li></ol>
+</div></section>
+<section id="breaks"><div class="wrap">
+  <div class="kicker">5 · What breaks first</div>
+  <h2>The failures to plan for</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>What happens</th><th>What you see</th><th>What I do</th></tr></thead><tbody><tr><td><b>A missing tenant filter</b></td><td>Data leak between customers</td><td>Row-level security, or a data layer that cannot build a query without tenant_id.</td></tr><tr><td><b>One tenant's heavy job</b></td><td>Every other tenant slows down</td><td>Rate-limit per tenant and move heavy tenants out.</td></tr><tr><td><b>Schema per tenant at thousands of tenants</b></td><td>Migrations take hours, catalog bloat</td><td>Prefer shared schema with tenant_id.</td></tr></tbody></table></div>
+</div></section>
+<section id="alternatives"><div class="wrap">
+  <div class="kicker">6 · Alternatives</div>
+  <h2>What I considered and did not pick</h2>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>Database per tenant from day one.</b> Strong isolation, but thousands of databases to back up, monitor and migrate.</li><li><b>Schema per tenant.</b> A middle ground that gets hard past a few hundred tenants.</li></ul>
+  <p class="takeaway"><b>Cost.</b> Shared schema is the cheapest per tenant. Price large tenants that need their own database accordingly.</p>
+  <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation and common practice, not from measurements. Where a claim is measured, it links to the <a href="../../notebooks/index.html">notebooks</a>. To write your own version of this doc, start from the <a href="../template/index.html">design doc template</a>.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../product-catalog/index.html"><div><span>Next</span>Product catalog with varied attributes<span>Where should a catalog go when every product type has different attributes?</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>

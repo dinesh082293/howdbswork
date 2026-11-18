@@ -14,7 +14,7 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../designs/index.html">Designs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
@@ -61,6 +61,7 @@
   <dl><dt>How it stores data</dt><dd>Data is partitioned by time. Old partitions are compressed, rolled up, or dropped whole.</dd><dt>Traffic it handles well</dt><dd>Metrics and events written in time order and read by time range.</dd><dt>Traffic that hurts it</dt><dd>Updates to old data, and very many distinct series (high cardinality), which explode index size.</dd><dt>What I watch</dt><dd>Series count, chunk or partition size, retention jobs.</dd></dl></div></div>
 </div></section>
 <section id="pick"><div class="wrap">
+  <p class="sub">For a whole application, with each kind of data placed and the reason given, see <a href="../designs/index.html">Application designs</a>.</p>
   <div class="kicker">How I pick</div>
   <h2>Start boring, add a family when the traffic asks for it</h2>
   <ol class="steplist">

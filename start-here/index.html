@@ -14,7 +14,7 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../designs/index.html">Designs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <section><div class="wrap">
@@ -483,6 +483,7 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
 <section id="design" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Design doc · which app sits where</div>
   <h2>Pick the database from the workload, not the fashion</h2>
+  <p class="sub">The full version of this section, with thirteen applications: <a href="../designs/index.html">Application designs</a>.</p>
   <p class="sub">"Which database?" is the wrong question. "Which workload, at what volume, with what correctness requirement?" is the one you can answer. Each workload below is stated with the property that decides it: access pattern, consistency requirement, retention shape. When two workloads with incompatible properties share one engine, the failure does not appear at launch. It appears in the incident cards above, at the volume where the properties start to conflict.</p>
 
   <div class="problem"><b class="label">Problem</b><div><p>One database forced to serve OLTP, analytics, search, and cache workloads degrades all four. Measurably, and in a predictable order.</p><small>The analytical scan evicts the OLTP working set first (incident #1), then its long snapshot pins cleanup (incident #5), then its result set pressures the pool (incident #2). Match each workload to its natural home first. Argue about vendors second.</small></div></div>
@@ -551,7 +552,7 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
-  <p class="reviewed">Last updated Nov 17, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
   <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>

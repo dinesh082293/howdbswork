@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Posts and the follow graph in a relational database. Timelines precomputed per user in Redis or a wide-column store (fan-out on write), except for."/>
+<link rel="icon" href="data:,"/>
+<title>Social feed and timelines · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Design doc · Social feed</div>
+  <h1>Social feed and timelines</h1>
+  <p class="qline">How do I build a home timeline that shows posts from everyone I follow?</p>
+  <p class="lede">Applications like this: social networks, activity feeds, notifications. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
+  <div class="verdict"><b class="dt">The short answer</b>Posts and the follow graph in a relational database. Timelines precomputed per user in Redis or a wide-column store (fan-out on write), except for accounts with huge followings, whose posts are merged in at read time.</div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
+</div></header>
+<section id="workload"><div class="wrap">
+  <div class="kicker">1 · The workload</div>
+  <h2>What the application asks of the database</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Dimension</th><th>This application</th></tr></thead><tbody><tr><td><b>Writes</b></td><td>Posts are moderate. Fan-out multiplies each post by the number of followers.</td></tr><tr><td><b>Reads</b></td><td>Very high. Opening the app reads a timeline.</td></tr><tr><td><b>Read to write</b></td><td>High, often more than 100 to 1.</td></tr><tr><td><b>Consistency</b></td><td>Loose. A post can appear a few seconds late.</td></tr><tr><td><b>Latency</b></td><td>The first screen of the timeline in well under a second.</td></tr><tr><td><b>Growth</b></td><td>Fast, driven by user count times follows.</td></tr></tbody></table></div>
+</div></section>
+<section id="placement"><div class="wrap">
+  <div class="kicker">2 · What goes where</div>
+  <h2>Each kind of data, its store, and why</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Data</th><th>Where it goes</th><th>Why</th></tr></thead><tbody><tr><td><b>Users, posts, follows</b></td><td>PostgreSQL or MySQL</td><td>The record of who posted what and who follows whom.</td></tr><tr><td><b>Precomputed timelines</b></td><td>Redis lists or sorted sets, or Cassandra and ScyllaDB at large scale</td><td>A timeline is a list of post IDs per user, read as one key. Writes are many and small, which suits memory or an LSM store.</td></tr><tr><td><b>Post content and media</b></td><td>The database for text, object storage and a CDN for media</td><td>Media is large and read often, which is a CDN job.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">How each family of store behaves under traffic: <a href="../../families/index.html">Database families</a>.</p>
+</div></section>
+<section id="model"><div class="wrap">
+  <div class="kicker">3 · Data model</div>
+  <h2>The core tables and the queries they serve</h2>
+  <pre class="cmdshow">-- record of truth
+CREATE TABLE follows (follower_id bigint, followee_id bigint,
+                      PRIMARY KEY (follower_id, followee_id));
+CREATE INDEX ON follows (followee_id);
+
+# timeline per user, newest first, capped at 800 entries
+ZADD timeline:42 1763452800 post:9001
+ZREMRANGEBYRANK timeline:42 0 -801
+ZREVRANGE timeline:42 0 49</pre>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Fan-out on write: when someone posts, a worker pushes the post ID into each follower's timeline.</li><li>For accounts with millions of followers, skip fan-out and merge their recent posts in at read time. A hybrid is the usual answer.</li><li>Timelines are a cache. They can be rebuilt from posts and follows.</li></ul>
+</div></section>
+<section id="growth"><div class="wrap">
+  <div class="kicker">4 · How it grows</div>
+  <h2>Start simple, change one thing at a time</h2>
+  <ol class="steplist"><li><b>Pull model</b><span>At small scale, query the posts of everyone I follow, newest first, with a good index. No precomputation.</span></li><li><b>Reads get expensive</b><span>Precompute timelines in Redis with fan-out on write.</span></li><li><b>Memory gets expensive</b><span>Move timelines to a wide-column store partitioned by user_id, with only the hot ones in Redis.</span></li></ol>
+</div></section>
+<section id="breaks"><div class="wrap">
+  <div class="kicker">5 · What breaks first</div>
+  <h2>The failures to plan for</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>What happens</th><th>What you see</th><th>What I do</th></tr></thead><tbody><tr><td><b>A celebrity posts</b></td><td>The fan-out queue backs up for minutes</td><td>Do not fan out for accounts above a follower threshold. Merge at read time.</td></tr><tr><td><b>Pull queries at scale</b></td><td>A big IN list of followees sorted by time</td><td>Precompute.</td></tr><tr><td><b>Timelines that never expire</b></td><td>Memory grows with inactive users</td><td>Cap each timeline, and drop timelines of users who have not opened the app in weeks.</td></tr></tbody></table></div>
+</div></section>
+<section id="alternatives"><div class="wrap">
+  <div class="kicker">6 · Alternatives</div>
+  <h2>What I considered and did not pick</h2>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>A graph database.</b> Good for deep graph questions (friends of friends of friends). A timeline is a one-hop question that relational tables and caches answer well.</li><li><b>Everything in one relational database at large scale.</b> The fan-out writes alone would dominate the primary.</li></ul>
+  <p class="takeaway"><b>Cost.</b> Memory for timelines is the big line. Cap timeline length and drop inactive users' timelines.</p>
+  <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation and common practice, not from measurements. Where a claim is measured, it links to the <a href="../../notebooks/index.html">notebooks</a>. To write your own version of this doc, start from the <a href="../template/index.html">design doc template</a>.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../search-ai-retrieval/index.html"><div><span>Next</span>Search and AI retrieval<span>Where should full-text search and vector search for AI features go?</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Thirteen design docs for common applications, with a picker: what kind of data goes in which database, and why."/>
+<link rel="icon" href="data:,"/>
+<title>Application designs · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../designs/index.html">Designs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Designs · what goes where, and why</div>
+  <h1>Application designs</h1>
+  <p class="qline">What kind of application should go in which database, and why?</p>
+  <p class="learn"><b>You will learn:</b> how to place each kind of application data in the right store, with thirteen design docs for common applications and a short picker to start from.</p>
+  <p class="lede">When a team asks me which database to use, the answer is rarely one database. It is a placement: this data here, that data there, and the reason for each. These pages are written as design docs, one per kind of application. Each starts from the workload, because the workload decides the store, not the other way round.</p>
+</div></header>
+<section id="pick"><div class="wrap">
+  <div class="kicker">Start here</div>
+  <h2>Where should this data go?</h2>
+  <p class="sub">Answer four questions about one kind of data. The picker suggests a store and the design docs to read next. It is a starting point for a design review, not a verdict.</p>
+  <div class="labcard" id="picker">
+  <fieldset class="pkq"><legend>1. What is the main job of this data?</legend><label class="pk"><input type="radio" name="job" value="tx"> Record business transactions: orders, payments, bookings, accounts</label><label class="pk"><input type="radio" name="job" value="serve"> Serve the same content to many readers: catalogs, feeds, profiles</label><label class="pk"><input type="radio" name="job" value="stream"> Take in a stream: messages, events, sensor readings, logs</label><label class="pk"><input type="radio" name="job" value="history"> Answer questions over history: reports, dashboards</label><label class="pk"><input type="radio" name="job" value="find"> Find things by text or by meaning</label><label class="pk"><input type="radio" name="job" value="state"> Keep fast-changing state: counters, ranks, sessions, rate limits</label></fieldset>
+  <fieldset class="pkq"><legend>2. What does a lost or doubled write cost?</legend><label class="pk"><input type="radio" name="loss" value="money"> Money, legal trouble, or a broken promise to a customer</label><label class="pk"><input type="radio" name="loss" value="user"> An unhappy user who retries</label><label class="pk"><input type="radio" name="loss" value="none"> Almost nothing: it can be recomputed</label></fieldset>
+  <fieldset class="pkq"><legend>3. Peak writes per second?</legend><label class="pk"><input type="radio" name="rate" value="low"> Up to a few hundred</label><label class="pk"><input type="radio" name="rate" value="mid"> Thousands</label><label class="pk"><input type="radio" name="rate" value="high"> Tens of thousands or more</label></fieldset>
+  <fieldset class="pkq"><legend>4. How does it grow?</legend><label class="pk"><input type="radio" name="growth" value="fits"> It fits on one server for years</label><label class="pk"><input type="radio" name="growth" value="forever"> It grows without end, and old data is rarely read</label></fieldset>
+  <div class="labctl"><button class="labbtn" type="button" id="pickGo">Show me where it goes</button></div>
+  <div id="pickOut" aria-live="polite"></div>
+</div>
+</div></section>
+<section id="principles"><div class="wrap">
+  <div class="kicker">How I place data</div>
+  <h2>Five rules I apply before naming a product</h2>
+  <ol class="steplist">
+    <li><b>One source of truth per kind of data</b><span>Every other store holding it (a cache, a search index, a warehouse) is a copy that can be rebuilt from the source.</span></li>
+    <li><b>Put rules where they cannot be skipped</b><span>Uniqueness, money that must balance, seats that must not be sold twice: in a database constraint, not only in application code.</span></li>
+    <li><b>Separate the hot path from the scans</b><span>Reports, exports and searches never run on the primary that serves checkouts or logins.</span></li>
+    <li><b>Decide retention on day one</b><span>Data that grows forever needs time partitions and a plan for old data before the first row is written.</span></li>
+    <li><b>Add a store only when the workload asks for it</b><span>Every extra system needs backups, monitoring, upgrades and someone on call. One relational database carries most applications a long way.</span></li>
+  </ol>
+</div></section>
+<section id="designs"><div class="wrap">
+  <div class="kicker">Thirteen design docs</div>
+  <h2>Pick the one closest to your application</h2>
+  <h3 style="margin:22px 0 4px;font-size:18px">Record transactions</h3><div class="pathgrid"><a class="pathcard" href="store-orders/index.html"><h3>Online store: orders and inventory</h3><p>Where should an online store keep its orders, carts and stock counts?</p><span class="go">Read the design →</span></a><a class="pathcard" href="payments-ledger/index.html"><h3>Payments and ledgers</h3><p>Where should money movements live, and how do I make sure no cent appears or disappears?</p><span class="go">Read the design →</span></a><a class="pathcard" href="booking-reservations/index.html"><h3>Bookings and reservations</h3><p>How do I stop two people from booking the same seat, room or time slot?</p><span class="go">Read the design →</span></a><a class="pathcard" href="accounts-sessions/index.html"><h3>User accounts, logins and sessions</h3><p>Where should user accounts live, and where should sessions and tokens go?</p><span class="go">Read the design →</span></a><a class="pathcard" href="multi-tenant-saas/index.html"><h3>Multi-tenant SaaS</h3><p>One database for all customers, one schema each, or one database each?</p><span class="go">Read the design →</span></a></div><h3 style="margin:22px 0 4px;font-size:18px">Serve content to many readers</h3><div class="pathgrid"><a class="pathcard" href="product-catalog/index.html"><h3>Product catalog with varied attributes</h3><p>Where should a catalog go when every product type has different attributes?</p><span class="go">Read the design →</span></a><a class="pathcard" href="social-feed/index.html"><h3>Social feed and timelines</h3><p>How do I build a home timeline that shows posts from everyone I follow?</p><span class="go">Read the design →</span></a><a class="pathcard" href="search-ai-retrieval/index.html"><h3>Search and AI retrieval</h3><p>Where should full-text search and vector search for AI features go?</p><span class="go">Read the design →</span></a></div><h3 style="margin:22px 0 4px;font-size:18px">Take in a stream</h3><div class="pathgrid"><a class="pathcard" href="chat-messaging/index.html"><h3>Chat and messaging</h3><p>Where should chat messages go, when there are billions of them and every conversation is read newest first?</p><span class="go">Read the design →</span></a><a class="pathcard" href="iot-telemetry/index.html"><h3>IoT, metrics and telemetry</h3><p>Where should millions of sensor readings per minute go?</p><span class="go">Read the design →</span></a><a class="pathcard" href="audit-event-log/index.html"><h3>Audit logs and event history</h3><p>Where should an append-only history of everything that happened go?</p><span class="go">Read the design →</span></a></div><h3 style="margin:22px 0 4px;font-size:18px">Keep fast state</h3><div class="pathgrid"><a class="pathcard" href="leaderboards-counters/index.html"><h3>Leaderboards, counters and rate limits</h3><p>Where should fast-changing counts go: views, likes, scores, rate limits?</p><span class="go">Read the design →</span></a></div><h3 style="margin:22px 0 4px;font-size:18px">Answer questions over history</h3><div class="pathgrid"><a class="pathcard" href="analytics-reporting/index.html"><h3>Analytics, dashboards and reporting</h3><p>Where should reports and dashboards run, so they do not slow down the application?</p><span class="go">Read the design →</span></a></div>
+  <p class="sub" style="margin-top:16px">Writing your own? Start from the <a href="template/index.html">design doc template</a>. For how each family of database behaves, see <a href="../families/index.html">Database families</a>.</p>
+</div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script src="../assets/js/picker.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="A time-series database (TimescaleDB, InfluxDB) or a column store (ClickHouse), with time partitioning, compression, downsampling and retention. Device."/>
+<link rel="icon" href="data:,"/>
+<title>IoT, metrics and telemetry · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Design doc · IoT and telemetry</div>
+  <h1>IoT, metrics and telemetry</h1>
+  <p class="qline">Where should millions of sensor readings per minute go?</p>
+  <p class="lede">Applications like this: device telemetry, application metrics, fleet tracking, smart meters. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
+  <div class="verdict"><b class="dt">The short answer</b>A time-series database (TimescaleDB, InfluxDB) or a column store (ClickHouse), with time partitioning, compression, downsampling and retention. Device metadata stays relational.</div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
+</div></header>
+<section id="workload"><div class="wrap">
+  <div class="kicker">1 · The workload</div>
+  <h2>What the application asks of the database</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Dimension</th><th>This application</th></tr></thead><tbody><tr><td><b>Writes</b></td><td>Very high, steady, in time order. Mostly appends.</td></tr><tr><td><b>Reads</b></td><td>Ranges of time for one device or a group, and aggregates per minute or hour.</td></tr><tr><td><b>Read to write</b></td><td>Low. Most data is written and rarely read.</td></tr><tr><td><b>Consistency</b></td><td>Loose. A late reading is fine.</td></tr><tr><td><b>Latency</b></td><td>Dashboards in a second or two.</td></tr><tr><td><b>Growth</b></td><td>Huge. Retention is the main design decision.</td></tr></tbody></table></div>
+</div></section>
+<section id="placement"><div class="wrap">
+  <div class="kicker">2 · What goes where</div>
+  <h2>Each kind of data, its store, and why</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Data</th><th>Where it goes</th><th>Why</th></tr></thead><tbody><tr><td><b>Readings</b></td><td>TimescaleDB, InfluxDB or ClickHouse</td><td>Time partitions, compression of similar values, and dropping old partitions whole.</td></tr><tr><td><b>Devices, owners, locations</b></td><td>PostgreSQL</td><td>Few rows, many relationships.</td></tr><tr><td><b>Latest value per device</b></td><td>Redis, or a small table updated in place</td><td>"What is the temperature now" should not scan the history.</td></tr><tr><td><b>Raw archive</b></td><td>Object storage in Parquet</td><td>Cheap, and readable later by analytics tools.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">How each family of store behaves under traffic: <a href="../../families/index.html">Database families</a>.</p>
+</div></section>
+<section id="model"><div class="wrap">
+  <div class="kicker">3 · Data model</div>
+  <h2>The core tables and the queries they serve</h2>
+  <pre class="cmdshow">-- TimescaleDB (a PostgreSQL extension)
+CREATE TABLE readings (
+  device_id bigint NOT NULL,
+  ts        timestamptz NOT NULL,
+  metric    text NOT NULL,
+  value     double precision
+);
+SELECT create_hypertable(&#x27;readings&#x27;, &#x27;ts&#x27;);
+
+-- per-minute averages for the dashboard
+SELECT time_bucket(&#x27;1 minute&#x27;, ts) AS minute, avg(value)
+FROM readings
+WHERE device_id = 42 AND ts &gt; now() - interval &#x27;1 day&#x27;
+GROUP BY minute ORDER BY minute;</pre>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Data is partitioned by time, so old data is dropped as whole partitions, not deleted row by row.</li><li>Keep raw data for days or weeks, minute rollups for months, hourly rollups for years.</li><li>Batch inserts. Thousands of rows per insert, not one row per round trip.</li></ul>
+</div></section>
+<section id="growth"><div class="wrap">
+  <div class="kicker">4 · How it grows</div>
+  <h2>Start simple, change one thing at a time</h2>
+  <ol class="steplist"><li><b>PostgreSQL with time partitions</b><span>Works for a modest number of devices.</span></li><li><b>Write rate or storage grows</b><span>A time-series extension or a column store, with compression and rollups.</span></li><li><b>Very large fleets</b><span>A message queue in front to absorb bursts, and several ingest workers writing batches.</span></li></ol>
+</div></section>
+<section id="breaks"><div class="wrap">
+  <div class="kicker">5 · What breaks first</div>
+  <h2>The failures to plan for</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>What happens</th><th>What you see</th><th>What I do</th></tr></thead><tbody><tr><td><b>Row-by-row inserts</b></td><td>Commit rate caps throughput long before disks do</td><td>Batch. See what one commit costs in <a href="../../notebooks/index.html#commit-cost">Notebook 2</a>.</td></tr><tr><td><b>High cardinality labels</b></td><td>Index size explodes in metric stores</td><td>Do not use user IDs or request IDs as tags.</td></tr><tr><td><b>No retention</b></td><td>Storage bill grows every month without end</td><td>Decide retention per resolution on day one.</td></tr></tbody></table></div>
+</div></section>
+<section id="alternatives"><div class="wrap">
+  <div class="kicker">6 · Alternatives</div>
+  <h2>What I considered and did not pick</h2>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>Plain MySQL or PostgreSQL tables without partitioning.</b> Fine at first. DELETE-based retention later causes bloat and I/O spikes.</li><li><b>A document store with one document per reading.</b> Large per-reading overhead and poor compression compared to columnar storage.</li></ul>
+  <p class="takeaway"><b>Cost.</b> Compression and retention decide the bill. Column and time-series stores often compress telemetry many times over, so measure on your own data.</p>
+  <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation and common practice, not from measurements. Where a claim is measured, it links to the <a href="../../notebooks/index.html">notebooks</a>. To write your own version of this doc, start from the <a href="../template/index.html">design doc template</a>.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../audit-event-log/index.html"><div><span>Next</span>Audit logs and event history<span>Where should an append-only history of everything that happened go?</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>

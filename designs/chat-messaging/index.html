@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="At small and medium scale, PostgreSQL with messages partitioned by time and indexed by (conversation_id, sent_at). At large scale, a wide-column store."/>
+<link rel="icon" href="data:,"/>
+<title>Chat and messaging · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Design doc · Chat and messaging</div>
+  <h1>Chat and messaging</h1>
+  <p class="qline">Where should chat messages go, when there are billions of them and every conversation is read newest first?</p>
+  <p class="lede">Applications like this: chat apps, support conversations, comments on a document. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
+  <div class="verdict"><b class="dt">The short answer</b>At small and medium scale, PostgreSQL with messages partitioned by time and indexed by (conversation_id, sent_at). At large scale, a wide-column store such as Cassandra or ScyllaDB, partitioned by conversation and bucketed by time.</div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
+</div></header>
+<section id="workload"><div class="wrap">
+  <div class="kicker">1 · The workload</div>
+  <h2>What the application asks of the database</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Dimension</th><th>This application</th></tr></thead><tbody><tr><td><b>Writes</b></td><td>High and steady. Every message is an insert.</td></tr><tr><td><b>Reads</b></td><td>The latest page of one conversation, very often.</td></tr><tr><td><b>Read to write</b></td><td>Roughly balanced.</td></tr><tr><td><b>Consistency</b></td><td>Per conversation, in order. Across conversations, loose.</td></tr><tr><td><b>Latency</b></td><td>Delivery feels instant: tens of milliseconds to store.</td></tr><tr><td><b>Growth</b></td><td>Fast and forever, unless you set retention.</td></tr></tbody></table></div>
+</div></section>
+<section id="placement"><div class="wrap">
+  <div class="kicker">2 · What goes where</div>
+  <h2>Each kind of data, its store, and why</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Data</th><th>Where it goes</th><th>Why</th></tr></thead><tbody><tr><td><b>Messages</b></td><td>PostgreSQL with time partitions, then Cassandra or ScyllaDB</td><td>One conversation, newest first, is a range read on one partition. LSM stores take heavy insert rates well.</td></tr><tr><td><b>Conversations and members</b></td><td>The relational database</td><td>Few rows, many relationships, permissions.</td></tr><tr><td><b>Online status and typing</b></td><td>Redis with a short TTL</td><td>Changes every few seconds and does not need to survive a restart.</td></tr><tr><td><b>Attachments</b></td><td>Object storage</td><td>Large and immutable.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">How each family of store behaves under traffic: <a href="../../families/index.html">Database families</a>.</p>
+</div></section>
+<section id="model"><div class="wrap">
+  <div class="kicker">3 · Data model</div>
+  <h2>The core tables and the queries they serve</h2>
+  <pre class="cmdshow">-- PostgreSQL
+CREATE TABLE messages (
+  conversation_id bigint NOT NULL,
+  sent_at         timestamptz NOT NULL,
+  id              bigint NOT NULL,
+  sender_id       bigint NOT NULL,
+  body            text,
+  PRIMARY KEY (conversation_id, sent_at, id)
+) PARTITION BY RANGE (sent_at);
+
+-- Cassandra or ScyllaDB at scale
+CREATE TABLE messages (
+  conversation_id bigint, bucket int, sent_at timeuuid, sender_id bigint, body text,
+  PRIMARY KEY ((conversation_id, bucket), sent_at)
+) WITH CLUSTERING ORDER BY (sent_at DESC);</pre>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>The key starts with conversation_id, so the latest page of a conversation is one range read.</li><li>The bucket (for example one per month) stops one busy conversation from becoming an unbounded partition.</li><li>Paging uses the last sent_at as the cursor, never OFFSET.</li></ul>
+</div></section>
+<section id="growth"><div class="wrap">
+  <div class="kicker">4 · How it grows</div>
+  <h2>Start simple, change one thing at a time</h2>
+  <ol class="steplist"><li><b>One relational database</b><span>Messages table with the composite key above.</span></li><li><b>Table too big to vacuum or back up comfortably</b><span>Partition by month and drop or archive old partitions.</span></li><li><b>Insert rate beyond one primary</b><span>Move messages to a wide-column store. Keep conversations and members relational.</span></li></ol>
+</div></section>
+<section id="breaks"><div class="wrap">
+  <div class="kicker">5 · What breaks first</div>
+  <h2>The failures to plan for</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>What happens</th><th>What you see</th><th>What I do</th></tr></thead><tbody><tr><td><b>One huge group chat</b></td><td>A hot partition and slow reads</td><td>Bucket by time inside the conversation.</td></tr><tr><td><b>Deleting old messages with DELETE</b></td><td>Bloat and long-running deletes</td><td>Drop whole partitions, or use TTLs in the wide-column store.</td></tr><tr><td><b>Unread counts computed on every read</b></td><td>COUNT(*) over a conversation on every app open</td><td>Keep a per-member last-read marker and a counter.</td></tr></tbody></table></div>
+</div></section>
+<section id="alternatives"><div class="wrap">
+  <div class="kicker">6 · Alternatives</div>
+  <h2>What I considered and did not pick</h2>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>MongoDB with one document per conversation and an array of messages.</b> The document grows without bound and hits the 16 MB document limit. One document per message works; one array per conversation does not.</li><li><b>A message queue as storage.</b> Queues deliver. They are not built to answer "show me page 3 of this conversation".</li></ul>
+  <p class="takeaway"><b>Cost.</b> Storage grows forever. Set retention, or move old partitions to cheaper storage.</p>
+  <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation and common practice, not from measurements. Where a claim is measured, it links to the <a href="../../notebooks/index.html">notebooks</a>. To write your own version of this doc, start from the <a href="../template/index.html">design doc template</a>.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../iot-telemetry/index.html"><div><span>Next</span>IoT, metrics and telemetry<span>Where should millions of sensor readings per minute go?</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>
