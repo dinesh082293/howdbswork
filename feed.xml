@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>An animated commit on Compare (step through one change from memory to the log to the data...</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-7c1a302c4d8e</guid>
+    <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
+    <description>an animated commit on Compare (step through one change from memory to the log to the data file, for each engine), a problem and fix picture on every anti-pattern, a phase diagram for each migration playbook, and a &quot;where your bill goes&quot; chart on the cost page that takes your own invoice lines.</description>
+  </item>
+  <item>
     <title>More pictures</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-f092a073c7e3</guid>
