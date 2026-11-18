@@ -14,11 +14,13 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>Real stories</h1>
+  <p class="qline">How did real databases fail, and what fixed them?</p>
+  <p class="learn"><b>You will learn:</b> Sixteen incidents, with the numbers, the fix and the lesson from each.</p>
   <p class="lede">Every page on this site explains a mechanism. This page shows what happens when the mechanism meets real traffic. Sixteen stories, all from companies that wrote up what broke. Each one has the numbers, the fix, and the lesson I took from it. The source is linked at the end of each story.</p>
   <p class="lede">None of these are my incidents. I read them the way I read a postmortem: what broke first, what the numbers were, and what decision would have prevented it.</p>
 </div></header>
@@ -559,6 +561,7 @@
 <section style="padding-top:6px"><div class="wrap">
   <p class="sub"><b style="color:var(--ink)">Before you leave, check this:</b> pick the story closest to your own system, and name the one decision in it you have not made yet. The shard key, the failover guardrail, the rollback path, the index shape. That decision is the incident you have not had yet. The hosting side of the same question, on-prem, EC2, Kubernetes, or managed, is on the <a href="../cloud/index.html">Cloud page</a>.</p>
 </div></section>
+<section class="nextpage"><div class="wrap"><a href="../decisions/index.html"><div><span>Next</span>Decisions<span>The choices that are hard to undo, one per page.</span></div><i>→</i></a></div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
@@ -569,5 +572,6 @@
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
 </body>
 </html>

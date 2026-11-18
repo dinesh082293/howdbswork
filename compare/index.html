@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Four everyday events, a write, a crash, a lagging replica and a long transaction, shown side by side for PostgreSQL, MySQL and MongoDB."/>
+<link rel="icon" href="data:,"/>
+<title>Same task, three engines · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Compare · same task, three engines</div>
+  <h1>Same task, three engines</h1>
+  <p class="qline">What does each engine do when the same thing happens to it?</p>
+  <p class="lede">Four everyday events: a write, a crash, a lagging replica, and a long transaction. For each, the three engines side by side, with the file names, the order of events, and a command to see it yourself.</p>
+  <div class="scnnav"><a href="#write">1 · A write</a><a href="#crash">2 · A crash</a><a href="#replica-lag">3 · A lagging replica</a><a href="#long-transaction">4 · A long transaction</a></div>
+</div></header>
+<section id="write"><div class="wrap">
+  <div class="kicker">Scenario 1 of 4</div>
+  <h2>I commit one row. What touches disk, and when?</h2>
+  <p class="sub">The same INSERT in all three engines. Each one writes the log first and the data file later. They differ in how many logs there are and in what "acknowledged" means.</p>
+  <div class="cmp3"><div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL</h3><ol><li>The row version is written into an 8 KB page in <span class="mono">shared_buffers</span>. The page is now dirty.</li><li>A WAL record describing the change goes into the WAL buffers.</li><li><b>COMMIT</b> flushes the WAL to <span class="mono">pg_wal/</span> and calls fsync. Only then does the client get its answer.</li><li>The dirty page reaches <span class="mono">base/</span> later, written by the checkpointer or the background writer.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">SHOW synchronous_commit;
+SELECT pg_current_wal_lsn();
+-- run an INSERT, then the line above again.
+-- The position moved.</pre></div><p class="price"><b>The price</b>An UPDATE writes a whole new row version. The old one stays in the page until VACUUM removes it.</p></div><div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL · InnoDB</h3><ol><li>The row changes in a 16 KB page in the buffer pool. The old version goes to the undo log.</li><li>A redo record goes into the log buffer.</li><li><b>COMMIT</b> flushes redo to <span class="mono">#innodb_redo/</span> and writes the binlog. The two are committed together, with a two-phase commit, so they agree after a crash.</li><li>The dirty page reaches <span class="mono">users.ibd</span> later, through the doublewrite files, written by the page cleaner threads.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">SHOW VARIABLES LIKE 'innodb_flush_log_at_trx_commit';
+SHOW VARIABLES LIKE 'sync_binlog';
+-- both 1 is the fully durable setting</pre></div><p class="price"><b>The price</b>Two logs mean two syncs per commit. Group commit shares them across concurrent transactions, which is why the cost is smaller than it sounds.</p></div><div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB · WiredTiger</h3><ol><li>The document change is applied in the WiredTiger cache. On a replica set, the oplog entry is written in the same transaction.</li><li>A journal record is written to <span class="mono">journal/WiredTigerLog.*</span>, flushed about every 100 ms, or at once for <span class="mono">j: true</span>.</li><li>The acknowledgment depends on the write concern. <span class="mono">w: 1</span> returns after the primary applied the write. <span class="mono">w: "majority"</span> waits until most members have it in their journal.</li><li>A checkpoint, about every 60 seconds, writes the cache to <span class="mono">collection-*.wt</span>.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">rs.conf().writeConcernMajorityJournalDefault
+db.getSiblingDB('local').oplog.rs.find().sort({$natural: -1}).limit(1)</pre></div><p class="price"><b>The price</b>A write acknowledged at <span class="mono">w: 1</span> but not yet replicated can be rolled back if the primary fails.</p></div></div>
+  <p class="takeaway">All three write the log first. The real difference is what the client was told, and when. Check the write concern or the commit setting before you trust an acknowledgment.</p>
+  <p class="sub" style="margin-top:6px">Go deeper: <a href="../start-here/index.html#insert">follow one insert, end to end</a>, or <a href="../decisions/sync-replication-failover/index.html">what a commit waits for</a>.</p>
+</div></section>
+<section id="crash"><div class="wrap">
+  <div class="kicker">Scenario 2 of 4</div>
+  <h2>The server is killed in the middle of traffic. What does the restart do?</h2>
+  <p class="sub">A power cut or a <span class="mono">kill -9</span>. Memory is gone. What survives is the log and whatever the last checkpoint wrote. The restart is the log being replayed.</p>
+  <div class="cmp3"><div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL</h3><ol><li><span class="mono">global/pg_control</span> names the last checkpoint and where the redo should start.</li><li>The startup process replays WAL forward from that point and puts the missing changes into the data pages.</li><li>Transactions that never committed need no undo. Their row versions stay invisible, and VACUUM removes them later.</li><li>The server accepts connections when the replay finishes.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">-- in the server log after a crash:
+-- database system was not properly shut down; automatic recovery in progress
+-- redo starts at ...
+-- redo done at ...</pre></div><p class="price"><b>The price</b>Recovery time follows how much WAL sits after the last checkpoint. That is set by <span class="mono">checkpoint_timeout</span> and <span class="mono">max_wal_size</span>.</p></div><div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL · InnoDB</h3><ol><li>Torn pages, half-written by the crash, are repaired from the doublewrite files first.</li><li>InnoDB finds the last checkpoint in the redo log and applies every redo record after it.</li><li>Transactions that were open at the crash are rolled back using the undo log. After startup, this continues in the background.</li><li>Transactions caught between prepare and commit are settled against the binlog.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">-- in the error log after a crash:
+-- InnoDB: Starting crash recovery.
+-- InnoDB: Applying a batch of ... redo log records</pre></div><p class="price"><b>The price</b>Rolling back one huge in-flight transaction can take a long time. A crash does not hide that cost. It moves it to startup.</p></div><div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB · WiredTiger</h3><ol><li>WiredTiger restores the last checkpoint, a consistent copy of the data about 60 seconds old.</li><li>It replays the journal records written after that checkpoint.</li><li>On a replica set, the member then catches up from the oplog. If another member became primary meanwhile, writes it had but the majority did not are rolled back.</li><li>While it catches up, the member reports <span class="mono">RECOVERING</span>. When it is done, it reports <span class="mono">SECONDARY</span>.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">rs.status().members.map(m => m.name + ' ' + m.stateStr)</pre></div><p class="price"><b>The price</b>A write that only the old primary had acknowledged at <span class="mono">w: 1</span> is the one that gets rolled back.</p></div></div>
+  <p class="takeaway">Recovery is the same idea three times: start from the last known good point, replay the log, and discard what never committed. What differs is where the unfinished work goes, and how much log you have to replay.</p>
+  <p class="sub" style="margin-top:6px">Try it: <a href="../labs/index.html#crash">break a database in the crash lab</a>.</p>
+</div></section>
+<section id="replica-lag"><div class="wrap">
+  <div class="kicker">Scenario 3 of 4</div>
+  <h2>A replica falls behind. Why, and how do I see it?</h2>
+  <p class="sub">Lag is a queue. Changes arrive faster than the replica applies them. Each engine has a different place where that queue builds up.</p>
+  <div class="cmp3"><div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL</h3><ol><li>The standby receives WAL over the network and replays it with one recovery process.</li><li>A burst of writes can arrive faster than one process replays it.</li><li>A long query on the standby can conflict with replay. Replay waits, up to <span class="mono">max_standby_streaming_delay</span> (30 s by default), then cancels the query.</li><li>With synchronous replication, lag stops being a delay and becomes commit latency.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">-- on the primary
+SELECT client_addr, state, write_lag, flush_lag, replay_lag
+FROM pg_stat_replication;
+-- on the standby
+SELECT now() - pg_last_xact_replay_timestamp();</pre></div><p class="price"><b>The price</b>The standby holds WAL the primary cannot recycle if a replication slot is tied to it, so a stuck replica can fill the primary disk.</p></div><div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL · InnoDB</h3><ol><li>The replica copies the binlog into its relay log with the I/O thread.</li><li>The applier threads replay it. This is usually where the queue builds up.</li><li>One large transaction replays as one unit, so a big batch delete on the source becomes a long stall on the replica.</li><li>Parallel replay (<span class="mono">replica_parallel_workers</span>) helps when the source workload is spread across many transactions.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">SHOW REPLICA STATUS\G
+-- read Seconds_Behind_Source, Replica_IO_Running,
+-- Replica_SQL_Running. Treat the seconds as a hint.</pre></div><p class="price"><b>The price</b>The binlog on the source must be kept long enough for a slow replica to catch up, or the replica needs a rebuild.</p></div><div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB · WiredTiger</h3><ol><li>The secondary tails the primary oplog and applies the entries in batches.</li><li>If writes outpace it, the secondary falls further behind the primary.</li><li>The oplog is a capped collection. If the secondary falls behind by more than the oplog window, the entries it needs are gone, and it needs a full resync.</li><li>Flow control, on by default, slows the primary down when the majority commit point lags too far.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">rs.printSecondaryReplicationInfo()
+rs.printReplicationInfo()  // the oplog window</pre></div><p class="price"><b>The price</b>Size the oplog for the longest outage you want a secondary to survive, not for the average day.</p></div></div>
+  <p class="takeaway">Lag is write rate minus apply rate, accumulated over time. Whatever the engine, the question is the same: what is the apply rate, and what is the limit on how far behind the log is kept?</p>
+  <p class="sub" style="margin-top:6px">Try it: <a href="../labs/index.html#replica-lag">watch the queue build in the replica lag lab</a>.</p>
+</div></section>
+<section id="long-transaction"><div class="wrap">
+  <div class="kicker">Scenario 4 of 4</div>
+  <h2>One transaction stays open for an hour. What does it cost?</h2>
+  <p class="sub">Nothing is wrong with the transaction itself. The cost is everything the database must keep so that its snapshot still makes sense.</p>
+  <div class="cmp3"><div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL</h3><ol><li>The transaction holds a snapshot. Every row version that died after the snapshot was taken must be kept.</li><li>VACUUM runs, but it cannot remove those versions, in any table in the database.</li><li>Tables and indexes grow (bloat), and queries read more pages for the same rows.</li><li>If the session is "idle in transaction", it also holds its locks the whole time.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">SELECT pid, state, now() - xact_start AS age
+FROM pg_stat_activity
+WHERE xact_start IS NOT NULL
+ORDER BY age DESC LIMIT 5;</pre></div><p class="price"><b>The price</b>Set <span class="mono">idle_in_transaction_session_timeout</span> so a forgotten session cannot hold the cleanup back for hours.</p></div><div class="cmp3-col my"><h3><span class="dot" style="background:var(--my)"></span>MySQL · InnoDB</h3><ol><li>The old read view needs old row versions, so the purge thread cannot delete the undo records for them.</li><li>The history list grows, and the undo tablespaces grow with it.</li><li>Reads of recently changed rows walk longer chains of old versions, so they slow down.</li><li>Locks held by the transaction block other writers until it ends.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">SELECT trx_id, trx_started, trx_rows_modified
+FROM information_schema.innodb_trx
+ORDER BY trx_started LIMIT 5;
+SHOW ENGINE INNODB STATUS\G  -- History list length</pre></div><p class="price"><b>The price</b>Undo tablespaces are truncated only once they pass <span class="mono">innodb_max_undo_log_size</span> and purge has caught up, so the extra space can linger after the transaction ends.</p></div><div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB · WiredTiger</h3><ol><li>A multi-document transaction is limited by <span class="mono">transactionLifetimeLimitSeconds</span>, 60 seconds by default. After that it is aborted.</li><li>A long read cursor or snapshot keeps older versions of documents in the WiredTiger cache.</li><li>The cache fills with history, and eviction starts to compete with the workload.</li><li>Writers can see more retries from write conflicts if the transaction held documents.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">db.currentOp({ active: true, secs_running: { $gt: 60 } })</pre></div><p class="price"><b>The price</b>MongoDB limits the problem with a hard timeout. The other two let it grow until you notice.</p></div></div>
+  <p class="takeaway">A long transaction is a debt: the database has to remember the past for as long as the transaction is open. PostgreSQL shows it as bloat, MySQL as undo, and MongoDB as cache pressure.</p>
+  <p class="sub" style="margin-top:6px">Related: <a href="../staff-path/index.html#labs">the MVCC timeline lab</a> shows why the snapshot is taken at the first query, not at BEGIN.</p>
+</div></section>
+<section style="padding-top:0"><div class="wrap">
+  <div class="derive"><b class="dt">What is verified here</b>The behavior on this page follows the documentation of PostgreSQL 18, MySQL 8.4 and MongoDB 8.0. The commands are standard and match the engine pages, but this page is not yet part of the automated command check that runs on the engine pages. The log lines are paraphrased, so match on the key words, not the exact text.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../labs/index.html"><div><span>Next</span>Labs<span>Crash it, flood it and lock it, then watch where the damage lands.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+</body>
+</html>

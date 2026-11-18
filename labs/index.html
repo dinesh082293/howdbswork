@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Four small simulations: crash recovery, replica lag, a lock pile-up, and page counts for a scan against an index lookup."/>
+<link rel="icon" href="data:,"/>
+<title>Labs · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Labs · things to click and break</div>
+  <h1>Labs</h1>
+  <p class="qline">What happens if I pull the plug, or flood a replica, or lock one row?</p>
+  <p class="lede">Four small simulations. Each one is a model of the behavior, not a benchmark, so the numbers are round on purpose. Break things and watch where the damage lands. Two more labs live on the <a href="../staff-path/index.html#labs">Staff Path</a>: a B+ tree and an MVCC timeline.</p>
+  <div class="scnnav"><a href="#crash">1 · Crash recovery</a><a href="#replica-lag">2 · Replica lag</a><a href="#lock-pileup">3 · Lock pile-up</a><a href="#page-count">4 · Page count</a></div>
+</div></header>
+
+<section id="crash"><div class="wrap">
+  <div class="kicker">Lab 1 · crash recovery</div>
+  <h2>Pull the plug, then watch the restart</h2>
+  <p class="sub">Commit a few transactions. Take a checkpoint at some point. Open a transaction and leave it. Then crash the server and restart it. The restart replays only the log written after the last checkpoint.</p>
+  <div class="labcard" id="crashLab">
+    <div class="labctl"><label>Engine <select id="crashEng"><option value="pg">PostgreSQL</option><option value="my">MySQL · InnoDB</option><option value="mo">MongoDB · WiredTiger</option></select></label><label><input type="checkbox" id="crashDurable" checked style="min-height:auto"> <span id="crashOffLabel"></span></label></div>
+    <div class="labctl">
+      <button class="labbtn" id="crashCommit" type="button">Commit a transaction</button>
+      <button class="labbtn" id="crashOpen" type="button">Open a transaction, do not commit</button>
+      <button class="labbtn" id="crashTick" type="button">One second passes</button>
+      <button class="labbtn" id="crashCkpt" type="button">Checkpoint</button>
+      <button class="labbtn danger" id="crashKill" type="button">Crash</button>
+      <button class="labbtn" id="crashRestart" type="button">Restart</button>
+      <button class="labbtn" id="crashReset" type="button">Reset</button>
+    </div>
+    <div class="txrow" id="crashRow" aria-live="polite"></div>
+    <p class="labnote" id="crashLegend"></p>
+    <pre class="labout" id="crashOut" aria-live="polite"></pre>
+    <p class="labnote">Try this: turn the log-flush box off, commit three times, crash, and read which commits were lost. They were acknowledged to the client, so the application believed they were safe. Then run it again with the box on.</p>
+  </div>
+  <p class="sub">The same event, side by side in the real engines: <a href="../compare/index.html#crash">Compare, scenario 2</a>.</p>
+</div></section>
+
+<section id="replica-lag"><div class="wrap">
+  <div class="kicker">Lab 2 · replica lag</div>
+  <h2>Writes arrive faster than the replica applies them</h2>
+  <p class="sub">Lag is a queue. Set the write rate and the apply rate and see how big the queue gets, how long the replica is behind, and whether it can ever catch up.</p>
+  <div class="labcard" id="lagLab">
+    <div class="labctl"><label>Engine <select id="lagEng"><option value="pg">PostgreSQL</option><option value="my">MySQL · InnoDB</option><option value="mo">MongoDB · WiredTiger</option></select></label></div>
+    <div class="labctl"><label>Writes per second <input type="range" id="lagW" min="100" max="5000" step="100" value="1500"> <b id="lagWv"></b></label></div>
+    <div class="labctl"><label>Replica applies per second <input type="range" id="lagA" min="200" max="5000" step="100" value="1200"> <b id="lagAv"></b></label></div>
+    <div class="labctl"><label>The overload lasts <input type="range" id="lagT" min="1" max="60" step="1" value="10"> <b id="lagTv"></b></label></div>
+    <div class="labctl" id="lagOrow"><label>Oplog window <input type="range" id="lagO" min="5" max="240" step="5" value="60"> <b id="lagOv"></b></label></div>
+    <div class="labstat"><div><b id="lagBacklog"></b>transactions waiting</div><div id="lagStatLag"><b id="lagLag"></b>replica is behind by</div><div><b id="lagCatch"></b>to catch up if writes drop by half</div></div>
+    <p class="labnote" id="lagNote"></p>
+    <p class="labnote">A real replica does not apply at a fixed rate. Apply speed depends on the shape of the work, so measure it on your own workload with the commands in <a href="../compare/index.html#replica-lag">Compare, scenario 3</a>.</p>
+  </div>
+</div></section>
+
+<section id="lock-pileup"><div class="wrap">
+  <div class="kicker">Lab 3 · lock pile-up</div>
+  <h2>One transaction holds one hot row</h2>
+  <p class="sub">A single transaction takes a lock on a row that many requests want. Every request that needs that row waits, and every waiting request holds a connection. Watch how long it takes for the pool to run out.</p>
+  <div class="labcard" id="lockLab">
+    <div class="labctl"><label>Engine <select id="lockEng"><option value="pg">PostgreSQL</option><option value="my">MySQL · InnoDB</option><option value="mo">MongoDB · WiredTiger</option></select></label></div>
+    <div class="labctl"><label>Requests for the row per second <input type="range" id="lockR" min="1" max="300" step="1" value="40"> <b id="lockRv"></b></label></div>
+    <div class="labctl"><label>The lock is held for <input type="range" id="lockH" min="0.1" max="30" step="0.1" value="5"> <b id="lockHv"></b></label></div>
+    <div class="labctl"><label>Connection pool size <input type="range" id="lockP" min="10" max="500" step="10" value="100"> <b id="lockPv"></b></label></div>
+    <div class="labctl"><label>Work per request once the lock is free <input type="range" id="lockMs" min="1" max="20" step="1" value="5"> <b id="lockMsv"></b></label></div>
+    <div class="lockbars" id="lockBars" aria-hidden="true"></div>
+    <div class="labstat"><div><b id="lockWait"></b>sessions waiting when the lock is released</div><div id="lockStatExh"><b id="lockExh"></b>until the pool is exhausted</div><div><b id="lockDrain"></b>to drain the queue afterwards</div></div>
+    <p class="labnote" id="lockNote"></p>
+    <p class="labnote">The bars show waiting sessions over the time the lock is held. Red bars are past the pool size. This is the most common shape of an outage that starts as "one slow query".</p>
+  </div>
+</div></section>
+
+<section id="page-count"><div class="wrap">
+  <div class="kicker">Lab 4 · page count</div>
+  <h2>Scan every page, or walk the index</h2>
+  <p class="sub">The same lookup, two ways. A scan reads every page of the table. An index lookup reads a handful. The squares are the table, scaled to fit.</p>
+  <div class="labcard" id="pageLab">
+    <div class="labctl"><label>Rows <input type="range" id="pageExp" min="4" max="9" step="1" value="7"> <b id="pageExpv"></b></label></div>
+    <div class="labctl"><label>Row size <input type="range" id="pageRow" min="100" max="1000" step="100" value="200"> <b id="pageRowv"></b></label>
+      <label>Page size <select id="pageEng"><option value="8192">8 KB (PostgreSQL)</option><option value="16384">16 KB (InnoDB)</option></select></label></div>
+    <div class="labctl"><button class="labbtn" id="pageScan" type="button">Scan the table</button><button class="labbtn" id="pageLook" type="button">Look up one row by index</button></div>
+    <div class="pgrid" id="pageGrid" aria-hidden="true"></div>
+    <div class="labstat"><div><b id="pageCount"></b>pages read in this run</div><div><b id="pageTotal"></b>pages in the table</div><div><b id="pageScanBytes"></b>to scan</div><div><b id="pageScanTime"></b>at a cold, sequential scan</div><div><b id="pageIdx"></b>pages for an index lookup</div></div>
+    <p class="labnote" id="pageNote"></p>
+  </div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../paths/index.html"><div><span>Next</span>Pick your door<span>Three reading paths: interview, on call, choosing a database.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script src="../assets/js/labs.js"></script>
+</body>
+</html>
