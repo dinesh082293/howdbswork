@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Four migration playbooks: add change data capture, split a database, move from MySQL to PostgreSQL, and add a cache, each with checks and a way back."/>
+<link rel="icon" href="data:,"/>
+<title>Migration playbooks · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Designs · migrations</div>
+  <h1>Migration playbooks</h1>
+  <p class="qline">How do I change the design without an outage?</p>
+  <p class="learn"><b>You will learn:</b> step by step plans for four common changes, how to check each one worked, and the way back if it did not.</p>
+  <p class="lede">Most designs change after launch. These four changes come up in almost every growing system. Each plan ends with the way back, because a migration without one is a bet.</p>
+  <div class="scnnav"><a href="#cdc">Add CDC</a><a href="#split">Split a database</a><a href="#mysql-to-pg">MySQL to PostgreSQL</a><a href="#cache">Add a cache</a></div>
+</div></header>
+<section id="cdc"><div class="wrap">
+  <div class="kicker">Migration</div>
+  <h2>Add change data capture</h2>
+  <p class="sub">Change data capture streams every committed change out of the database, so search indexes, caches and warehouses can follow it without polling or scanning the primary.</p>
+  <ol class="steplist"><li><b>Turn on the change stream</b><span>PostgreSQL: wal_level = logical (needs a restart) and a replication slot per consumer. MySQL: binlog_format = ROW and binlog_row_image = FULL, with GTIDs on. MongoDB: change streams, which need a replica set.</span></li><li><b>Take the initial snapshot</b><span>The tool (Debezium or a managed equivalent) copies the existing rows, then switches to the stream at a consistent point.</span></li><li><b>Make the consumer idempotent</b><span>The same change can arrive twice after a restart. Apply changes by primary key so that applying one twice does no harm.</span></li><li><b>Watch the slot or binlog position</b><span>A stopped consumer makes PostgreSQL keep WAL for its slot, and the disk fills. Alert on slot lag, and set max_slot_wal_keep_size as a safety limit.</span></li><li><b>Plan for schema changes</b><span>Adding a column is usually fine. Renaming or dropping one breaks consumers unless they are updated first.</span></li></ol>
+  <h3 style="font-size:17px;margin:14px 0 6px">How I check it worked</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Row counts and a checksum of a few key columns match between source and target.</li><li>Lag stays in seconds under the peak write rate.</li><li>Stopping the consumer for an hour, then starting it, catches up without data loss.</li></ul>
+  <p class="takeaway"><b>The way back.</b> Drop the replication slot or stop reading the binlog. The source database is unchanged, so turning CDC off is safe, as long as the slot is dropped and does not keep holding WAL.</p>
+</div></section><section id="split"><div class="wrap">
+  <div class="kicker">Migration</div>
+  <h2>Split one database into two</h2>
+  <p class="sub">One database often holds several domains (orders, users, catalog). Splitting one out gives it its own scaling, its own failure domain and its own team.</p>
+  <ol class="steplist"><li><b>Stop the cross-domain joins first</b><span>In code, before any data moves. The new service reads the other domain through an API or a copy, not through a join.</span></li><li><b>Copy the tables with logical replication or CDC</b><span>The new database follows the old one while the application still writes to the old one.</span></li><li><b>Avoid writing to both from the application</b><span>Two commits in two databases can disagree after a failure. If both must be updated for a while, use an outbox and one direction of copying.</span></li><li><b>Switch writes in a short freeze</b><span>Stop writes to the moved tables, wait for the copy to catch up, point the application at the new database, resume.</span></li><li><b>Keep the old tables read-only for a while</b><span>They are the fallback, and they answer questions about what moved.</span></li></ol>
+  <h3 style="font-size:17px;margin:14px 0 6px">How I check it worked</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Counts and checksums match before the switch.</li><li>After the switch, no writes reach the old tables (revoke the permissions to be sure).</li><li>Latency of the requests that used to join across domains is measured, not assumed.</li></ul>
+  <p class="takeaway"><b>The way back.</b> Until the old tables are dropped, switch writes back and copy the new rows in the other direction. Decide in advance how long this window stays open.</p>
+</div></section><section id="mysql-to-pg"><div class="wrap">
+  <div class="kicker">Migration</div>
+  <h2>Move from MySQL to PostgreSQL</h2>
+  <p class="sub">The engines speak similar SQL, so most of the work is in the details that differ.</p>
+  <ol class="steplist"><li><b>Convert the schema by hand, then review it</b><span>TINYINT(1) to boolean, DATETIME to timestamptz, AUTO_INCREMENT to identity, UNSIGNED columns to the next larger type. Case-insensitive comparisons from MySQL collations need citext or indexes on lower(column).</span></li><li><b>Clean the data that PostgreSQL rejects</b><span>Zero dates such as 0000-00-00, invalid UTF-8, and values that only fit because of an old SQL mode.</span></li><li><b>Load and keep in sync</b><span>pgloader for a one-time load, or a CDC tool or AWS DMS to keep PostgreSQL following MySQL until cutover.</span></li><li><b>Change the application SQL</b><span>Backtick quoting, LIMIT x, y, ON DUPLICATE KEY UPDATE (becomes ON CONFLICT), and GROUP BY queries that MySQL accepted without listing every column.</span></li><li><b>Rehearse the cutover</b><span>Time a full run on a copy, including the final sync and the switch.</span></li></ol>
+  <h3 style="font-size:17px;margin:14px 0 6px">How I check it worked</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Row counts and checksums per table match.</li><li>The top queries have plans checked on PostgreSQL, with their indexes.</li><li>The application test suite runs green against PostgreSQL.</li></ul>
+  <p class="takeaway"><b>The way back.</b> Keep MySQL receiving the changes from PostgreSQL for a while after cutover, if your tooling supports reverse sync. If not, the way back is a restore, so rehearse it.</p>
+</div></section><section id="cache"><div class="wrap">
+  <div class="kicker">Migration</div>
+  <h2>Add a cache in front of the database</h2>
+  <p class="sub">A cache helps when the same data is read far more often than it changes. Added carelessly, it serves stale data and can take the database down when it empties.</p>
+  <ol class="steplist"><li><b>Cache-aside</b><span>Read from the cache. On a miss, read the database and store the result with a TTL.</span></li><li><b>Invalidate after commit</b><span>On a write, delete the cache key after the transaction commits, not before, or a reader can refill it with the old value.</span></li><li><b>Add jitter to TTLs</b><span>Keys created together expire together. A random few percent on each TTL spreads the refills.</span></li><li><b>Protect against stampedes</b><span>When a hot key expires, let one request refill it while others wait or get the stale value.</span></li><li><b>Plan for a cold cache</b><span>After a restart, every read goes to the database. Size the database to survive that, or warm the cache before taking traffic.</span></li></ol>
+  <h3 style="font-size:17px;margin:14px 0 6px">How I check it worked</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Hit ratio is measured per key pattern.</li><li>Stale reads are measured, for example by comparing a sample against the database.</li><li>A test restart of the cache does not overload the database.</li></ul>
+  <p class="takeaway"><b>The way back.</b> Turn the cache off with a flag. If the database cannot take the load without it, the cache has become part of capacity, and the design should say so.</p>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../review/index.html"><div><span>Next</span>Submit a design for review<span>A second opinion, in public or in private.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>

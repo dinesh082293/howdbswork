@@ -1780,5 +1780,41 @@
   "u": "designs/audit-event-log/index.html",
   "s": "Designs",
   "k": "audit and event logs where should an append-only history of everything that happened go?"
+ },
+ {
+  "t": "Anti-patterns: what not to put where",
+  "u": "designs/anti-patterns/index.html",
+  "s": "Designs",
+  "k": "anti-patterns mistakes queue table uuid primary key offset float money timestamp delete retention files in database hot row"
+ },
+ {
+  "t": "Capacity calculator",
+  "u": "designs/capacity/index.html",
+  "s": "Designs",
+  "k": "capacity sizing memory disk working set wal log volume calculator estimate"
+ },
+ {
+  "t": "Migration playbooks",
+  "u": "designs/migrations/index.html",
+  "s": "Designs",
+  "k": "migration cdc debezium split database mysql to postgresql pgloader dms cache"
+ },
+ {
+  "t": "Submit a design for review",
+  "u": "designs/review/index.html",
+  "s": "Designs",
+  "k": "design review submit feedback"
+ },
+ {
+  "t": "Notebook: the rules the design docs rely on",
+  "u": "notebooks/index.html#design-checks",
+  "s": "Notebooks",
+  "k": "oversell stock idempotency key exclusion constraint row level security measured"
+ },
+ {
+  "t": "Notebook: Redis, ClickHouse and Cassandra",
+  "u": "notebooks/index.html#other-engines",
+  "s": "Notebooks",
+  "k": "redis sorted set rate limit clickhouse compression parts cassandra partition allow filtering"
  }
 ]

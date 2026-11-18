@@ -1,7 +1,7 @@
 name: Lab notebooks
 
 # Runs the experiments behind the Notebooks page on real PostgreSQL 18,
-# MySQL 8.4 and MongoDB 8.0 containers, then pushes the plain-text
+# MySQL 8.4, MongoDB 8.0, Redis 7.4, ClickHouse 24.8 and Cassandra 5.0 containers, then pushes the plain-text
 # transcripts to the lab-results branch. The page quotes them as captured,
 # with the run date. Trigger it by hand, or by pushing to the lab-run branch.
 on:
@@ -38,21 +38,44 @@ jobs:
           docker exec nb-mo mongosh --quiet --eval 'rs.initiate({_id: "rs0", members: [{_id: 0, host: "127.0.0.1:27017"}]})'
           until docker exec nb-mo mongosh --quiet --eval 'db.hello().isWritablePrimary' | grep -q true; do sleep 2; done
 
+      - name: Start Redis, ClickHouse and Cassandra
+        run: |
+          docker run -d --name nb-redis -p 6379:6379 redis:7.4
+          docker run -d --name nb-ch -p 8123:8123 --ulimit nofile=262144:262144 \
+            -e CLICKHOUSE_SKIP_USER_SETUP=1 clickhouse/clickhouse-server:24.8
+          docker run -d --name nb-cass -p 9042:9042 -e MAX_HEAP_SIZE=1G -e HEAP_NEWSIZE=256M cassandra:5.0
+          until docker exec nb-redis redis-cli ping | grep -q PONG; do sleep 2; done
+          until curl -sf http://127.0.0.1:8123/ping; do sleep 2; done
+          for i in $(seq 1 90); do docker exec nb-cass cqlsh -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1 && break; sleep 4; done
+
       - name: Install drivers
-        run: pip install --quiet psycopg2-binary pymysql pymongo
+        run: pip install --quiet psycopg2-binary pymysql pymongo redis clickhouse-connect cassandra-driver
 
       - name: Run the notebooks
-        run: python3 scripts/notebooks/run_all.py lab-output
+        run: |
+          # A push to lab-run may carry scripts/notebooks/selected.txt to run only some scripts.
+          # Each line: a script, then optional notebook function names.
+          if [ -f scripts/notebooks/selected.txt ]; then SEL=scripts/notebooks/selected.txt
+          else printf 'run_all.py\nrun_more.py\n' > /tmp/sel.txt; SEL=/tmp/sel.txt; fi
+          while read -r script names; do
+            [ -n "$script" ] && python3 scripts/notebooks/$script lab-output $names
+          done < "$SEL"
 
       - name: Push transcripts to the lab-results branch
         run: |
           mkdir /tmp/results && cp lab-output/* /tmp/results/
           git config user.name "lab-notebooks"
           git config user.email "lab-notebooks@users.noreply.github.com"
-          git checkout --orphan lab-results
-          git rm -rq --cached .
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          # Keep earlier transcripts; replace only the files this run produced.
+          if git fetch -q origin lab-results; then
+            git checkout -q -B lab-results origin/lab-results
+          else
+            git checkout --orphan lab-results
+            git rm -rq --cached .
+          fi
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name '*.txt' -exec rm -rf {} +
+          rm -f *.error.txt
           cp /tmp/results/* .
           git add -A
           git commit -qm "Lab notebook transcripts, run ${GITHUB_RUN_ID}"
-          git push -f origin lab-results
+          git push origin lab-results

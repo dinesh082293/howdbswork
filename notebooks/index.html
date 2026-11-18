@@ -21,12 +21,12 @@
   <div class="kicker">Notebooks · experiments run on real servers</div>
   <h1>Lab notebooks</h1>
   <p class="qline">What actually happens when you run it?</p>
-  <p class="learn"><b>You will learn:</b> what a long transaction, a durable commit, an index, two concurrent sessions and five common query shapes cost, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.</p>
-  <p class="lede">Most pages on this site explain a mechanism. These notebooks show it happening. I wrote five experiments, and a workflow in this site's repository runs them on real servers, PostgreSQL 18.7, MySQL 8.4.13 and MongoDB 8.0.38, on a GitHub Actions runner. The output below is pasted as captured, with the run time. Nothing in it is written by hand.</p>
-  <div class="scnnav"><a href="#long-transaction">1 · Long transaction</a><a href="#commit-cost">2 · Commit cost</a><a href="#scan-vs-index">3 · Scan against index</a><a href="#anomalies">4 · Two sessions</a><a href="#queries">5 · Query shapes</a></div>
+  <p class="learn"><b>You will learn:</b> what a long transaction, a durable commit, an index, two concurrent sessions and common query shapes cost on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, whether the rules in the design docs hold, and how Redis, ClickHouse and Cassandra behave in the roles the design docs give them.</p>
+  <p class="lede">Most pages on this site explain a mechanism. These notebooks show it happening. I wrote seven experiments, and a workflow in this site's repository runs them on real servers, PostgreSQL 18.7, MySQL 8.4.13, MongoDB 8.0.38, Redis 7.4, ClickHouse 24.8 and Cassandra 5.0, on a GitHub Actions runner. The output below is pasted as captured, with the run time. Nothing in it is written by hand.</p>
+  <div class="scnnav"><a href="#long-transaction">1 · Long transaction</a><a href="#commit-cost">2 · Commit cost</a><a href="#scan-vs-index">3 · Scan against index</a><a href="#anomalies">4 · Two sessions</a><a href="#queries">5 · Query shapes</a><a href="#design-checks">6 · Design checks</a><a href="#other-engines">7 · Redis, ClickHouse, Cassandra</a></div>
 </div></header>
 <section style="padding-top:12px;padding-bottom:0"><div class="wrap">
-  <div class="derive"><b class="dt">How these were run</b>A GitHub Actions runner with 4 vCPUs on a cloud VM, one container per engine, stock settings unless the notebook says otherwise. Timings belong to that machine. Your hardware will give different absolute numbers, and the comparisons are what carry over. The experiment code is <a href="https://github.com/dinesh082293/howdbswork/blob/main/scripts/notebooks/run_all.py">run_all.py</a> and the workflow is <a href="https://github.com/dinesh082293/howdbswork/blob/main/.github/workflows/lab-notebooks.yml">lab-notebooks.yml</a>. Run them yourself and compare.</div>
+  <div class="derive"><b class="dt">How these were run</b>A GitHub Actions runner with 4 vCPUs on a cloud VM, one container per engine, stock settings unless the notebook says otherwise. Timings belong to that machine. Your hardware will give different absolute numbers, and the comparisons are what carry over. The experiment code is <a href="https://github.com/dinesh082293/howdbswork/blob/main/scripts/notebooks/run_all.py">run_all.py</a> and <a href="https://github.com/dinesh082293/howdbswork/blob/main/scripts/notebooks/run_more.py">run_more.py</a> and the workflow is <a href="https://github.com/dinesh082293/howdbswork/blob/main/.github/workflows/lab-notebooks.yml">lab-notebooks.yml</a>. Run them yourself and compare.</div>
 </div></section>
 <section id="long-transaction"><div class="wrap">
   <div class="kicker">Notebook 1 · run 2026-11-18 04:25 UTC</div>
@@ -330,6 +330,85 @@ table size: 150 MB | 19231 pages of 8 KB
   <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
   <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Column order decides which queries an index helps: both columns, in order, read 44 rows. The second column alone read the whole table in all three engines.</li><li>A covering query never touched the table: PostgreSQL showed Heap Fetches: 0, MySQL said "Covering index lookup", and MongoDB examined 0 documents.</li><li>OFFSET 500000 walked 500,020 index entries to return 20 rows in every engine. Paging by key read 20.</li><li>One query for 100 customers took 1.6 ms. One query per customer took 20.1 ms. Round trips add up long before the database is busy.</li></ul>
   <p class="labnote">Full transcript: <a href="../assets/data/notebooks/queries.txt">queries.txt</a></p>
+</div></section>
+<section id="design-checks"><div class="wrap">
+  <div class="kicker">Notebook 6 · run 2026-11-18 21:22 UTC</div>
+  <h2>The rules the design docs rely on</h2>
+  <p class="sub">The <a href="../designs/index.html">design docs</a> say "let the database enforce the rule". This notebook checks four of those rules on real servers: the last item in stock, a retried payment, an overlapping booking, and a query that forgets its tenant filter.</p>
+  <details class="predict"><summary>Sixteen clients try 1,600 purchases of an item with 1,000 in stock. Each one reads the stock, and if it is above zero, writes the stock minus one. How many sales go through?</summary><p>All 1,600, in every engine, and the stock still shows hundreds left. The conditional update, UPDATE ... WHERE available >= 1, sold exactly 1,000 and left 0.</p></details>
+  <pre class="nbout"><b>## 1. The last item: 1000 units, 16 clients each trying 100 purchases at once (1600 attempts)</b>
+  PostgreSQL, read, then write the new value:    sold 1600 of 1000, stock left  869, 0.5 s
+  PostgreSQL, UPDATE ... WHERE available &gt;= 1:   sold 1000 of 1000, stock left    0, 0.3 s
+  MySQL,      read, then write the new value:    sold 1600 of 1000, stock left  888, 0.4 s
+  MySQL,      UPDATE ... WHERE available &gt;= 1:   sold 1000 of 1000, stock left    0, 0.6 s
+  MongoDB,    read, then $set the new value:     sold 1600 of 1000, stock left  799, 0.6 s
+  MongoDB,    updateOne({available: {$gte: 1}}, $inc): sold 1000 of 1000, stock left    0, 0.3 s
+
+<b>## 2. A retried payment with an idempotency key (PostgreSQL)</b>
+  attempt 1, key pay-abc: committed
+  attempt 2, same key (a client retry): rolled back: duplicate key value violates unique constraint &quot;nb_idem_pkey&quot;
+  ledger rows: 2 | sum of amounts: 0 | alice: -500
+
+<b>## 3. Two bookings for the same room and overlapping times</b>
+  PostgreSQL, room 7, 14:00-16:00 -&gt; booked
+  PostgreSQL, room 7, 15:00-17:00 -&gt; conflicting key value violates exclusion constraint &quot;nb_room_bookings_room_id_during_excl&quot;
+  PostgreSQL, room 7, 16:00-18:00 -&gt; booked
+  MySQL, event 99, seat A12, booking 1 -&gt; booked
+  MySQL, event 99, seat A12, booking 2 -&gt; Duplicate entry &#x27;99-A12&#x27; for key &#x27;nb_seat_bookings.PRIMARY&#x27;
+
+<b>## 4. A query that forgets WHERE tenant_id = ... (PostgreSQL row-level security)</b>
+  as the application role, tenant 2, SELECT count(*) FROM nb_projects -&gt; 10
+  same role, the rows it sees, by tenant -&gt; [(2, 10)]
+  as postgres (a superuser), same query -&gt; 30  &lt;- superusers bypass row-level security</pre>
+  <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>The last item:</b> read-then-write sold 1,600 units of a 1,000-unit stock in PostgreSQL, MySQL and MongoDB alike, and left the counter wrong too (869, 888 and 799 remaining). The conditional, relative update sold exactly 1,000 in all three.</li><li><b>A retried payment:</b> the second attempt with the same idempotency key hit the unique constraint and rolled back as a whole. The ledger kept two rows that sum to zero.</li><li><b>An overlapping booking:</b> the PostgreSQL exclusion constraint rejected 15:00 to 17:00 against 14:00 to 16:00, and accepted 16:00 to 18:00, which only touches it. In MySQL the primary key on (event, seat) rejected the second booking of seat A12.</li><li><b>A forgotten tenant filter:</b> with row-level security, the application role saw only its tenant's 10 rows out of 30. The postgres superuser saw all 30, which is why the application must not connect as one.</li></ul>
+  <p class="labnote">Full transcript: <a href="../assets/data/notebooks/design-checks.txt">design-checks.txt</a></p>
+</div></section><section id="other-engines"><div class="wrap">
+  <div class="kicker">Notebook 7 · run 2026-11-18 21:26 UTC</div>
+  <h2>Redis, ClickHouse and Cassandra</h2>
+  <p class="sub">The design docs add three stores to the main engines: Redis for counters and leaderboards, ClickHouse for reports, Cassandra for message history. This notebook runs the pattern each design doc relies on.</p>
+  <details class="predict"><summary>ClickHouse holds 10,000,000 order lines. A revenue report filters on one month and sums two columns. How many rows does it read?</summary><p>870,400 rows and about 15 MB, in 8 ms. The table is partitioned by month and sorted by SKU and time, so ClickHouse skipped every part that could not match and read only the columns the query names.</p></details>
+  <pre class="nbout"><b># Redis: 7.4.12</b>
+<b>## Redis: a leaderboard of 100,000 players in a sorted set</b>
+  memory for the sorted set: 9.6 MB
+  10,000 ZINCRBY, one round trip each: 12511 ops/s, 0.080 ms each
+  ZREVRANGE top 10: 0.212 ms -&gt; player:11605=100045, player:52494=100036, player:4988=100022 ...
+  ZREVRANK player:42: rank 67405 in 0.099 ms
+<b>## Redis: a fixed-window rate limit, 5 requests per window</b>
+  request 1 -&gt; count 1 -&gt; allowed
+  request 2 -&gt; count 2 -&gt; allowed
+  request 3 -&gt; count 3 -&gt; allowed
+  request 4 -&gt; count 4 -&gt; allowed
+  request 5 -&gt; count 5 -&gt; allowed
+  request 6 -&gt; count 6 -&gt; rejected
+  request 7 -&gt; count 7 -&gt; rejected
+  TTL on the key: 2 s; waiting 3 s ...
+  key exists after the window: False -&gt; the next request starts a new window
+
+<b># ClickHouse: 24.8.14.39</b>
+<b>## ClickHouse: 10,000,000 order lines, then a report that reads two columns</b>
+  INSERT ... SELECT of 10,000,000 rows in one statement: 4.2 s
+  column created_at   on disk 37.26 MiB  uncompressed 37.10 MiB  ratio 1.0x
+  column customer_id  on disk 8.02 MiB   uncompressed 74.19 MiB  ratio 9.3x
+  column note         on disk 592.07 KiB uncompressed 120.56 MiB ratio 208.5x
+  column order_id     on disk 41.27 MiB  uncompressed 74.19 MiB  ratio 1.8x
+  column price_cents  on disk 3.95 MiB   uncompressed 74.19 MiB  ratio 18.8x
+  column qty          on disk 194.42 KiB uncompressed 37.10 MiB  ratio 195.4x
+  column sku          on disk 142.99 KiB uncompressed 13.99 MiB  ratio 100.2x
+  revenue by SKU since 2026-10-01, top 3: [(&#x27;sku-499&#x27;, 444315.9), (&#x27;sku-99&#x27;, 444051.0), (&#x27;sku-399&#x27;, 444025.9)] in 8 ms
+  rows read: 870400, bytes read: 15273984
+<b>## ClickHouse: one row per INSERT against one batch</b>
+  200 single-row INSERTs: 0.24 s, 200 parts on disk (merges paused to show it)
+  1 INSERT of 200 rows:   0.004 s, 1 part on disk
+
+<b># Cassandra: 5.0.9</b>
+<b>## Cassandra: chat messages, partitioned by (conversation_id, bucket)</b>
+  100,000 messages across 1,000 conversations written in 10.7 s
+  latest 20 messages of conversation 42 (one partition): 20 rows in 3.3 ms, newest first: message 99042
+  query by sender_id (not part of the key): rejected -&gt; &quot;Cannot execute this query as it might involve data filtering and thus may have unpredictable performance. If you want to execute this query despite the performance unpredictability, use ALLOW FILTERI</pre>
+  <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>Redis:</b> a 100,000-player leaderboard took 9.6 MB of memory. One ZINCRBY round trip took 0.07 ms, and both the top 10 and one player's rank came back in under 0.2 ms. The rate limit allowed 5 requests, rejected the 6th and 7th, and the key expired on its own.</li><li><b>ClickHouse:</b> columns with few distinct values compressed 100 to 200 times (qty, sku, note). Unique or timestamp-like columns barely compressed. 200 single-row inserts made 200 parts on disk; one insert of 200 rows made one part. That is why the design docs say batch.</li><li><b>Cassandra:</b> the latest 20 messages of one conversation came from one partition in 2.4 ms. A query by sender_id, which is not part of the key, was rejected outright unless you add ALLOW FILTERING. Cassandra makes you design tables around the queries.</li></ul>
+  <p class="labnote">Full transcript: <a href="../assets/data/notebooks/other-engines.txt">other-engines.txt</a></p>
 </div></section>
 <section class="nextpage"><div class="wrap"><a href="../tutorials/index.html"><div><span>Next</span>Guided tutorials<span>Run it yourself, on a PostgreSQL in your browser.</span></div><i>→</i></a></div></section>
 <footer><div class="wrap">
