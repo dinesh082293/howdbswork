@@ -1,0 +1,79 @@
+# Notebook 4: two sessions, interleaved step by step
+# run at: 2026-11-18 04:27 UTC
+# runner: Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 | 4 vCPU
+# PostgreSQL: 18.7 (Debian 18.7-1.pgdg13+2)
+# MySQL: 8.4.13
+# MongoDB: 8.0.38
+
+## PostgreSQL 18, lost update, READ COMMITTED (the default)
+  A: SELECT balance -> 100
+  B: SELECT balance -> 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120; COMMIT -> ok
+  final balance: 120  (expected 130 if both deposits count)
+
+## PostgreSQL 18, lost update, REPEATABLE READ
+  A: SELECT balance -> 100
+  B: SELECT balance -> 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120 -> ERROR: could not serialize access due to concurrent update
+  final balance: 110  (expected 130 if both deposits count)
+
+## MySQL 8.4, lost update, REPEATABLE READ (the default)
+  A: SELECT balance -> 100
+  B: SELECT balance -> 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120; COMMIT -> ok
+  final balance: 120  (expected 130 if both deposits count)
+
+## MySQL 8.4, lost update fixed with SELECT ... FOR UPDATE
+  A: SELECT balance FOR UPDATE -> 100
+  B: SELECT balance FOR UPDATE -> still waiting after 1.5 s: True
+  A: UPDATE balance = 110; COMMIT
+  B: ... the SELECT FOR UPDATE returns -> 110
+  B: UPDATE balance = 130; COMMIT -> ok
+  final balance: 130  (expected 130 if both deposits count)
+
+## MongoDB 8.0, lost update, inside two transactions
+  A: findOne -> balance 100
+  B: findOne -> balance 100
+  A: updateOne balance = 110; commitTransaction
+  B: updateOne balance = 120 -> OperationFailure: Caused by :: Write conflict during plan execution and yielding is disabled. :: Please retry your operation or multi-document transaction.
+  final balance: 110  (expected 130 if both deposits count)
+
+## PostgreSQL 18, write skew, REPEATABLE READ
+  A: SELECT count(*) WHERE on_call -> 2
+  B: SELECT count(*) WHERE on_call -> 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -> ok
+  B: COMMIT -> ok
+  doctors on call at the end: 0  (the rule was: at least 1)
+
+## PostgreSQL 18, write skew, SERIALIZABLE
+  A: SELECT count(*) WHERE on_call -> 2
+  B: SELECT count(*) WHERE on_call -> 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -> ok
+  B: COMMIT -> ERROR: could not serialize access due to read/write dependencies among transactions
+  doctors on call at the end: 1  (the rule was: at least 1)
+
+## MySQL 8.4, write skew, REPEATABLE READ (the default)
+  A: SELECT COUNT(*) WHERE on_call -> 2
+  B: SELECT COUNT(*) WHERE on_call -> 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -> ok
+  B: COMMIT -> ok
+  doctors on call at the end: 0  (the rule was: at least 1)
+
+## MongoDB 8.0, write skew, inside two transactions
+  A: countDocuments({on_call: true}) -> 2
+  B: countDocuments({on_call: true}) -> 2
+  A: updateOne alice off call
+  B: updateOne bob off call
+  A: commitTransaction -> ok
+  B: commitTransaction -> ok
+  doctors on call at the end: 0  (the rule was: at least 1)
+
