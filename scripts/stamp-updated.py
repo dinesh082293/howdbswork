@@ -27,7 +27,11 @@ def main():
     def body(text):
         # The nav and footer are rebuilt on every page by build-nav-footer.py,
         # so a change there does not count as an update to the page.
-        return re.sub(r"<(nav|footer)>.*?</\1>", "", text, flags=re.S)
+        text = re.sub(r"<(nav|footer)>.*?</\1>", "", text, flags=re.S)
+        # Generated navigation (breadcrumb, section index, old next-page blocks) is not content either.
+        text = re.sub(r"<!-- (CRUMBS|SECTION|SITEMAP):BEGIN -->.*?<!-- \1:END -->", "", text, flags=re.S)
+        text = re.sub(r'<section class="nextpage">.*?</section>', "", text, flags=re.S)
+        return re.sub(r"\s+", " ", text)
 
     for line in git("status", "--porcelain", "--untracked-files=all").splitlines():
         path = line[3:].strip().strip('"')
