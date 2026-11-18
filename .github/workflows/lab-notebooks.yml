@@ -54,9 +54,12 @@ jobs:
       - name: Run the notebooks
         run: |
           # A push to lab-run may carry scripts/notebooks/selected.txt to run only some scripts.
-          SEL="run_all.py run_more.py"
-          if [ -f scripts/notebooks/selected.txt ]; then SEL=$(cat scripts/notebooks/selected.txt); fi
-          for s in $SEL; do python3 scripts/notebooks/$s lab-output; done
+          # Each line: a script, then optional notebook function names.
+          if [ -f scripts/notebooks/selected.txt ]; then SEL=scripts/notebooks/selected.txt
+          else printf 'run_all.py\nrun_more.py\n' > /tmp/sel.txt; SEL=/tmp/sel.txt; fi
+          while read -r script names; do
+            [ -n "$script" ] && python3 scripts/notebooks/$script lab-output $names
+          done < "$SEL"
 
       - name: Push transcripts to the lab-results branch
         run: |

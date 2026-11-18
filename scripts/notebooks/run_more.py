@@ -196,7 +196,7 @@ def nb_other_engines():
                   sku LowCardinality(String), qty UInt32, price_cents UInt64, note String)
                   ENGINE = MergeTree PARTITION BY toYYYYMM(created_at) ORDER BY (sku, created_at)""")
     t = time.perf_counter()
-    ch.command("""INSERT INTO order_lines SELECT number, toDateTime('2025-11-18 00:00:00') + (number % 31536000),
+    ch.command("""INSERT INTO order_lines SELECT number, toDateTime('2025-11-18 00:00:00') + (number * 3),
                   number % 100000, concat('sku-', toString(number % 500)), 1 + number % 5, 99 + number % 9900,
                   concat('gift wrap: ', toString(number % 3 = 0)) FROM numbers(10000000)""")
     log("  INSERT ... SELECT of 10,000,000 rows in one statement: %.1f s" % (time.perf_counter() - t))
@@ -206,9 +206,9 @@ def nb_other_engines():
         log("  column %-12s on disk %-10s uncompressed %-10s ratio %sx" % row)
     t = time.perf_counter()
     res = ch.query("""SELECT sku, sum(qty * price_cents) / 100 AS revenue FROM order_lines
-                      WHERE created_at >= toDateTime('2026-10-18 00:00:00') GROUP BY sku ORDER BY revenue DESC LIMIT 3""")
+                      WHERE created_at >= toDateTime('2026-10-01 00:00:00') GROUP BY sku ORDER BY revenue DESC LIMIT 3""")
     dt = time.perf_counter() - t
-    log("  revenue by SKU, last 30 days, top 3: %s in %.0f ms" % (res.result_rows, 1000 * dt))
+    log("  revenue by SKU since 2026-10-01, top 3: %s in %.0f ms" % (res.result_rows, 1000 * dt))
     s = res.summary
     log("  rows read: %s, bytes read: %s" % (s.get("read_rows"), s.get("read_bytes")))
     log("## ClickHouse: one row per INSERT against one batch")
