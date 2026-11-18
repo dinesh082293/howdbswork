@@ -21,7 +21,7 @@
   <div class="kicker">Design doc · Orders and inventory</div>
   <h1>Online store: orders and inventory</h1>
   <p class="qline">Where should an online store keep its orders, carts and stock counts?</p>
-  <p class="lede">Applications like this: A shop, a marketplace checkout, a food-ordering app. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
+  <p class="lede">Applications like this: a shop, a marketplace checkout, a food-ordering app. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
   <div class="verdict"><b class="dt">The short answer</b>Orders, order lines, payments references and stock live in one relational database, PostgreSQL or MySQL. Carts can live in Redis. Product search goes to a search engine, and reporting goes to a column store.</div>
   <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
 </div></header>
