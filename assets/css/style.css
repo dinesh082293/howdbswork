@@ -648,3 +648,32 @@ select{padding:10px 12px;border:1px solid var(--line);border-radius:10px;backgro
   .sitesearch{order:2;margin-left:auto}
   .navlinks{order:3;flex:1 1 100%;margin:0 -12px 6px}
 }
+/* ===== Round 4: families, notebooks, tutorials, predict, trust ===== */
+.famtable{width:100%;border-collapse:collapse;font-size:14.5px;min-width:640px}
+.famtable th,.famtable td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line)}
+.famtable th{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.famgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+@media(max-width:900px){.famgrid{grid-template-columns:1fr}}
+.famcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.famcard h3{margin:0 0 2px;font-size:18px}
+.famcard .fam-ex{margin:0 0 10px;font-size:13.5px;color:var(--muted)}
+.famcard dl{margin:0;font-size:14.5px}
+.famcard dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--teal);margin-top:8px}
+.famcard dd{margin:2px 0 0}
+details.predict{border:1px dashed var(--teal);border-radius:12px;padding:12px 16px;margin:12px 0;max-width:860px;background:var(--surface)}
+details.predict summary{cursor:pointer;font-weight:700;list-style:none}
+details.predict summary::-webkit-details-marker{display:none}
+details.predict summary::before{content:"Predict first · ";font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--teal)}
+details.predict[open] summary{margin-bottom:8px}
+details.predict p{margin:0;font-size:14.5px}
+.reviewed{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.nbout{background:var(--term-bg);color:var(--term-ink);font-family:"IBM Plex Mono",monospace;font-size:12px;line-height:1.6;border-radius:10px;padding:12px 14px;white-space:pre-wrap;word-break:break-word;max-height:520px;overflow:auto}
+.nbout b{color:var(--term-hl);font-weight:600}
+.tut{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin:14px 0;max-width:1000px}
+.tut h3{margin:0 0 6px;font-size:19px}
+.tutstep{border-top:1px dashed var(--line);padding:12px 0}
+.tutstep p{margin:0 0 8px;font-size:14.5px}
+.tutstep pre.sql{background:var(--surface2);border-radius:8px;padding:8px 10px;font-family:"IBM Plex Mono",monospace;font-size:12.5px;white-space:pre-wrap;margin:0 0 8px}
+.tutstep pre.res{background:var(--term-bg);color:var(--term-ink);border-radius:8px;padding:8px 10px;font-family:"IBM Plex Mono",monospace;font-size:12px;white-space:pre-wrap;margin:8px 0 0;min-height:20px}
+.tutstep .reveal{display:none;margin-top:8px;background:var(--teal-bg);border-radius:8px;padding:8px 10px;font-size:14px}
+.tutstep.done .reveal{display:block}

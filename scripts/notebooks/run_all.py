@@ -150,15 +150,21 @@ def nb_long_transaction():
         q1(b, "UPDATE nb_accounts SET balance = balance + 1")
     log("session B: 5 x UPDATE nb_accounts SET balance = balance + 1")
     time.sleep(3)
-    log("History list length while A is open:", hll(b))
+    log("History list length after 5 big UPDATEs:", hll(b), " <- it counts transactions waiting for purge, not rows")
+    t = time.perf_counter()
+    for i in range(20000):
+        q1(b, "UPDATE nb_accounts SET balance = balance + 1 WHERE id = %s", (1 + i % 100000,))
+    log("session B: 20,000 single-row UPDATEs, each its own transaction (%.0f s)" % (time.perf_counter() - t))
+    time.sleep(3)
+    log("History list length while A is still open:", hll(b))
     a.commit()
-    log("session A: COMMIT")
+    log("session A: COMMIT  (the old read view is released)")
     t0 = time.time()
     while True:
         time.sleep(2)
         h = hll(b)
         log("  %2ds after COMMIT, History list length: %d" % (time.time() - t0, h))
-        if h < 1000 or time.time() - t0 > 40:
+        if h < 100 or time.time() - t0 > 60:
             break
     log("")
     # MongoDB
@@ -306,7 +312,7 @@ def nb_anomalies():
         try:
             q1(b, "UPDATE nb_acct SET balance = %s WHERE id = 1", (rb + 20,)); b.commit(); log("  B: UPDATE balance = %d; COMMIT -> ok" % (rb + 20))
         except psycopg2.Error as e:
-            b.rollback(); log("  B: UPDATE balance = %d -> ERROR: %s" % (rb + 20, e.pgerror.strip().splitlines()[0]))
+            b.rollback(); log("  B: UPDATE balance = %d -> ERROR: %s" % (rb + 20, e.pgerror.strip().splitlines()[0].replace("ERROR:  ", "")))
         log("  final balance: %d  (expected 130 if both deposits count)" % q1(s, "SELECT balance FROM nb_acct WHERE id = 1")[0][0])
 
     def pg_write_skew(level):
@@ -321,7 +327,7 @@ def nb_anomalies():
             try:
                 x.commit(); log("  %s: COMMIT -> ok" % n)
             except psycopg2.Error as e:
-                x.rollback(); log("  %s: COMMIT -> ERROR: %s" % (n, e.pgerror.strip().splitlines()[0]))
+                x.rollback(); log("  %s: COMMIT -> ERROR: %s" % (n, e.pgerror.strip().splitlines()[0].replace("ERROR:  ", "")))
         log("  doctors on call at the end: %d  (the rule was: at least 1)" % q1(s, "SELECT count(*) FROM nb_doctors WHERE on_call")[0][0])
 
     def my_lost_update(lock):
@@ -413,7 +419,7 @@ def nb_queries():
     c = pg()
     q1(c, "DROP TABLE IF EXISTS nb_orders")
     q1(c, "CREATE TABLE nb_orders (id int PRIMARY KEY, customer_id int, created_at timestamp, status text, total numeric(10,2))")
-    q1(c, "INSERT INTO nb_orders SELECT g, 1 + (g * 7919) % 10000, timestamp '2025-11-18' + (g % 525600) * interval '1 minute', CASE WHEN g % 10 = 0 THEN 'refunded' ELSE 'paid' END, (g % 500) + 0.99 FROM generate_series(1, 1000000) g")
+    q1(c, "INSERT INTO nb_orders SELECT g, 1 + (g::bigint * 7919) % 10000, timestamp '2025-11-18' + (g % 525600) * interval '1 minute', CASE WHEN g % 10 = 0 THEN 'refunded' ELSE 'paid' END, (g % 500) + 0.99 FROM generate_series(1, 1000000) g")
     q1(c, "CREATE INDEX nb_orders_cust_created ON nb_orders (customer_id, created_at)")
     q1(c, "VACUUM ANALYZE nb_orders")
     q1(c, "SET max_parallel_workers_per_gather = 0")
