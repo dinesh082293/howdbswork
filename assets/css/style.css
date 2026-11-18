@@ -721,3 +721,66 @@ label.calc span{font-weight:400;color:var(--muted);font-size:12px;min-height:0}
 #commitAnim .ca-name{fill:var(--ink);font:500 12.5px "IBM Plex Mono",monospace}
 #commitAnim label{font-size:14px}
 svg.appic{display:block;width:100%;max-width:440px;height:auto;margin:6px 0 4px;background:var(--surface2);border-radius:10px}
+/* ===== Site structure: grouped menus, breadcrumb, section index ===== */
+.navlinks{align-items:center}
+details.navgrp{position:relative}
+details.navgrp summary{list-style:none;cursor:pointer;color:var(--ink);font-size:13.5px;font-weight:500;padding:10px 12px;border-radius:999px;white-space:nowrap}
+details.navgrp summary::-webkit-details-marker{display:none}
+details.navgrp summary::after{content:"▾";font-size:10px;margin-left:5px;color:var(--muted)}
+details.navgrp summary:hover,details.navgrp[open] summary{background:var(--surface2)}
+details.navgrp.here summary{color:var(--teal);font-weight:700}
+.navlinks a[aria-current="page"]{color:var(--teal);font-weight:700}
+.navmenu{position:absolute;top:calc(100% + 6px);left:0;z-index:60;min-width:260px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.14);padding:8px;display:grid;gap:2px}
+.navmenu.cols2{grid-template-columns:1fr 1fr;min-width:520px}
+.navmenu .navblurb{grid-column:1/-1;margin:2px 8px 6px;font-size:12.5px;color:var(--muted);line-height:1.45}
+.navmenu a{display:block;padding:8px 10px !important;border-radius:8px;font-size:13.5px;white-space:normal}
+.navmenu a:hover{background:var(--surface2)}
+details.navgrp:last-of-type .navmenu{left:auto;right:0}
+@media(max-width:899px){
+  .navlinks{flex-wrap:wrap !important;overflow:visible !important}
+  details.navgrp{position:static}
+  .navmenu{position:absolute;left:12px !important;right:12px !important;min-width:0}
+  .navmenu.cols2{grid-template-columns:1fr;min-width:0;max-height:70vh;overflow:auto}
+}
+.crumbs{border-bottom:1px solid var(--line);background:var(--surface)}
+.crumbs .wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:8px;padding-bottom:8px;font-size:13px}
+.crumbs a{color:var(--muted);text-decoration:none}
+.crumbs a:hover{color:var(--teal)}
+.crumbs span{color:var(--line)}
+.crumbs b{color:var(--ink);font-weight:600}
+.crumbs em{margin-left:auto;font-style:normal;color:var(--muted);font-family:"IBM Plex Mono",monospace;font-size:12px}
+.secnav{border-top:1px solid var(--line);padding:26px 0 30px;background:var(--surface2)}
+.secnav-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px}
+.secnav-head a{font-size:13px}
+.secnav-list{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 16px}
+.secnav-list a{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 12px;font-size:13px;text-decoration:none;color:var(--ink)}
+.secnav-list a:hover{border-color:var(--teal)}
+.secnav-list a.on{background:var(--teal);border-color:var(--teal);color:var(--surface);font-weight:700}
+.secnav-pn{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:700px){.secnav-pn{grid-template-columns:1fr}}
+.secnav-pn a.pn{display:block;border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:14px 18px;text-decoration:none;color:var(--ink);font-weight:700;font-size:15.5px}
+.secnav-pn a.pn:hover{border-color:var(--teal)}
+.secnav-pn a.pn span{display:block;font-weight:500;font-size:12.5px;color:var(--muted);margin-bottom:2px}
+.secnav-pn a.next{text-align:right;grid-column:2}
+.secnav-pn a.prev{grid-column:1}
+@media(max-width:700px){.secnav-pn a.next,.secnav-pn a.prev{grid-column:1}}
+.mapgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:12px 0}
+.mapcard{display:block;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;text-decoration:none;color:var(--ink)}
+.mapcard:hover{border-color:var(--teal)}
+.mapcard b{display:block;font-size:17px;margin-bottom:4px}
+.mapcard span{display:block;font-size:14px;color:var(--muted)}
+.mapcard i{display:block;font-style:normal;color:var(--teal);font-weight:600;font-size:13px;margin-top:8px}
+.mapsecs{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.mapsec{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.mapsec h2{font-size:20px;margin:0 0 4px}
+.mapsec ol{margin:8px 0 0;padding-left:22px;font-size:14.5px;line-height:1.75}
+/* Alignment: grid and flex children may shrink below their content, so wide commands
+   scroll inside their own box instead of pushing the page sideways on a phone. */
+.loggrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:820px){.loggrid{grid-template-columns:minmax(0,1fr)}}
+.loggrid>*,.logcard,.opcard,.incident,.cmp3>*,.famgrid>*,.pathgrid>*,.mapgrid>*,.vizrow>*{min-width:0}
+.lookcmd,.opcard .sql,pre{max-width:100%}
+[class$="grid"]>*,[class$="cols"]>*,[class*="grid "]>*{min-width:0}
+.dbox{max-width:100%;overflow-wrap:anywhere}
+.fcol{min-width:0;max-width:100%}
+p .mono,li .mono,td .mono,dd .mono{overflow-wrap:anywhere}

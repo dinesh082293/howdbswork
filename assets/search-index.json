@@ -1822,5 +1822,11 @@
   "u": "designs/hosting/index.html",
   "s": "Designs",
   "k": "hosting on-prem cloud managed rds aurora cloud sql ec2 vm kubernetes operator serverless atlas tco cost who does what gp3 io2"
+ },
+ {
+  "t": "All pages, in reading order",
+  "u": "sitemap/index.html",
+  "s": "About",
+  "k": "sitemap all pages index contents table of contents order sections"
  }
 ]

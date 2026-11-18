@@ -25,6 +25,25 @@
     });
     window.addEventListener('afterprint', function () { document.body.removeAttribute('data-print'); });
   }
+
+  // Grouped nav menus: one open at a time, close on outside click or Escape.
+  function navMenus() {
+    var groups = document.querySelectorAll('details.navgrp');
+    Array.prototype.forEach.call(groups, function (d) {
+      d.addEventListener('toggle', function () {
+        if (!d.open) return;
+        Array.prototype.forEach.call(groups, function (o) { if (o !== d) o.open = false; });
+      });
+    });
+    document.addEventListener('click', function (e) {
+      Array.prototype.forEach.call(groups, function (d) { if (d.open && !d.contains(e.target)) d.open = false; });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      Array.prototype.forEach.call(groups, function (d) { if (d.open) { d.open = false; d.querySelector('summary').focus(); } });
+    });
+  }
+  try { navMenus(); } catch (e) {}
   try { readingTime(); } catch (e) {}
   try { printButtons(); } catch (e) {}
 })();

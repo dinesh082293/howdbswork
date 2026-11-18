@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>One structure for the whole site</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-b43e25978b2e</guid>
+    <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
+    <description>one structure for the whole site: seven sections in reading order (Learn, Engines, Practice, Design, Get it right, Run it, About), a menu per section, a breadcrumb on every page, and at the bottom of every page its section&#x27;s pages with previous and next links, so you can read the site from the first page to the last. Plus an All pages page, and fixes so every page fits a phone screen.</description>
+  </item>
+  <item>
     <title>An animated commit on Compare (step through one change from memory to the log to the data...</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-7c1a302c4d8e</guid>
