@@ -1,0 +1,47 @@
+name: Design review
+description: Ask for a review of the database design of an application or feature.
+title: "Design review: "
+labels: ["design-review"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This issue is public. Leave out company names, hostnames, credentials and customer data.
+        The outline follows https://howdbswork.com/designs/template/
+  - type: textarea
+    id: app
+    attributes:
+      label: What the application does
+      description: One paragraph, in business terms.
+    validations:
+      required: true
+  - type: textarea
+    id: workload
+    attributes:
+      label: The workload
+      description: Peak writes and reads per second, data size today and in 12 months, how data is read (by key, by range, aggregates, text, similarity), latency target.
+    validations:
+      required: true
+  - type: dropdown
+    id: loss
+    attributes:
+      label: What does a lost or doubled write cost?
+      options:
+        - Money, legal trouble, or a broken promise to a customer
+        - An unhappy user who retries
+        - Almost nothing
+    validations:
+      required: true
+  - type: textarea
+    id: placement
+    attributes:
+      label: Proposed placement
+      description: Each kind of data, the store it goes in, and whether that store is the source of truth or a copy.
+    validations:
+      required: true
+  - type: textarea
+    id: question
+    attributes:
+      label: The decision you are unsure about
+    validations:
+      required: true

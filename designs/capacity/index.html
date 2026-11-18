@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Estimate data size, working set, memory, disk and log volume for a table, with every assumption stated."/>
+<link rel="icon" href="data:,"/>
+<title>Capacity calculator · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../notebooks/index.html">Notebooks</a><a href="../../designs/index.html">Designs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Designs · capacity</div>
+  <h1>Capacity calculator</h1>
+  <p class="qline">How much memory, disk and log volume will this table need in a year?</p>
+  <p class="learn"><b>You will learn:</b> a first estimate of data size, working set, memory, disk and log volume, with every assumption written next to the number.</p>
+  <p class="lede">This is the arithmetic I do on a whiteboard before sizing a server, turned into a form. It gives a starting estimate, not a guarantee. Load a sample of real data and measure before you buy anything.</p>
+</div></header>
+<section id="calc"><div class="wrap">
+  <div class="labcard">
+    <div class="calcgrid">
+      <label class="calc">Rows today<input type="number" id="cRows" value="10000000" min="0" step="1"/><span></span></label>
+      <label class="calc">Average row size, bytes<input type="number" id="cRowB" value="200" min="0" step="1"/><span>Count the columns, not the schema maximum.</span></label>
+      <label class="calc">Secondary indexes<input type="number" id="cIdx" value="3" min="0" step="1"/><span></span></label>
+      <label class="calc">Average index entry, bytes<input type="number" id="cIdxB" value="40" min="0" step="1"/><span>Key columns plus about 20 bytes of overhead.</span></label>
+      <label class="calc">New rows per day<input type="number" id="cDay" value="200000" min="0" step="1"/><span></span></label>
+      <label class="calc">Retention, days (0 = keep forever)<input type="number" id="cRet" value="0" min="0" step="1"/><span></span></label>
+      <label class="calc">Plan for how many months<input type="number" id="cMon" value="12" min="0" step="1"/><span></span></label>
+      <label class="calc">Hot share of the data, percent<input type="number" id="cHot" value="20" min="0" step="1"/><span>The part read every day.</span></label>
+      <label class="calc">Peak writes per second<input type="number" id="cW" value="500" min="0" step="1"/><span></span></label>
+      <label class="calc">Connections<input type="number" id="cConn" value="200" min="0" step="1"/><span></span></label>
+      <label class="calc">Copies (primary plus replicas)<input type="number" id="cCopies" value="2" min="0" step="1"/><span></span></label>
+    </div>
+    <div class="labstat" id="cOut"></div>
+    <div id="cNotes" class="labnote"></div>
+  </div>
+  <div class="derive"><b class="dt">The assumptions</b>Table size is rows times row size plus 25 percent for page headers and free space. Each index, including the primary key, takes rows times entry size plus 40 percent for B-tree overhead. With a retention period, the row count levels off at new rows per day times retention days. Memory is the working set (the hot share of tables and indexes) plus 30 percent, plus 2 GB for the operating system, plus about 10 MB per connection. Disk keeps 30 percent free and adds 30 percent for logs, temporary files and growth surprises. Log volume is about 1.5 times the bytes changed per write. These are round numbers for a first estimate. Measure on real data.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../migrations/index.html"><div><span>Next</span>Migration playbooks<span>Change the design without an outage.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+<script src="../../assets/js/capacity.js"></script>
+</body>
+</html>

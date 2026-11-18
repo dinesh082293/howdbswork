@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>Designs, round two</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-e450e2471c2f</guid>
+    <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
+    <description>designs, round two: a data-flow diagram on every design doc, fifteen anti-patterns, a capacity calculator, four migration playbooks (add CDC, split a database, MySQL to PostgreSQL, add a cache), and a way to submit a design for review. Two new notebooks: the rules the design docs rely on, measured (read-then-write oversold 1,600 units of a 1,000-unit stock in all three engines), and Redis, ClickHouse and Cassandra in the roles the design docs give them.</description>
+  </item>
+  <item>
     <title>Application designs</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-6f36078a9a67</guid>

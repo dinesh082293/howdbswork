@@ -1,0 +1,31 @@
+# Notebook 6: the rules the design docs rely on
+# run at: 2026-11-18 21:22 UTC
+# runner: Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 | 4 vCPU
+# PostgreSQL: 18.7 (Debian 18.7-1.pgdg13+2)
+# MySQL: 8.4.13
+# MongoDB: 8.0.38
+
+## 1. The last item: 1000 units, 16 clients each trying 100 purchases at once (1600 attempts)
+  PostgreSQL, read, then write the new value:    sold 1600 of 1000, stock left  869, 0.5 s
+  PostgreSQL, UPDATE ... WHERE available >= 1:   sold 1000 of 1000, stock left    0, 0.3 s
+  MySQL,      read, then write the new value:    sold 1600 of 1000, stock left  888, 0.4 s
+  MySQL,      UPDATE ... WHERE available >= 1:   sold 1000 of 1000, stock left    0, 0.6 s
+  MongoDB,    read, then $set the new value:     sold 1600 of 1000, stock left  799, 0.6 s
+  MongoDB,    updateOne({available: {$gte: 1}}, $inc): sold 1000 of 1000, stock left    0, 0.3 s
+
+## 2. A retried payment with an idempotency key (PostgreSQL)
+  attempt 1, key pay-abc: committed
+  attempt 2, same key (a client retry): rolled back: duplicate key value violates unique constraint "nb_idem_pkey"
+  ledger rows: 2 | sum of amounts: 0 | alice: -500
+
+## 3. Two bookings for the same room and overlapping times
+  PostgreSQL, room 7, 14:00-16:00 -> booked
+  PostgreSQL, room 7, 15:00-17:00 -> conflicting key value violates exclusion constraint "nb_room_bookings_room_id_during_excl"
+  PostgreSQL, room 7, 16:00-18:00 -> booked
+  MySQL, event 99, seat A12, booking 1 -> booked
+  MySQL, event 99, seat A12, booking 2 -> Duplicate entry '99-A12' for key 'nb_seat_bookings.PRIMARY'
+
+## 4. A query that forgets WHERE tenant_id = ... (PostgreSQL row-level security)
+  as the application role, tenant 2, SELECT count(*) FROM nb_projects -> 10
+  same role, the rows it sees, by tenant -> [(2, 10)]
+  as postgres (a superuser), same query -> 30  <- superusers bypass row-level security

@@ -694,3 +694,9 @@ label.pk{display:flex;gap:8px;align-items:flex-start;font-size:14.5px;padding:5p
 label.pk input{margin-top:4px;accent-color:var(--teal)}
 #pickOut .verdict{margin-top:6px}
 #pickOut ul{margin:6px 0 0;padding-left:20px;font-size:14.5px;line-height:1.6}
+.flowwrap{overflow-x:auto;margin:6px 0 4px;max-width:1000px}
+.flowwrap svg.flow{display:block;width:100%;min-width:640px;height:auto}
+.calcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px 14px;margin-bottom:6px}
+label.calc{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}
+label.calc input{border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);padding:8px 10px;font:500 14px "IBM Plex Mono",monospace;width:100%;box-sizing:border-box}
+label.calc span{font-weight:400;color:var(--muted);font-size:12px;min-height:0}
