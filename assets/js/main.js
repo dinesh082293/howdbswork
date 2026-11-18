@@ -395,7 +395,7 @@ function renderPair(P){
    '<div class="sm"><h5>Mechanism, derived from the layout</h5><p>'+P.why+'</p></div>'+
    '<div class="sm"><h5>The tradeoff</h5><p>'+P.tradeoff+'</p></div>'+
    '</div>'+
-   '<div class="practice"><h5>In Practice, real output, red flags named</h5><pre class="evidence">'+P.practice.out+'</pre><p class="evnote">'+P.practice.note+'</p><div class="lookcmd">'+P.detect+'</div></div>'+
+   '<div class="practice"><h5>In Practice, sample output, red flags named</h5><pre class="evidence">'+P.practice.out+'</pre><p class="evnote">'+P.practice.note+'</p><div class="lookcmd">'+P.detect+'</div></div>'+
    '<div class="wib"><h5>Where it breaks</h5><p><b>Root cause:</b> '+P.root+'</p><p><b>Blast radius:</b> '+P.blast+'</p><p><b>Mitigation:</b> '+P.mit+'</p></div>'+
    '<div class="staffmeta">'+
    '<div class="sm warn"><h5>Common staff-level mistake</h5><p>'+P.mistake+'</p></div>'+
