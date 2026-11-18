@@ -23,7 +23,7 @@
   <p class="qline">Where should a catalog go when every product type has different attributes?</p>
   <p class="lede">Applications like this: shops with shoes, laptops and food in one catalog. Real estate listings. Car parts. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected.</p>
   <div class="verdict"><b class="dt">The short answer</b>PostgreSQL with common columns plus a JSONB column for the varied attributes, or MongoDB with one document per product. A search engine on top for browsing and filtering.</div>
-  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a></div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a><a href="#where">Where to run it</a></div>
 </div></header>
 <section id="workload"><div class="wrap">
   <div class="kicker">1 · The workload</div>
@@ -70,6 +70,12 @@ WHERE category = &#x27;laptops&#x27; AND attrs @&gt; &#x27;{&quot;ram_gb&quot;: 
   <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>Entity-attribute-value tables.</b> Flexible on paper, but every product read becomes a pile of joins. JSONB or documents do the same job better.</li><li><b>Search engine as the only store.</b> Search engines are not built to be the source of truth. Keep the record in a database.</li></ul>
   <p class="takeaway"><b>Cost.</b> Search clusters are often the largest line on a catalog bill. Size them for the index you have, and keep replicas at what the query rate needs.</p>
   <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation and common practice. Measured on real servers: one lookup with and without an index, in <a href="../../notebooks/index.html#scan-vs-index">the notebooks</a>. Before you build: check the <a href="../anti-patterns/index.html">anti-patterns</a>, size it with the <a href="../capacity/index.html">capacity calculator</a>, and write your own version from the <a href="../template/index.html">design doc template</a>. Want a second opinion? <a href="../review/index.html">Submit it for review</a>.</div>
+</div></section>
+<section id="where"><div class="wrap">
+  <div class="kicker">7 · Where to run it</div>
+  <h2>On-prem, managed, EC2 or Kubernetes</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Stage</th><th>Where it runs</th></tr></thead><tbody><tr><td><b>Where I would start</b></td><td>Managed relational, plus a managed search service</td></tr><tr><td><b>When it grows</b></td><td>The same, with a CDN in front</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">For a team without a dedicated database team. Who does which job in each option, and the full-cost comparison: <a href="../hosting/index.html">Where to run the database</a>.</p>
 </div></section>
 <section class="nextpage"><div class="wrap"><a href="../social-feed/index.html"><div><span>Next</span>Social feed and timelines<span>How do I build a home timeline that shows posts from everyone I follow?</span></div><i>→</i></a></div></section>
 <footer><div class="wrap">

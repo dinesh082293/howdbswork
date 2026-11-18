@@ -22,7 +22,7 @@
   <h1>Application designs</h1>
   <p class="qline">What kind of application should go in which database, and why?</p>
   <p class="learn"><b>You will learn:</b> how to place each kind of application data in the right store, with thirteen design docs for common applications and a short picker to start from.</p>
-  <div class="scnnav"><a href="#pick">The picker</a><a href="#principles">Five rules</a><a href="#designs">Thirteen design docs</a><a href="#tools">Tools</a></div>
+  <div class="scnnav"><a href="#pick">The picker</a><a href="#principles">Five rules</a><a href="#designs">Thirteen design docs</a><a href="#tools">Tools</a><a href="hosting/index.html">Where to run it</a></div>
   <p class="lede">When a team asks me which database to use, the answer is rarely one database. It is a placement: this data here, that data there, and the reason for each. These pages are written as design docs, one per kind of application. Each starts from the workload, because the workload decides the store, not the other way round.</p>
 </div></header>
 <section id="pick"><div class="wrap">
@@ -57,9 +57,10 @@
 </div></section>
 <section id="tools"><div class="wrap">
   <div class="kicker">Tools for your own design</div>
-  <h2>Write it, size it, check it, change it</h2>
+  <h2>Write it, size it, place it, check it, change it</h2>
   <div class="pathgrid">
     <a class="pathcard" href="template/index.html"><h3>Design doc template</h3><p>The outline every design doc here follows, ready to copy.</p><span class="go">Open →</span></a>
+    <a class="pathcard" href="hosting/index.html"><h3>Where to run it</h3><p>On-prem, managed cloud, EC2 or Kubernetes: who does what, and the full cost.</p><span class="go">Open →</span></a>
     <a class="pathcard" href="capacity/index.html"><h3>Capacity calculator</h3><p>Data size, working set, memory, disk and log volume, with every assumption stated.</p><span class="go">Open →</span></a>
     <a class="pathcard" href="anti-patterns/index.html"><h3>Anti-patterns</h3><p>Fifteen habits that pass code review and fail under load.</p><span class="go">Open →</span></a>
     <a class="pathcard" href="migrations/index.html"><h3>Migration playbooks</h3><p>Add CDC, split a database, move MySQL to PostgreSQL, add a cache.</p><span class="go">Open →</span></a>

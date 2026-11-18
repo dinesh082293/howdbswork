@@ -1816,5 +1816,11 @@
   "u": "notebooks/index.html#other-engines",
   "s": "Notebooks",
   "k": "redis sorted set rate limit clickhouse compression parts cassandra partition allow filtering"
+ },
+ {
+  "t": "Where to run the database: on-prem, managed, EC2 or Kubernetes",
+  "u": "designs/hosting/index.html",
+  "s": "Designs",
+  "k": "hosting on-prem cloud managed rds aurora cloud sql ec2 vm kubernetes operator serverless atlas tco cost who does what gp3 io2"
  }
 ]
