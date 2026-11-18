@@ -700,3 +700,17 @@ label.pk input{margin-top:4px;accent-color:var(--teal)}
 label.calc{display:flex;flex-direction:column;gap:4px;font-size:13.5px;font-weight:600}
 label.calc input{border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);padding:8px 10px;font:500 14px "IBM Plex Mono",monospace;width:100%;box-sizing:border-box}
 label.calc span{font-weight:400;color:var(--muted);font-size:12px;min-height:0}
+/* ===== Visuals: validated chart palette (dataviz validator, light and dark) ===== */
+:root{ --viz-a:#00897b; --viz-b:#b96a12; --viz-c:#6a5acd; }
+@media (prefers-color-scheme: dark){ :root{ --viz-a:#1f9a8c; --viz-b:#c97a2c; --viz-c:#8b7fe0; } }
+.viz{margin:14px 0 6px;max-width:900px}
+.viz .vt{font-weight:700;font-size:15px;margin:0 0 2px}
+.viz .vs{font-size:13px;color:var(--muted);margin:0 0 6px}
+.viz .vwrap{overflow-x:auto}
+.viz svg{display:block;width:100%;height:auto}
+.viz svg.wide{min-width:640px}
+.viz .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink);margin:2px 0 6px}
+.viz .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.viz rect.hit:hover + .bar, .viz .bar:hover{opacity:.85}
+.vizrow{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+@media(max-width:900px){.vizrow{grid-template-columns:1fr}}
