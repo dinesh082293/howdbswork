@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>More pictures</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-f092a073c7e3</guid>
+    <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
+    <description>more pictures: charts of every measured result on the Notebooks page, step-by-step timelines of lost updates and write skew, the write path and crash recovery on Compare, B-tree, LSM and column layouts on Families, an index-order diagram on Queries, an ownership map on Where to run it, and the oversell chart on the store design doc. Also fixed: some notebook text quoted an earlier run (see Corrections).</description>
+  </item>
+  <item>
     <title>Where to run the database</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-5e5b08211bc7</guid>
