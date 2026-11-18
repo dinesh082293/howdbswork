@@ -784,3 +784,49 @@ details.navgrp:last-of-type .navmenu{left:auto;right:0}
 .dbox{max-width:100%;overflow-wrap:anywhere}
 .fcol{min-width:0;max-width:100%}
 p .mono,li .mono,td .mono,dd .mono{overflow-wrap:anywhere}
+/* ===== Reading aids ===== */
+.readbar{position:fixed;top:0;left:0;right:0;height:3px;background:var(--viz-a);transform-origin:0 50%;transform:scaleX(0);z-index:80;pointer-events:none}
+.hlink{margin-left:8px;font-size:.6em;color:var(--muted);text-decoration:none;opacity:0;transition:opacity .15s;vertical-align:middle;font-family:"IBM Plex Mono",monospace}
+h2:hover .hlink,h3:hover .hlink,.hlink:focus{opacity:1}
+@media(hover:none){.hlink{display:none}}
+.tocbtn{position:fixed;right:18px;bottom:18px;z-index:70;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:11px 18px;font-weight:700;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.14);cursor:pointer}
+.tocbtn:hover{border-color:var(--teal)}
+.tocpanel{position:fixed;right:18px;bottom:72px;z-index:70;width:min(340px,calc(100vw - 36px));max-height:60vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(0,0,0,.18);padding:10px}
+.tocpanel .toch{margin:2px 8px 6px;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.tocpanel a{display:block;padding:7px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:14px;line-height:1.35}
+.tocpanel a.sub{padding-left:22px;font-size:13.5px;color:var(--muted)}
+.tocpanel a:hover{background:var(--surface2)}
+.tocpanel a.on{background:var(--teal-bg);color:var(--teal);font-weight:700}
+@media print{.readbar,.tocbtn,.tocpanel,.hlink{display:none !important}}
+.gterm{position:relative;border-bottom:1.5px dotted var(--teal);cursor:help}
+.gterm .gcard{display:none;position:absolute;left:0;top:calc(100% + 6px);z-index:65;width:min(300px,80vw);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.5;font-weight:400;box-shadow:0 10px 26px rgba(0,0,0,.16);text-align:left;white-space:normal}
+.gterm .gcard b{color:var(--teal)}
+.gterm:hover .gcard,.gterm:focus .gcard,.gterm:focus-within .gcard{display:block}
+.secnav-list a.read::after,.mapsec li a.read::after{content:" ✓";color:var(--teal);font-weight:700}
+.secnav-list a.on.read::after{color:var(--surface)}
+.readcount{color:var(--muted)}
+.quizsec{padding-top:6px}
+.quiz{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:20px;max-width:900px}
+.quiz h2{margin:2px 0 4px}
+.qz{border-top:1px dashed var(--line);padding:14px 0 10px}
+.qq{margin:0 0 8px;font-size:15.5px}
+.qopts{display:flex;flex-direction:column;gap:6px}
+.qopt{text-align:left;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14.5px;cursor:pointer}
+.qopt:hover:not(:disabled){border-color:var(--teal)}
+.qopt:disabled{cursor:default}
+.qopt.good{border-color:var(--viz-a);background:var(--teal-bg);font-weight:600}
+.qopt.bad{border-color:var(--viz-b);background:var(--my-bg)}
+.qe{margin:8px 0 0;font-size:14px;color:var(--ink);background:var(--surface2);border-radius:8px;padding:8px 10px}
+.qscore{font-weight:700;margin:10px 0 0}
+.oc-tabs .labbtn.on{background:var(--teal);border-color:var(--teal);color:var(--surface)}
+.oc-card{border-top:1px dashed var(--line);padding-top:14px}
+.oc-time{font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.06em;color:var(--muted);margin:0 0 6px;text-transform:uppercase}
+.oc-text{font-size:16px;margin:0 0 10px}
+.oc-evl{font-size:12px;color:var(--muted);margin:0 0 4px}
+.oc-ev{background:var(--term-bg);color:var(--term-ink);font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.6;border-radius:10px;padding:10px 12px;white-space:pre;overflow-x:auto;margin:0 0 12px}
+.oc-ch{display:flex;flex-direction:column;gap:6px}
+.qopt.meh{border-color:var(--viz-c);background:var(--surface2)}
+.oc-v{border-radius:8px;padding:9px 12px;margin:10px 0 8px;font-size:14.5px}
+.oc-v.good{background:var(--teal-bg)}
+.oc-v.ok{background:var(--surface2);border-left:4px solid var(--viz-c)}
+.oc-v.bad{background:var(--my-bg)}

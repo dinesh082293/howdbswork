@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call."/>
+<link rel="icon" href="data:,"/>
+<title>On call tonight · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><details class="navgrp"><summary>Learn</summary><div class="navmenu"><p class="navblurb">Start from zero: what happens when you write a row, the words you need, and a path to staff level.</p><a href="../start-here/index.html">Start here</a><a href="../concepts/index.html">Ten concepts</a><a href="../staff-path/index.html">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div></details><details class="navgrp"><summary>Engines</summary><div class="navmenu"><p class="navblurb">PostgreSQL, MySQL and MongoDB from the files on disk up, then side by side, then the wider landscape.</p><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL · InnoDB</a><a href="../mongodb/index.html">MongoDB · WiredTiger</a><a href="../compare/index.html">Same task, three engines</a><a href="../families/index.html">Database families</a></div></details><details class="navgrp"><summary>Practice</summary><div class="navmenu"><p class="navblurb">See it happen: simulations, a real PostgreSQL in your browser, and experiments run on real servers.</p><a href="../labs/index.html">Labs</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a></div></details><details class="navgrp"><summary>Design</summary><div class="navmenu cols2"><p class="navblurb">What kind of application data goes in which database, and why, as design docs.</p><a href="../designs/index.html">Application designs</a><a href="../designs/store-orders/index.html">Store orders and inventory</a><a href="../designs/payments-ledger/index.html">Payments and ledgers</a><a href="../designs/booking-reservations/index.html">Bookings and reservations</a><a href="../designs/accounts-sessions/index.html">Accounts and sessions</a><a href="../designs/multi-tenant-saas/index.html">Multi-tenant SaaS</a><a href="../designs/product-catalog/index.html">Product catalog</a><a href="../designs/social-feed/index.html">Social feed</a><a href="../designs/search-ai-retrieval/index.html">Search and AI retrieval</a><a href="../designs/chat-messaging/index.html">Chat and messaging</a><a href="../designs/iot-telemetry/index.html">IoT and telemetry</a><a href="../designs/audit-event-log/index.html">Audit and event logs</a><a href="../designs/leaderboards-counters/index.html">Leaderboards and counters</a><a href="../designs/analytics-reporting/index.html">Analytics and reporting</a><a href="../designs/template/index.html">Design doc template</a><a href="../designs/review/index.html">Submit a design for review</a></div></details><details class="navgrp"><summary>Get it right</summary><div class="navmenu"><p class="navblurb">The decisions and habits that decide whether the design holds up: queries, concurrency, durability and cost.</p><a href="../queries/index.html">Queries that look fine and are not</a><a href="../isolation/index.html">Lost updates and write skew</a><a href="../designs/anti-patterns/index.html">Anti-patterns</a><a href="../decisions/index.html">Decisions</a><a href="../decisions/sync-replication-failover/index.html">What a commit waits for</a><a href="../decisions/cost-model/index.html">Why the bill is huge</a></div></details><details class="navgrp here"><summary>Run it</summary><div class="navmenu"><p class="navblurb">Where it runs, how big it must be, how to change it, and what to do when it breaks.</p><a href="../designs/hosting/index.html">Where to run the database</a><a href="../cloud/index.html">On-prem vs cloud, by engine</a><a href="../designs/capacity/index.html">Capacity calculator</a><a href="../designs/migrations/index.html">Migration playbooks</a><a href="../cheat-sheet/index.html">Cheat sheet</a><a href="../reference/index.html">Reference: plans, logs, checklist</a><a href="../stories/index.html">Real failures</a><a href="../oncall/index.html" aria-current="page">On call tonight</a></div></details><details class="navgrp"><summary>About</summary><div class="navmenu"><p class="navblurb">Who writes this, what was corrected, what to read next, and how to reach me.</p><a href="../about/index.html">About</a><a href="../corrections/index.html">Corrections</a><a href="../references/index.html">Reading list</a><a href="../work-with-me/index.html">Work with me</a><a href="../sitemap/index.html">All pages</a></div></details></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<!-- CRUMBS:BEGIN --><div class="crumbs"><div class="wrap"><a href="../index.html">Home</a><span>›</span><a href="../sitemap/index.html#run">Run it</a><span>›</span><b aria-current="page">On call tonight</b><em>8 of 8</em></div></div><!-- CRUMBS:END -->
+<header class="hero"><div class="wrap">
+  <div class="kicker">On call tonight · three incidents</div>
+  <h1>On call tonight</h1>
+  <p class="qline">The pager goes off. What do you check first?</p>
+  <p class="learn"><b>You will learn:</b> how to work an incident from symptom to cause, one decision at a time, on three of the most common database pages.</p>
+  <p class="lede">Each incident starts with an alert. At every step you pick what to do, and you are told whether it was a good call, a workable one, or one that would make things worse, and why. The outputs are written to look like the real commands, and they are samples, not captured runs. The causes are the ones the rest of this site measures and explains.</p>
+</div></header>
+<section><div class="wrap">
+  <div class="oncall labcard" id="oncall">
+    <div class="oc-tabs labctl" role="group" aria-label="Pick an incident">
+      <button type="button" class="labbtn" data-s="disk">1 · The disk is filling up</button>
+      <button type="button" class="labbtn" data-s="locks">2 · Checkout is timing out</button>
+      <button type="button" class="labbtn" data-s="lag">3 · The replica is far behind</button>
+    </div>
+    <div class="oc-stage"></div>
+  </div>
+  <p class="sub">For the real thing, the <a href="../reference/index.html#checklist">first five minutes checklist</a> and the <a href="../paths/index.html#on-call">on-call reading path</a> are the pages to keep open.</p>
+</div></section>
+<!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Run it · page 8 of 8</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px">Where it runs, how big it must be, how to change it, and what to do when it breaks.</p><div class="secnav-list"><a href="../designs/hosting/index.html">Where to run the database</a><a href="../cloud/index.html">On-prem vs cloud, by engine</a><a href="../designs/capacity/index.html">Capacity calculator</a><a href="../designs/migrations/index.html">Migration playbooks</a><a href="../cheat-sheet/index.html">Cheat sheet</a><a href="../reference/index.html">Reference: plans, logs, checklist</a><a href="../stories/index.html">Real failures</a><a href="../oncall/index.html" aria-current="page" class="on">On call tonight</a></div><div class="secnav-pn"><a class="pn prev" href="../stories/index.html"><span>← Previous</span>Real failures</a><a class="pn next" href="../about/index.html"><span>Next section: About →</span>About</a></div></div></section><!-- SECTION:END -->
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../sitemap/index.html">All pages</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script src="../assets/js/reader.js"></script>
+<script src="../assets/js/oncall.js"></script>
+</body>
+</html>

@@ -31,6 +31,7 @@ def main():
         # Generated navigation (breadcrumb, section index, old next-page blocks) is not content either.
         text = re.sub(r"<!-- (CRUMBS|SECTION|SITEMAP):BEGIN -->.*?<!-- \1:END -->", "", text, flags=re.S)
         text = re.sub(r'<section class="nextpage">.*?</section>', "", text, flags=re.S)
+        text = re.sub(r"<script[^>]*></script>", "", text)
         return re.sub(r"\s+", " ", text)
 
     for line in git("status", "--porcelain", "--untracked-files=all").splitlines():
