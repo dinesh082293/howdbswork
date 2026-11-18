@@ -14,7 +14,7 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
@@ -64,6 +64,7 @@ Execution Time: 0.052 ms</pre>
     <div id="planOut" data-plan-out></div>
   </div>
 </div></section>
+<section style="padding:0"><div class="wrap"><p class="sub">To share a PostgreSQL plan with a colleague, I paste the JSON output of EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) into <a href="https://explain.dalibo.com/">explain.dalibo.com</a>. It draws the plan and highlights the slowest node. Do not paste plans that contain sensitive values.</p></div></section>
 <section id="compare" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Side by side · the same job, three ways</div>
   <h2>The same work, done by three different file layouts</h2>
@@ -180,6 +181,7 @@ Execution Time: 0.052 ms</pre>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
   <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>

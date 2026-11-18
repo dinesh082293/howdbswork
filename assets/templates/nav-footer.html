@@ -5,13 +5,15 @@
        {{ROOT}}       relative path back to the site root ("" on the home
                       page, "../" one level down, "../../" two levels down)
        {{BACK_HOME}}  the "Back to home" line, or empty on the home page
+       {{UPDATED}}    the page's "Last updated" date, from
+                      assets/data/updated.json (scripts/stamp-updated.py)
        {{STAMP_DOCS}} the "Checked against docs" line, built from
                       assets/data/engines.json (versions + stamp month)
      The "one invariant" paragraph lives here and nowhere else. -->
 <!-- NAV -->
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="{{ROOT}}index.html">Home</a><a href="{{ROOT}}postgresql/index.html">PostgreSQL</a><a href="{{ROOT}}mysql/index.html">MySQL</a><a href="{{ROOT}}mongodb/index.html">MongoDB</a><a href="{{ROOT}}cheat-sheet/index.html">Cheat Sheet</a><a href="{{ROOT}}staff-path/index.html">Staff Path</a><a href="{{ROOT}}compare/index.html">Compare</a><a href="{{ROOT}}labs/index.html">Labs</a><a href="{{ROOT}}decisions/index.html">Decisions</a><a href="{{ROOT}}reference/index.html">Reference</a><a href="{{ROOT}}cloud/index.html">Cloud</a><a href="{{ROOT}}stories/index.html">Stories</a><a href="{{ROOT}}about/index.html">About</a></div>
+  <div class="navlinks"><a href="{{ROOT}}index.html">Home</a><a href="{{ROOT}}postgresql/index.html">PostgreSQL</a><a href="{{ROOT}}mysql/index.html">MySQL</a><a href="{{ROOT}}mongodb/index.html">MongoDB</a><a href="{{ROOT}}cheat-sheet/index.html">Cheat Sheet</a><a href="{{ROOT}}staff-path/index.html">Staff Path</a><a href="{{ROOT}}compare/index.html">Compare</a><a href="{{ROOT}}labs/index.html">Labs</a><a href="{{ROOT}}notebooks/index.html">Notebooks</a><a href="{{ROOT}}families/index.html">Families</a><a href="{{ROOT}}decisions/index.html">Decisions</a><a href="{{ROOT}}reference/index.html">Reference</a><a href="{{ROOT}}cloud/index.html">Cloud</a><a href="{{ROOT}}stories/index.html">Stories</a><a href="{{ROOT}}about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <!-- FOOTER -->
@@ -20,5 +22,6 @@
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>{{STAMP_DOCS}}</p>
+  <p class="reviewed">Last updated {{UPDATED}} · <a href="{{ROOT}}corrections/index.html">Corrections</a> · <a href="{{ROOT}}feed.xml">RSS feed</a> · <a href="{{ROOT}}work-with-me/index.html">Work with me</a></p>
   <p><a href="{{ROOT}}references/index.html">References</a></p>
 </div></footer>

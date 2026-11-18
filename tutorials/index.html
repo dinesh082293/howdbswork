@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Three guided tutorials on a real PostgreSQL running in your browser: row versions, scan against index, and column order in an index."/>
+<link rel="icon" href="data:,"/>
+<title>Guided tutorials · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Tutorials · a real PostgreSQL in your browser</div>
+  <h1>Guided tutorials</h1>
+  <p class="qline">Can I see this happen myself, without installing anything?</p>
+  <p class="learn"><b>You will learn:</b> how an UPDATE creates a new row version, how many pages a scan reads against an index, and why the column order in an index matters.</p>
+  <p class="lede">Each tutorial runs a real PostgreSQL inside this page, using PGlite. Nothing is sent to a server. Every step asks a question first. Make a guess, run the step, then read the answer. I learn more from a wrong guess than from a right one, and I expect you do too.</p>
+  <div class="scnnav"><a href="#row-versions">1 · Row versions</a><a href="#scan-vs-index">2 · Scan against index</a><a href="#column-order">3 · Column order</a></div>
+</div></header>
+<section id="row-versions"><div class="wrap"><div class="tut"><h3>1. An UPDATE writes a new row version</h3><p class="labnote" style="margin:0 0 10px">Watch the physical address of a row, its ctid, change when you update it. Each step asks you to guess first.</p>
+<div class="labctl"><button class="labbtn tutstart" type="button">Start PostgreSQL in the browser</button></div><p class="labnote tutstatus">Not started.</p>
+<div class="tutstep"><p><b>Create a table with two rows.</b></p><pre class="sql">CREATE TABLE accounts (id int PRIMARY KEY, balance int);
+INSERT INTO accounts VALUES (1, 100), (2, 100);</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">Two rows, each stored as a tuple in the first 8 KB page of the table file.</div></div><div class="tutstep"><p><b>ctid is (page, slot). Guess first: where do the two rows sit?</b></p><pre class="sql">SELECT ctid, xmin, * FROM accounts ORDER BY id;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">Both are on page 0, in slots 1 and 2. xmin is the ID of the transaction that created each version.</div></div><div class="tutstep"><p><b>Guess first: does row 1 keep its ctid after an UPDATE?</b></p><pre class="sql">UPDATE accounts SET balance = 150 WHERE id = 1;
+SELECT ctid, xmin, * FROM accounts ORDER BY id;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">No. PostgreSQL wrote a new version of row 1 in a new slot, and xmin is now the updating transaction. The old version is still in the page, dead, until VACUUM removes it. That is MVCC, and it is why update-heavy tables need vacuum.</div></div><div class="tutstep"><p><b>Guess first: will VACUUM move row 1 back to slot 1?</b></p><pre class="sql">VACUUM accounts;
+SELECT ctid, * FROM accounts ORDER BY id;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">No. VACUUM marks the dead slot as free for future inserts, but live rows stay where they are. Only a rewrite, such as VACUUM FULL, moves them, and it locks the table while it does.</div></div></div></div></section>
+<section id="scan-vs-index"><div class="wrap"><div class="tut"><h3>2. Count the pages: a scan against an index</h3><p class="labnote" style="margin:0 0 10px">The same lookup twice. Read the Buffers line in each plan: it is the number of 8 KB pages the query touched.</p>
+<div class="labctl"><button class="labbtn tutstart" type="button">Start PostgreSQL in the browser</button></div><p class="labnote tutstatus">Not started.</p>
+<div class="tutstep"><p><b>Create 100,000 users.</b></p><pre class="sql">CREATE TABLE users AS
+  SELECT g AS id, &#x27;user&#x27; || g || &#x27;@example.com&#x27; AS email
+  FROM generate_series(1, 100000) g;
+ANALYZE users;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">A table of about 100,000 rows, a few hundred pages.</div></div><div class="tutstep"><p><b>Guess first: how many pages does finding one email read, with no index?</b></p><pre class="sql">EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM users WHERE email = &#x27;user50000@example.com&#x27;;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">A Seq Scan, and the Buffers line shows every page of the table. Nothing tells PostgreSQL where the row is, so it reads all of them.</div></div><div class="tutstep"><p><b>Guess first: and with an index on email?</b></p><pre class="sql">CREATE INDEX users_email ON users (email);
+EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM users WHERE email = &#x27;user50000@example.com&#x27;;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">An Index Scan with a handful of buffers: the index root, a leaf page, and the table page that holds the row. At 100 times the rows, the index adds about one page. The scan reads 100 times more.</div></div></div></div></section>
+<section id="column-order"><div class="wrap"><div class="tut"><h3>3. Column order in a two-column index</h3><p class="labnote" style="margin:0 0 10px">An index on (customer_id, day) is sorted by customer_id first. That order decides which queries it can help.</p>
+<div class="labctl"><button class="labbtn tutstart" type="button">Start PostgreSQL in the browser</button></div><p class="labnote tutstatus">Not started.</p>
+<div class="tutstep"><p><b>Create 100,000 orders and one two-column index.</b></p><pre class="sql">CREATE TABLE orders AS
+  SELECT g AS id, 1 + g % 1000 AS customer_id,
+         date &#x27;2025-01-01&#x27; + (g % 365) AS day
+  FROM generate_series(1, 100000) g;
+CREATE INDEX orders_cust_day ON orders (customer_id, day);
+ANALYZE orders;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">100,000 orders, 1,000 customers, one index with customer_id first.</div></div><div class="tutstep"><p><b>Guess first: does a filter on both columns use the index?</b></p><pre class="sql">EXPLAIN SELECT * FROM orders
+WHERE customer_id = 42 AND day &gt;= &#x27;2025-06-01&#x27;;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">Yes. The plan names orders_cust_day: the leading column narrows to one customer, then the day range is read in order.</div></div><div class="tutstep"><p><b>Guess first: and a filter on day alone, the second column?</b></p><pre class="sql">EXPLAIN SELECT * FROM orders WHERE day = &#x27;2025-06-01&#x27;;</pre><button class="labbtn" type="button">Run this step</button><pre class="res"></pre><div class="reveal">Usually a Seq Scan. The index is sorted by customer_id, so the rows for one day are spread across all of it. If you filter by day on its own, it needs its own index, or day first in this one. Check what your plan says: on some data the planner still scans the whole index.</div></div></div></div></section>
+<section style="padding-top:0"><div class="wrap"><p class="sub">The same SQL runs in any psql session. For MySQL and MongoDB, the same experiments are on the <a href="../notebooks/index.html">Notebooks</a> page, run on real servers.</p></div></section>
+<section class="nextpage"><div class="wrap"><a href="../labs/index.html"><div><span>Next</span>Labs<span>Crash it, flood it and lock it.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script type="module" src="../assets/js/tutorials.js"></script>
+</body>
+</html>

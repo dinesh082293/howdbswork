@@ -1,0 +1,114 @@
+# Notebook 5: four query shapes on 1,000,000 orders
+# run at: 2026-11-18 04:27 UTC
+# runner: Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 | 4 vCPU
+# PostgreSQL: 18.7 (Debian 18.7-1.pgdg13+2)
+# MySQL: 8.4.13
+# MongoDB: 8.0.38
+
+Table: orders(id, customer_id 1..10000, created_at over one year, status, total). Index on (customer_id, created_at).
+
+## PostgreSQL 18
+-- 1. both columns of the index, in order
+   SELECT * FROM nb_orders WHERE customer_id = 42 AND created_at >= '2026-06-01'
+  Bitmap Heap Scan on nb_orders (actual time=0.046..0.089 rows=44.00 loops=1)
+    Recheck Cond: ((customer_id = 42) AND (created_at >= '2026-06-01 00:00:00'::timestamp without time zone))
+    Heap Blocks: exact=44
+    Buffers: shared hit=44 read=4
+    ->  Bitmap Index Scan on nb_orders_cust_created (actual time=0.036..0.037 rows=44.00 loops=1)
+          Index Cond: ((customer_id = 42) AND (created_at >= '2026-06-01 00:00:00'::timestamp without time zone))
+          Index Searches: 1
+          Buffers: shared read=4
+  Planning:
+    Buffers: shared hit=33
+  Planning Time: 0.149 ms
+  Execution Time: 0.102 ms
+-- 2. only the second column of the index
+   SELECT * FROM nb_orders WHERE created_at >= '2026-11-17'
+  Seq Scan on nb_orders (actual time=20.432..39.127 rows=1440.00 loops=1)
+    Filter: (created_at >= '2026-11-17 00:00:00'::timestamp without time zone)
+    Rows Removed by Filter: 998560
+    Buffers: shared hit=7353
+  Planning Time: 0.054 ms
+  Execution Time: 39.180 ms
+-- 3. covering: every column needed is in the index
+   SELECT customer_id, created_at FROM nb_orders WHERE customer_id = 42
+  Index Only Scan using nb_orders_cust_created on nb_orders (actual time=0.024..0.042 rows=100.00 loops=1)
+    Index Cond: (customer_id = 42)
+    Heap Fetches: 0
+    Index Searches: 1
+    Buffers: shared hit=5
+  Planning Time: 0.081 ms
+  Execution Time: 0.062 ms
+-- 4a. paging with OFFSET
+   SELECT * FROM nb_orders ORDER BY id OFFSET 500000 LIMIT 20
+  Limit (actual time=64.443..64.447 rows=20.00 loops=1)
+    Buffers: shared hit=5046
+    ->  Index Scan using nb_orders_pkey on nb_orders (actual time=0.019..51.008 rows=500020.00 loops=1)
+          Index Searches: 1
+          Buffers: shared hit=5046
+  Planning:
+    Buffers: shared read=3
+  Planning Time: 0.150 ms
+  Execution Time: 64.461 ms
+-- 4b. paging with a key (keyset)
+   SELECT * FROM nb_orders WHERE id > 500000 ORDER BY id LIMIT 20
+  Limit (actual time=0.040..0.047 rows=20.00 loops=1)
+    Buffers: shared hit=4
+    ->  Index Scan using nb_orders_pkey on nb_orders (actual time=0.039..0.043 rows=20.00 loops=1)
+          Index Cond: (id > 500000)
+          Index Searches: 1
+          Buffers: shared hit=4
+  Planning:
+    Buffers: shared hit=3
+  Planning Time: 0.097 ms
+  Execution Time: 0.060 ms
+-- 5. N+1 from the application: latest order for 100 customers
+  100 queries, one per customer: 20.1 ms | 1 query with = ANY(list): 1.6 ms
+
+## MySQL 8.4
+-- 1. both columns of the index, in order
+   SELECT * FROM nb_orders WHERE customer_id = 42 AND created_at >= '2026-06-01'
+  -> Index range scan on nb_orders using nb_orders_cust_created over (customer_id = 42 AND '2026-06-01 00:00:00' <= created_at), with index condition: ((nb_orders.customer_id = 42) and (nb_orders.created_at >= TIMESTAMP'2026-06-01 00:00:00'))  (cost=20.1 rows=44) (actual time=0.138..0.144 rows=44 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 44
+-- 2. only the second column of the index
+   SELECT * FROM nb_orders WHERE created_at >= '2026-11-17'
+  -> Filter: (nb_orders.created_at >= TIMESTAMP'2026-11-17 00:00:00')  (cost=100443 rows=332398) (actual time=118..224 rows=1440 loops=1)
+      -> Table scan on nb_orders  (cost=100443 rows=997294) (actual time=0.229..177 rows=1e+6 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 1000001
+-- 3. covering: every column needed is in the index
+   SELECT customer_id, created_at FROM nb_orders WHERE customer_id = 42
+  -> Covering index lookup on nb_orders using nb_orders_cust_created (customer_id=42)  (cost=11.2 rows=100) (actual time=0.0166..0.0239 rows=100 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 100
+-- 4a. paging with OFFSET
+   SELECT * FROM nb_orders ORDER BY id LIMIT 20 OFFSET 500000
+  -> Limit/Offset: 20/500000 row(s)  (cost=25427 rows=20) (actual time=98.8..98.8 rows=20 loops=1)
+      -> Index scan on nb_orders using PRIMARY  (cost=25427 rows=500020) (actual time=0.253..86.1 rows=500020 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 500019
+-- 4b. paging with a key (keyset)
+   SELECT * FROM nb_orders WHERE id > 500000 ORDER BY id LIMIT 20
+  -> Limit: 20 row(s)  (cost=99876 rows=20) (actual time=0.252..0.257 rows=20 loops=1)
+      -> Filter: (nb_orders.id > 500000)  (cost=99876 rows=498647) (actual time=0.251..0.256 rows=20 loops=1)
+          -> Index range scan on nb_orders using PRIMARY over (500000 < id)  (cost=99876 rows=498647) (actual time=0.25..0.253 rows=20 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 19
+
+## MongoDB 8.0
+-- 1. both fields of the index, in order
+   {"find": "nb_orders", "filter": {"customer_id": 42, "created_at": {"$gte": "2026-06-01 00:00:00"}}}
+  plan: FETCH <- IXSCAN
+  nReturned: 44 | totalKeysExamined: 44 | totalDocsExamined: 44 | executionTimeMillis: 1
+-- 2. only the second field of the index
+   {"find": "nb_orders", "filter": {"created_at": {"$gte": "2026-11-17 00:00:00"}}}
+  plan: COLLSCAN
+  nReturned: 1440 | totalKeysExamined: 0 | totalDocsExamined: 1000000 | executionTimeMillis: 436
+-- 3. covering: projection only uses indexed fields
+   {"find": "nb_orders", "filter": {"customer_id": 42}, "projection": {"_id": 0, "customer_id": 1, "created_at": 1}}
+  plan: PROJECTION_COVERED <- IXSCAN
+  nReturned: 100 | totalKeysExamined: 100 | totalDocsExamined: 0 | executionTimeMillis: 0
+-- 4a. paging with skip
+   {"find": "nb_orders", "filter": {}, "sort": {"_id": 1}, "skip": 500000, "limit": 20}
+  plan: LIMIT <- FETCH <- SKIP <- IXSCAN
+  nReturned: 20 | totalKeysExamined: 500020 | totalDocsExamined: 20 | executionTimeMillis: 231
+-- 4b. paging with a key (keyset)
+   {"find": "nb_orders", "filter": {"_id": {"$gt": 500000}}, "sort": {"_id": 1}, "limit": 20}
+  plan: LIMIT <- FETCH <- IXSCAN
+  nReturned: 20 | totalKeysExamined: 20 | totalDocsExamined: 20 | executionTimeMillis: 0

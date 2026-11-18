@@ -1636,5 +1636,59 @@
   "u": "decisions/cost-model/index.html",
   "s": "Decisions",
   "k": "cost bill overpay rightsizing instance iops replicas unused indexes retention reserved"
+ },
+ {
+  "t": "Lab notebooks: five experiments run on real servers",
+  "u": "notebooks/index.html",
+  "s": "Notebooks",
+  "k": "notebooks experiments real output long transaction commit cost scan index anomalies queries"
+ },
+ {
+  "t": "Notebook: what one open transaction costs",
+  "u": "notebooks/index.html#long-transaction",
+  "s": "Notebooks",
+  "k": "long transaction bloat vacuum dead tuples history list length purge transactionLifetimeLimitSeconds"
+ },
+ {
+  "t": "Notebook: what waiting for the log costs per commit",
+  "u": "notebooks/index.html#commit-cost",
+  "s": "Notebooks",
+  "k": "commit cost synchronous_commit innodb_flush_log_at_trx_commit sync_binlog write concern j"
+ },
+ {
+  "t": "Database families: B-tree, LSM, column, in-memory, distributed SQL, vector",
+  "u": "families/index.html",
+  "s": "Families",
+  "k": "families lsm btree column store redis cassandra rocksdb clickhouse cockroachdb spanner aurora vector pgvector elasticsearch timescale"
+ },
+ {
+  "t": "Queries that look fine and are not",
+  "u": "queries/index.html",
+  "s": "Queries",
+  "k": "query composite index column order covering index only scan offset keyset pagination n+1 orm"
+ },
+ {
+  "t": "Lost updates and write skew",
+  "u": "isolation/index.html",
+  "s": "Isolation",
+  "k": "isolation lost update write skew serializable repeatable read read committed for update anomalies"
+ },
+ {
+  "t": "Guided tutorials on PostgreSQL in your browser",
+  "u": "tutorials/index.html",
+  "s": "Tutorials",
+  "k": "tutorial pglite browser ctid xmin explain buffers column order"
+ },
+ {
+  "t": "Corrections",
+  "u": "corrections/index.html",
+  "s": "Corrections",
+  "k": "corrections errata fixes"
+ },
+ {
+  "t": "Work with me: database health check",
+  "u": "work-with-me/index.html",
+  "s": "Work with me",
+  "k": "consulting health check review hire"
  }
 ]

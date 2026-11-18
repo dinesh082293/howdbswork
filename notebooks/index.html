@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Five experiments run on real PostgreSQL 18, MySQL 8.4 and MongoDB 8.0 servers, with the captured output: long transactions, commit cost, scans, concurrency anomalies and query shapes."/>
+<link rel="icon" href="data:,"/>
+<title>Lab notebooks · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Notebooks · experiments run on real servers</div>
+  <h1>Lab notebooks</h1>
+  <p class="qline">What actually happens when you run it?</p>
+  <p class="learn"><b>You will learn:</b> what a long transaction, a durable commit, an index, two concurrent sessions and five common query shapes cost, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.</p>
+  <p class="lede">Most pages on this site explain a mechanism. These notebooks show it happening. I wrote five experiments, and a workflow in this site's repository runs them on real servers, PostgreSQL 18.7, MySQL 8.4.13 and MongoDB 8.0.38, on a GitHub Actions runner. The output below is pasted as captured, with the run time. Nothing in it is written by hand.</p>
+  <div class="scnnav"><a href="#long-transaction">1 · Long transaction</a><a href="#commit-cost">2 · Commit cost</a><a href="#scan-vs-index">3 · Scan against index</a><a href="#anomalies">4 · Two sessions</a><a href="#queries">5 · Query shapes</a></div>
+</div></header>
+<section style="padding-top:12px;padding-bottom:0"><div class="wrap">
+  <div class="derive"><b class="dt">How these were run</b>A GitHub Actions runner with 4 vCPUs on a cloud VM, one container per engine, stock settings unless the notebook says otherwise. Timings belong to that machine. Your hardware will give different absolute numbers, and the comparisons are what carry over. The experiment code is <a href="https://github.com/dinesh082293/howdbswork/blob/main/scripts/notebooks/run_all.py">run_all.py</a> and the workflow is <a href="https://github.com/dinesh082293/howdbswork/blob/main/.github/workflows/lab-notebooks.yml">lab-notebooks.yml</a>. Run them yourself and compare.</div>
+</div></section>
+<section id="long-transaction"><div class="wrap">
+  <div class="kicker">Notebook 1 · run 2026-11-18 04:25 UTC</div>
+  <h2>What one open transaction costs</h2>
+  <p class="sub">I held one transaction open in each engine and kept writing from a second session. This is the experiment behind <a href="../compare/index.html#long-transaction">Compare, scenario 4</a>.</p>
+  <details class="predict"><summary>PostgreSQL: 100,000 rows, a snapshot held open, then 500,000 row updates. How many dead row versions can VACUUM remove while the snapshot is open?</summary><p>None of the 500,000. VACUUM says so itself: "500000 are dead but not yet removable". Once the snapshot is released, the same VACUUM removes all of them, and the file stays at 29 MB.</p></details>
+  <pre class="nbout"><b>## PostgreSQL 18: a REPEATABLE READ snapshot held open while 5 x 100,000 rows are updated</b>
+table size at start: 5784 kB
+session A: BEGIN ISOLATION LEVEL REPEATABLE READ; SELECT count(*) -&gt; 100000
+session B: 5 x UPDATE nb_accounts SET balance = balance + 1  (500,000 new row versions)
+table size now: 29 MB
+session B: VACUUM (VERBOSE) nb_accounts while A is still open:
+  pages: 0 removed, 2655 remain, 2655 scanned (100.00% of total), 0 eagerly scanned
+  tuples: 0 removed, 600000 remain, 500000 are dead but not yet removable
+  removable cutoff: 757, which was 5 XIDs old when operation ended
+dead tuples (pg_stat_user_tables): 700000
+session A: ROLLBACK  (the snapshot is released)
+session B: VACUUM (VERBOSE) nb_accounts again:
+  pages: 0 removed, 2655 remain, 2655 scanned (100.00% of total), 0 eagerly scanned
+  tuples: 500000 removed, 100000 remain, 0 are dead but not yet removable
+  removable cutoff: 762, which was 0 XIDs old when operation ended
+  index &quot;nb_accounts_pkey&quot;: pages: 1099 in total, 0 newly deleted, 0 currently deleted, 0 reusable
+table size after VACUUM: 29 MB  &lt;- VACUUM made the space reusable; the file did not shrink
+
+<b>## MySQL 8.4: a consistent snapshot held open while 5 x 100,000 rows are updated</b>
+History list length at start: 6
+session A: START TRANSACTION WITH CONSISTENT SNAPSHOT; SELECT COUNT(*) -&gt; 100000
+session B: 5 x UPDATE nb_accounts SET balance = balance + 1
+History list length after 5 big UPDATEs: 11  &lt;- it counts transactions waiting for purge, not rows
+session B: 20,000 single-row UPDATEs, each its own transaction (12 s)
+History list length while A is still open: 20006
+session A: COMMIT  (the old read view is released)
+   2s after COMMIT, History list length: 0
+
+<b>## MongoDB 8.0: a multi-document transaction left open past the lifetime limit</b>
+transactionLifetimeLimitSeconds default: 60 | set to 10 for this run
+session A: startTransaction; updateOne({_id: 1}, {$inc: {balance: 10}})
+session A: waits 25 s without committing
+session A: commitTransaction -&gt; OperationFailure: Transaction with { txnNumber: 2 } has been aborted.
+serverStatus().transactions.totalAborted: before 0 after 1
+balance now: 100</pre>
+  <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>PostgreSQL:</b> the table grew from 5.8 MB to 29 MB while one idle snapshot was open, and VACUUM could not remove a single dead version until it closed. After that, the space became reusable, but the file did not shrink.</li><li><b>MySQL:</b> the History list length counts transactions waiting for purge, not rows. Five updates of 100,000 rows each added 5. Twenty thousand one-row updates added 20,000. Two seconds after the old snapshot closed, purge had cleared it to 0.</li><li><b>MongoDB:</b> the engine does not let the problem grow. Past transactionLifetimeLimitSeconds the transaction is aborted, the commit fails, and the write is gone. It is 60 seconds by default, and I lowered it to 10 for the run.</li></ul>
+  <p class="labnote">Full transcript: <a href="../assets/data/notebooks/long-transaction.txt">long-transaction.txt</a></p>
+</div></section><section id="commit-cost"><div class="wrap">
+  <div class="kicker">Notebook 2 · run 2026-11-18 04:26 UTC</div>
+  <h2>What waiting for the log costs per commit</h2>
+  <p class="sub">Two thousand single-row inserts, one commit each, with the durable setting on and then off. I ran the durable setting twice, before and after, to see whether the number holds.</p>
+  <details class="predict"><summary>How much faster are commits when they do not wait for the log flush: 10 percent, 2 times, or 10 times?</summary><p>On this machine, about 1.7 times in PostgreSQL and about 2.3 times in MySQL and MongoDB. On a disk where a flush costs more, such as network-attached storage, the gap is larger. Measure on your own disk before you decide.</p></details>
+  <pre class="nbout"><b>## PostgreSQL 18: synchronous_commit on vs off</b>
+  synchronous_commit = on     4238 commits/s  0.236 ms per commit
+  synchronous_commit = off    7607 commits/s  0.131 ms per commit
+  synchronous_commit = on     4131 commits/s  0.242 ms per commit
+
+<b>## MySQL 8.4: innodb_flush_log_at_trx_commit and sync_binlog</b>
+  innodb_flush_log_at_trx_commit = 1, sync_binlog = 1    1770 commits/s  0.565 ms per commit
+  innodb_flush_log_at_trx_commit = 2, sync_binlog = 0    4013 commits/s  0.249 ms per commit
+  innodb_flush_log_at_trx_commit = 1, sync_binlog = 1    1798 commits/s  0.556 ms per commit
+
+<b>## MongoDB 8.0 (single-node replica set): write concern j: true vs j: false</b>
+  w: 1, j: true     1048 commits/s  0.954 ms per commit
+  w: 1, j: false    2716 commits/s  0.368 ms per commit
+  w: 1, j: true     1121 commits/s  0.892 ms per commit</pre>
+  <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>The durable setting cost 0.29 ms per commit in PostgreSQL, 0.63 ms in MySQL with both logs synced, and 0.92 ms in MongoDB with j: true. The faster settings trade that time for a window of acknowledged commits that a crash can lose.</li><li>MySQL with both settings at 1 syncs two logs per commit, the redo log and the binlog. Turning both down more than doubled its commit rate.</li><li>The repeated runs agree within a few percent, so the difference is the setting, not noise. The absolute numbers belong to this runner, not to your server.</li></ul>
+  <p class="labnote">Full transcript: <a href="../assets/data/notebooks/commit-cost.txt">commit-cost.txt</a></p>
+</div></section><section id="scan-vs-index"><div class="wrap">
+  <div class="kicker">Notebook 3 · run 2026-11-18 04:26 UTC</div>
+  <h2>One lookup in a million rows, without and with an index</h2>
+  <p class="sub">The same lookup by email, on 1,000,000 rows, in all three engines. Parallel query is off in PostgreSQL so that the plan shows one plain scan.</p>
+  <details class="predict"><summary>With an index on email, how many 8 KB pages does PostgreSQL read to find one row out of a million?</summary><p>Four: shared hit=1 read=3. Without the index it read 19,231, every page of the 150 MB table.</p></details>
+  <pre class="nbout"><b>## PostgreSQL 18</b>
+table size: 150 MB | 19231 pages of 8 KB
+<b>-- no index on email (parallel query off, to show one plain scan)</b>
+  Seq Scan on nb_users (actual time=40.672..70.484 rows=1.00 loops=1)
+    Filter: (email = &#x27;user500000@example.com&#x27;::text)
+    Rows Removed by Filter: 999999
+    Buffers: shared hit=14362 read=4869
+  Planning:
+    Buffers: shared hit=25 read=1
+  Planning Time: 0.122 ms
+  Execution Time: 70.500 ms
+<b>-- after CREATE INDEX nb_users_email ON nb_users (email)</b>
+  Index Scan using nb_users_email on nb_users (actual time=0.027..0.027 rows=1.00 loops=1)
+    Index Cond: (email = &#x27;user500000@example.com&#x27;::text)
+    Index Searches: 1
+    Buffers: shared hit=1 read=3
+  Planning:
+    Buffers: shared hit=16 read=1
+  Planning Time: 0.158 ms
+  Execution Time: 0.038 ms
+
+<b>## MySQL 8.4</b>
+<b>-- no index on email</b>
+  -&gt; Filter: (nb_users.email = &#x27;user500000@example.com&#x27;)  (cost=104422 rows=99032) (actual time=361..509 rows=1 loops=1)
+      -&gt; Table scan on nb_users  (cost=104422 rows=990318) (actual time=0.971..437 rows=1e+6 loops=1)
+  Handler_read_rnd_next (rows read in a scan): 1000001 | Handler_read_key (index lookups): 1 | Handler_read_next: 0
+<b>-- after CREATE INDEX nb_users_email ON nb_users (email)</b>
+  -&gt; Index lookup on nb_users using nb_users_email (email=&#x27;user500000@example.com&#x27;)  (cost=0.706 rows=1) (actual time=0.47..0.471 rows=1 loops=1)
+  Handler_read_rnd_next (rows read in a scan): 0 | Handler_read_key (index lookups): 1 | Handler_read_next: 1
+
+<b>## MongoDB 8.0</b>
+<b>-- no index on email</b>
+  plan: COLLSCAN
+  nReturned: 1 | totalKeysExamined: 0 | totalDocsExamined: 1000000 | executionTimeMillis: 436
+<b>-- after createIndex({email: 1})</b>
+  plan: FETCH &lt;- IXSCAN
+  nReturned: 1 | totalKeysExamined: 1 | totalDocsExamined: 1 | executionTimeMillis: 0</pre>
+  <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>PostgreSQL:</b> 19,231 pages and 75 ms without the index, 4 pages and 0.03 ms with it.</li><li><b>MySQL:</b> 1,000,001 rows read by the table scan in 391 ms. With the index, one lookup in 0.24 ms.</li><li><b>MongoDB:</b> 1,000,000 documents examined in 481 ms. With the index, 1 key and 1 document, under a millisecond.</li><li>The ratio is the point: the index made the lookup more than a thousand times cheaper in every engine, and the gap grows with the table.</li></ul>
+  <p class="labnote">Full transcript: <a href="../assets/data/notebooks/scan-vs-index.txt">scan-vs-index.txt</a></p>
+</div></section><section id="anomalies"><div class="wrap">
+  <div class="kicker">Notebook 4 · run 2026-11-18 04:27 UTC</div>
+  <h2>Two sessions, interleaved step by step</h2>
+  <p class="sub">Two classic concurrency bugs, lost update and write skew, run in each engine with the default settings and then with the fix. Every step is real, in the order shown. The <a href="../isolation/index.html">Isolation page</a> explains each one.</p>
+  <details class="predict"><summary>Two sessions each read a balance of 100 and add to it, +10 and +20. With the default settings, does PostgreSQL keep both deposits?</summary><p>No. At READ COMMITTED, the default, the final balance is 120, and the +10 is lost. At REPEATABLE READ, PostgreSQL refuses the second update instead.</p></details>
+  <pre class="nbout"><b>## PostgreSQL 18, lost update, READ COMMITTED (the default)</b>
+  A: SELECT balance -&gt; 100
+  B: SELECT balance -&gt; 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120; COMMIT -&gt; ok
+  final balance: 120  (expected 130 if both deposits count)
+
+<b>## PostgreSQL 18, lost update, REPEATABLE READ</b>
+  A: SELECT balance -&gt; 100
+  B: SELECT balance -&gt; 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120 -&gt; ERROR: could not serialize access due to concurrent update
+  final balance: 110  (expected 130 if both deposits count)
+
+<b>## MySQL 8.4, lost update, REPEATABLE READ (the default)</b>
+  A: SELECT balance -&gt; 100
+  B: SELECT balance -&gt; 100
+  A: UPDATE balance = 110; COMMIT
+  B: UPDATE balance = 120; COMMIT -&gt; ok
+  final balance: 120  (expected 130 if both deposits count)
+
+<b>## MySQL 8.4, lost update fixed with SELECT ... FOR UPDATE</b>
+  A: SELECT balance FOR UPDATE -&gt; 100
+  B: SELECT balance FOR UPDATE -&gt; still waiting after 1.5 s: True
+  A: UPDATE balance = 110; COMMIT
+  B: ... the SELECT FOR UPDATE returns -&gt; 110
+  B: UPDATE balance = 130; COMMIT -&gt; ok
+  final balance: 130  (expected 130 if both deposits count)
+
+<b>## MongoDB 8.0, lost update, inside two transactions</b>
+  A: findOne -&gt; balance 100
+  B: findOne -&gt; balance 100
+  A: updateOne balance = 110; commitTransaction
+  B: updateOne balance = 120 -&gt; OperationFailure: Caused by :: Write conflict during plan execution and yielding is disabled. :: Please retry your operation or multi-document transaction.
+  final balance: 110  (expected 130 if both deposits count)
+
+<b>## PostgreSQL 18, write skew, REPEATABLE READ</b>
+  A: SELECT count(*) WHERE on_call -&gt; 2
+  B: SELECT count(*) WHERE on_call -&gt; 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -&gt; ok
+  B: COMMIT -&gt; ok
+  doctors on call at the end: 0  (the rule was: at least 1)
+
+<b>## PostgreSQL 18, write skew, SERIALIZABLE</b>
+  A: SELECT count(*) WHERE on_call -&gt; 2
+  B: SELECT count(*) WHERE on_call -&gt; 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -&gt; ok
+  B: COMMIT -&gt; ERROR: could not serialize access due to read/write dependencies among transactions
+  doctors on call at the end: 1  (the rule was: at least 1)
+
+<b>## MySQL 8.4, write skew, REPEATABLE READ (the default)</b>
+  A: SELECT COUNT(*) WHERE on_call -&gt; 2
+  B: SELECT COUNT(*) WHERE on_call -&gt; 2
+  A: UPDATE alice off call
+  B: UPDATE bob off call
+  A: COMMIT -&gt; ok
+  B: COMMIT -&gt; ok
+  doctors on call at the end: 0  (the rule was: at least 1)
+
+<b>## MongoDB 8.0, write skew, inside two transactions</b>
+  A: countDocuments({on_call: true}) -&gt; 2
+  B: countDocuments({on_call: true}) -&gt; 2
+  A: updateOne alice off call
+  B: updateOne bob off call
+  A: commitTransaction -&gt; ok
+  B: commitTransaction -&gt; ok
+  doctors on call at the end: 0  (the rule was: at least 1)</pre>
+  <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>The defaults do not protect a read-then-write pattern. PostgreSQL at READ COMMITTED and MySQL at REPEATABLE READ both lost a deposit without any error.</li><li>PostgreSQL at REPEATABLE READ and MongoDB inside transactions refused the second write. The application has to catch that error and retry.</li><li>Write skew got past PostgreSQL at REPEATABLE READ, MySQL at its default, and MongoDB inside transactions. Only PostgreSQL SERIALIZABLE stopped it.</li><li>The fix I ran, SELECT ... FOR UPDATE in MySQL, kept both deposits: the second session waited for the first, then read 110. The other common fix is to make the update relative, SET balance = balance + 10, so that it never writes a stale value.</li></ul>
+  <p class="labnote">Full transcript: <a href="../assets/data/notebooks/anomalies.txt">anomalies.txt</a></p>
+</div></section><section id="queries"><div class="wrap">
+  <div class="kicker">Notebook 5 · run 2026-11-18 04:27 UTC</div>
+  <h2>Five query shapes on a million orders</h2>
+  <p class="sub">An orders table with an index on (customer_id, created_at), and five query shapes that show up in most application code. The <a href="../queries/index.html">Queries page</a> walks through each one.</p>
+  <details class="predict"><summary>The index is on (customer_id, created_at). A query filters only on created_at. Does any of the three engines use the index?</summary><p>None of them did. PostgreSQL and MySQL scanned the whole table, and MongoDB did a COLLSCAN, because the index is sorted by customer_id first.</p></details>
+  <pre class="nbout"><b>## PostgreSQL 18</b>
+<b>-- 1. both columns of the index, in order</b>
+   SELECT * FROM nb_orders WHERE customer_id = 42 AND created_at &gt;= &#x27;2026-06-01&#x27;
+  Bitmap Heap Scan on nb_orders (actual time=0.046..0.089 rows=44.00 loops=1)
+    Recheck Cond: ((customer_id = 42) AND (created_at &gt;= &#x27;2026-06-01 00:00:00&#x27;::timestamp without time zone))
+    Heap Blocks: exact=44
+    Buffers: shared hit=44 read=4
+    -&gt;  Bitmap Index Scan on nb_orders_cust_created (actual time=0.036..0.037 rows=44.00 loops=1)
+          Index Cond: ((customer_id = 42) AND (created_at &gt;= &#x27;2026-06-01 00:00:00&#x27;::timestamp without time zone))
+          Index Searches: 1
+          Buffers: shared read=4
+  Planning:
+    Buffers: shared hit=33
+  Planning Time: 0.149 ms
+  Execution Time: 0.102 ms
+<b>-- 2. only the second column of the index</b>
+   SELECT * FROM nb_orders WHERE created_at &gt;= &#x27;2026-11-17&#x27;
+  Seq Scan on nb_orders (actual time=20.432..39.127 rows=1440.00 loops=1)
+    Filter: (created_at &gt;= &#x27;2026-11-17 00:00:00&#x27;::timestamp without time zone)
+    Rows Removed by Filter: 998560
+    Buffers: shared hit=7353
+  Planning Time: 0.054 ms
+  Execution Time: 39.180 ms
+<b>-- 3. covering: every column needed is in the index</b>
+   SELECT customer_id, created_at FROM nb_orders WHERE customer_id = 42
+  Index Only Scan using nb_orders_cust_created on nb_orders (actual time=0.024..0.042 rows=100.00 loops=1)
+    Index Cond: (customer_id = 42)
+    Heap Fetches: 0
+    Index Searches: 1
+    Buffers: shared hit=5
+  Planning Time: 0.081 ms
+  Execution Time: 0.062 ms
+<b>-- 4a. paging with OFFSET</b>
+   SELECT * FROM nb_orders ORDER BY id OFFSET 500000 LIMIT 20
+  Limit (actual time=64.443..64.447 rows=20.00 loops=1)
+    Buffers: shared hit=5046
+    -&gt;  Index Scan using nb_orders_pkey on nb_orders (actual time=0.019..51.008 rows=500020.00 loops=1)
+          Index Searches: 1
+          Buffers: shared hit=5046
+  Planning:
+    Buffers: shared read=3
+  Planning Time: 0.150 ms
+  Execution Time: 64.461 ms
+<b>-- 4b. paging with a key (keyset)</b>
+   SELECT * FROM nb_orders WHERE id &gt; 500000 ORDER BY id LIMIT 20
+  Limit (actual time=0.040..0.047 rows=20.00 loops=1)
+    Buffers: shared hit=4
+    -&gt;  Index Scan using nb_orders_pkey on nb_orders (actual time=0.039..0.043 rows=20.00 loops=1)
+          Index Cond: (id &gt; 500000)
+          Index Searches: 1
+          Buffers: shared hit=4
+  Planning:
+    Buffers: shared hit=3
+  Planning Time: 0.097 ms
+  Execution Time: 0.060 ms
+<b>-- 5. N+1 from the application: latest order for 100 customers</b>
+  100 queries, one per customer: 20.1 ms | 1 query with = ANY(list): 1.6 ms
+
+<b>## MySQL 8.4</b>
+<b>-- 1. both columns of the index, in order</b>
+   SELECT * FROM nb_orders WHERE customer_id = 42 AND created_at &gt;= &#x27;2026-06-01&#x27;
+  -&gt; Index range scan on nb_orders using nb_orders_cust_created over (customer_id = 42 AND &#x27;2026-06-01 00:00:00&#x27; &lt;= created_at), with index condition: ((nb_orders.customer_id = 42) and (nb_orders.created_at &gt;= TIMESTAMP&#x27;2026-06-01 00:00:00&#x27;))  (cost=20.1 rows=44) (actual time=0.138..0.144 rows=44 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 44
+<b>-- 2. only the second column of the index</b>
+   SELECT * FROM nb_orders WHERE created_at &gt;= &#x27;2026-11-17&#x27;
+  -&gt; Filter: (nb_orders.created_at &gt;= TIMESTAMP&#x27;2026-11-17 00:00:00&#x27;)  (cost=100443 rows=332398) (actual time=118..224 rows=1440 loops=1)
+      -&gt; Table scan on nb_orders  (cost=100443 rows=997294) (actual time=0.229..177 rows=1e+6 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 1000001
+<b>-- 3. covering: every column needed is in the index</b>
+   SELECT customer_id, created_at FROM nb_orders WHERE customer_id = 42
+  -&gt; Covering index lookup on nb_orders using nb_orders_cust_created (customer_id=42)  (cost=11.2 rows=100) (actual time=0.0166..0.0239 rows=100 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 100
+<b>-- 4a. paging with OFFSET</b>
+   SELECT * FROM nb_orders ORDER BY id LIMIT 20 OFFSET 500000
+  -&gt; Limit/Offset: 20/500000 row(s)  (cost=25427 rows=20) (actual time=98.8..98.8 rows=20 loops=1)
+      -&gt; Index scan on nb_orders using PRIMARY  (cost=25427 rows=500020) (actual time=0.253..86.1 rows=500020 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 500019
+<b>-- 4b. paging with a key (keyset)</b>
+   SELECT * FROM nb_orders WHERE id &gt; 500000 ORDER BY id LIMIT 20
+  -&gt; Limit: 20 row(s)  (cost=99876 rows=20) (actual time=0.252..0.257 rows=20 loops=1)
+      -&gt; Filter: (nb_orders.id &gt; 500000)  (cost=99876 rows=498647) (actual time=0.251..0.256 rows=20 loops=1)
+          -&gt; Index range scan on nb_orders using PRIMARY over (500000 &lt; id)  (cost=99876 rows=498647) (actual time=0.25..0.253 rows=20 loops=1)
+  rows touched (Handler_read_next + Handler_read_rnd_next): 19
+
+<b>## MongoDB 8.0</b>
+<b>-- 1. both fields of the index, in order</b>
+   {&quot;find&quot;: &quot;nb_orders&quot;, &quot;filter&quot;: {&quot;customer_id&quot;: 42, &quot;created_at&quot;: {&quot;$gte&quot;: &quot;2026-06-01 00:00:00&quot;}}}
+  plan: FETCH &lt;- IXSCAN
+  nReturned: 44 | totalKeysExamined: 44 | totalDocsExamined: 44 | executionTimeMillis: 1
+<b>-- 2. only the second field of the index</b>
+   {&quot;find&quot;: &quot;nb_orders&quot;, &quot;filter&quot;: {&quot;created_at&quot;: {&quot;$gte&quot;: &quot;2026-11-17 00:00:00&quot;}}}
+  plan: COLLSCAN
+  nReturned: 1440 | totalKeysExamined: 0 | totalDocsExamined: 1000000 | executionTimeMillis: 436
+<b>-- 3. covering: projection only uses indexed fields</b>
+   {&quot;find&quot;: &quot;nb_orders&quot;, &quot;filter&quot;: {&quot;customer_id&quot;: 42}, &quot;projection&quot;: {&quot;_id&quot;: 0, &quot;customer_id&quot;: 1, &quot;created_at&quot;: 1}}
+  plan: PROJECTION_COVERED &lt;- IXSCAN
+  nReturned: 100 | totalKeysExamined: 100 | totalDocsExamined: 0 | executionTimeMillis: 0
+<b>-- 4a. paging with skip</b>
+   {&quot;find&quot;: &quot;nb_orders&quot;, &quot;filter&quot;: {}, &quot;sort&quot;: {&quot;_id&quot;: 1}, &quot;skip&quot;: 500000, &quot;limit&quot;: 20}
+  plan: LIMIT &lt;- FETCH &lt;- SKIP &lt;- IXSCAN
+  nReturned: 20 | totalKeysExamined: 500020 | totalDocsExamined: 20 | executionTimeMillis: 231
+<b>-- 4b. paging with a key (keyset)</b>
+   {&quot;find&quot;: &quot;nb_orders&quot;, &quot;filter&quot;: {&quot;_id&quot;: {&quot;$gt&quot;: 500000}}, &quot;sort&quot;: {&quot;_id&quot;: 1}, &quot;limit&quot;: 20}
+  plan: LIMIT &lt;- FETCH &lt;- IXSCAN
+  nReturned: 20 | totalKeysExamined: 20 | totalDocsExamined: 20 | executionTimeMillis: 0</pre>
+  <h3 style="font-size:17px;margin:16px 0 6px">What I take from it</h3>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Column order decides which queries an index helps: both columns, in order, read 44 rows. The second column alone read the whole table in all three engines.</li><li>A covering query never touched the table: PostgreSQL showed Heap Fetches: 0, MySQL said "Covering index lookup", and MongoDB examined 0 documents.</li><li>OFFSET 500000 walked 500,020 index entries to return 20 rows in every engine. Paging by key read 20.</li><li>One query for 100 customers took 1.6 ms. One query per customer took 20.1 ms. Round trips add up long before the database is busy.</li></ul>
+  <p class="labnote">Full transcript: <a href="../assets/data/notebooks/queries.txt">queries.txt</a></p>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../tutorials/index.html"><div><span>Next</span>Guided tutorials<span>Run it yourself, on a PostgreSQL in your browser.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+</body>
+</html>

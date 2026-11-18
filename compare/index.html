@@ -14,14 +14,14 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../notebooks/index.html">Notebooks</a><a href="../families/index.html">Families</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <div class="kicker">Compare · same task, three engines</div>
   <h1>Same task, three engines</h1>
   <p class="qline">What does each engine do when the same thing happens to it?</p>
-  <p class="lede">Four everyday events: a write, a crash, a lagging replica, and a long transaction. For each, the three engines side by side, with the file names, the order of events, and a command to see it yourself.</p>
+  <p class="lede">I keep coming back to four events when I compare engines, because each one exposes how an engine is built. Four everyday events: a write, a crash, a lagging replica, and a long transaction. For each, the three engines side by side, with the file names, the order of events, and a command to see it yourself.</p>
   <div class="scnnav"><a href="#write">1 · A write</a><a href="#crash">2 · A crash</a><a href="#replica-lag">3 · A lagging replica</a><a href="#long-transaction">4 · A long transaction</a></div>
 </div></header>
 <section id="write"><div class="wrap">
@@ -36,7 +36,7 @@ SHOW VARIABLES LIKE 'sync_binlog';
 -- both 1 is the fully durable setting</pre></div><p class="price"><b>The price</b>Two logs mean two syncs per commit. Group commit shares them across concurrent transactions, which is why the cost is smaller than it sounds.</p></div><div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB · WiredTiger</h3><ol><li>The document change is applied in the WiredTiger cache. On a replica set, the oplog entry is written in the same transaction.</li><li>A journal record is written to <span class="mono">journal/WiredTigerLog.*</span>, flushed about every 100 ms, or at once for <span class="mono">j: true</span>.</li><li>The acknowledgment depends on the write concern. <span class="mono">w: 1</span> returns after the primary applied the write. <span class="mono">w: "majority"</span> waits until most members have it in their journal.</li><li>A checkpoint, about every 60 seconds, writes the cache to <span class="mono">collection-*.wt</span>.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">rs.conf().writeConcernMajorityJournalDefault
 db.getSiblingDB('local').oplog.rs.find().sort({$natural: -1}).limit(1)</pre></div><p class="price"><b>The price</b>A write acknowledged at <span class="mono">w: 1</span> but not yet replicated can be rolled back if the primary fails.</p></div></div>
   <p class="takeaway">All three write the log first. The real difference is what the client was told, and when. Check the write concern or the commit setting before you trust an acknowledgment.</p>
-  <p class="sub" style="margin-top:6px">Go deeper: <a href="../start-here/index.html#insert">follow one insert, end to end</a>, or <a href="../decisions/sync-replication-failover/index.html">what a commit waits for</a>.</p>
+  <p class="sub" style="margin-top:6px">Measured: <a href="../notebooks/index.html#commit-cost">Notebook 2</a> times the durable setting against the fast one. Go deeper: <a href="../start-here/index.html#insert">follow one insert, end to end</a>, or <a href="../decisions/sync-replication-failover/index.html">what a commit waits for</a>.</p>
 </div></section>
 <section id="crash"><div class="wrap">
   <div class="kicker">Scenario 2 of 4</div>
@@ -78,7 +78,7 @@ FROM information_schema.innodb_trx
 ORDER BY trx_started LIMIT 5;
 SHOW ENGINE INNODB STATUS\G  -- History list length</pre></div><p class="price"><b>The price</b>Undo tablespaces are truncated only once they pass <span class="mono">innodb_max_undo_log_size</span> and purge has caught up, so the extra space can linger after the transaction ends.</p></div><div class="cmp3-col mo"><h3><span class="dot" style="background:var(--mo)"></span>MongoDB · WiredTiger</h3><ol><li>A multi-document transaction is limited by <span class="mono">transactionLifetimeLimitSeconds</span>, 60 seconds by default. After that it is aborted.</li><li>A long read cursor or snapshot keeps older versions of documents in the WiredTiger cache.</li><li>The cache fills with history, and eviction starts to compete with the workload.</li><li>Writers can see more retries from write conflicts if the transaction held documents.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">db.currentOp({ active: true, secs_running: { $gt: 60 } })</pre></div><p class="price"><b>The price</b>MongoDB limits the problem with a hard timeout. The other two let it grow until you notice.</p></div></div>
   <p class="takeaway">A long transaction is a debt: the database has to remember the past for as long as the transaction is open. PostgreSQL shows it as bloat, MySQL as undo, and MongoDB as cache pressure.</p>
-  <p class="sub" style="margin-top:6px">Related: <a href="../staff-path/index.html#labs">the MVCC timeline lab</a> shows why the snapshot is taken at the first query, not at BEGIN.</p>
+  <p class="sub" style="margin-top:6px">Measured: <a href="../notebooks/index.html#long-transaction">Notebook 1</a> runs this on all three engines. Related: <a href="../staff-path/index.html#labs">the MVCC timeline lab</a> shows why the snapshot is taken at the first query, not at BEGIN.</p>
 </div></section>
 <section style="padding-top:0"><div class="wrap">
   <div class="derive"><b class="dt">What is verified here</b>The behavior on this page follows the documentation of PostgreSQL 18, MySQL 8.4 and MongoDB 8.0. The commands are standard and match the engine pages, but this page is not yet part of the automated command check that runs on the engine pages. The log lines are paraphrased, so match on the key words, not the exact text.</div>
@@ -90,6 +90,7 @@ SHOW ENGINE INNODB STATUS\G  -- History list length</pre></div><p class="price">
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
   <p><a href="../references/index.html">References</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
