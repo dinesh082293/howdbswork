@@ -34,6 +34,14 @@
 <section id="where"><div class="wrap">
   <div class="kicker">Where the money goes</div>
   <h2>Six lines on the invoice</h2>
+  <figure class="viz labcard" id="billChart" style="max-width:980px">
+    <p class="vt">Where your bill goes</p>
+    <p class="vs">The starting numbers are an example, not a benchmark. Replace them with the lines from your own monthly invoice. The largest line is drawn in orange.</p>
+    <div class="calcgrid"><label class="calc">Compute (primary and replicas)<input type="number" id="bCompute" value="5200" min="0" step="any"/></label><label class="calc">Storage<input type="number" id="bStorage" value="1400" min="0" step="any"/></label><label class="calc">I/O and throughput<input type="number" id="bIO" value="900" min="0" step="any"/></label><label class="calc">Backups and snapshots<input type="number" id="bBackup" value="600" min="0" step="any"/></label><label class="calc">Network transfer<input type="number" id="bNet" value="500" min="0" step="any"/></label><label class="calc">Non-production copies<input type="number" id="bNonprod" value="1800" min="0" step="any"/></label></div>
+    <div class="vwrap" id="billSvg"></div>
+    <p class="labnote" id="billNote" aria-live="polite"></p>
+    <ul id="billLevers" style="font-size:14px;line-height:1.6;margin:6px 0 0;padding-left:20px"></ul>
+  </figure>
   <table class="cmp-table" style="width:100%;max-width:900px;border-collapse:collapse;font-size:14.5px">
     <thead><tr style="text-align:left;border-bottom:2px solid var(--line)"><th style="padding:8px">Line</th><th style="padding:8px">What it buys</th><th style="padding:8px">What usually inflates it</th></tr></thead>
     <tbody>
@@ -121,11 +129,12 @@ GROUP BY state ORDER BY 2 DESC;</pre></div><p class="price"><b>The fix</b>Put a 
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
-  <p class="reviewed">Last updated Nov 17, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
   <p><a href="../../references/index.html">References</a></p>
 </div></footer><script src="../../assets/js/main.js"></script>
 <script src="../../assets/js/copy-buttons.js"></script>
 <script src="../../assets/js/search.js"></script>
 <script src="../../assets/js/polish.js"></script>
+<script src="../../assets/js/billchart.js"></script>
 </body>
 </html>
