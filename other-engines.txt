@@ -1,0 +1,45 @@
+# Notebook 7: Redis, ClickHouse and Cassandra, the stores the design docs add
+# run at: 2026-11-18 21:22 UTC
+# runner: Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 | 4 vCPU
+# PostgreSQL: 18.7 (Debian 18.7-1.pgdg13+2)
+# MySQL: 8.4.13
+# MongoDB: 8.0.38
+
+# Redis: 7.4.12
+## Redis: a leaderboard of 100,000 players in a sorted set
+  memory for the sorted set: 9.6 MB
+  10,000 ZINCRBY, one round trip each: 14000 ops/s, 0.071 ms each
+  ZREVRANGE top 10: 0.185 ms -> player:11605=100045, player:52494=100036, player:4988=100022 ...
+  ZREVRANK player:42: rank 67405 in 0.121 ms
+## Redis: a fixed-window rate limit, 5 requests per window
+  request 1 -> count 1 -> allowed
+  request 2 -> count 2 -> allowed
+  request 3 -> count 3 -> allowed
+  request 4 -> count 4 -> allowed
+  request 5 -> count 5 -> allowed
+  request 6 -> count 6 -> rejected
+  request 7 -> count 7 -> rejected
+  TTL on the key: 2 s; waiting 3 s ...
+  key exists after the window: False -> the next request starts a new window
+
+# ClickHouse: 24.8.14.39
+## ClickHouse: 10,000,000 order lines, then a report that reads two columns
+  INSERT ... SELECT of 10,000,000 rows in one statement: 3.1 s
+  column created_at   on disk 38.26 MiB  uncompressed 38.09 MiB  ratio 1.0x
+  column customer_id  on disk 5.80 MiB   uncompressed 76.18 MiB  ratio 13.1x
+  column note         on disk 595.98 KiB uncompressed 123.79 MiB ratio 212.7x
+  column order_id     on disk 43.71 MiB  uncompressed 76.18 MiB  ratio 1.7x
+  column price_cents  on disk 2.89 MiB   uncompressed 76.18 MiB  ratio 26.4x
+  column qty          on disk 195.09 KiB uncompressed 38.09 MiB  ratio 199.9x
+  column sku          on disk 120.89 KiB uncompressed 14.32 MiB  ratio 121.3x
+  revenue by SKU, last 30 days, top 3: [] in 3 ms
+  rows read: 0, bytes read: 0
+## ClickHouse: one row per INSERT against one batch
+  200 single-row INSERTs: 0.23 s, 200 parts on disk (merges paused to show it)
+  1 INSERT of 200 rows:   0.004 s, 1 part on disk
+
+# Cassandra: 5.0.9
+## Cassandra: chat messages, partitioned by (conversation_id, bucket)
+  100,000 messages across 1,000 conversations written in 8.0 s
+  latest 20 messages of conversation 42 (one partition): 20 rows in 2.4 ms, newest first: message 99042
+  query by sender_id (not part of the key): rejected -> "Cannot execute this query as it might involve data filtering and thus may have unpredictable performance. If you want to execute this query despite the performance unpredictability, use ALLOW FILTERI
