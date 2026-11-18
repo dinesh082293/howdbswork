@@ -14,16 +14,20 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>The cheat sheet</h1>
+  <p class="qline">What are the eight rules to know before touching production?</p>
+  <p class="learn"><b>You will learn:</b> Eight rules per engine, each with the file and the command, short enough to scan in a minute.</p>
 </div></header>
+<aside class="myth"><span class="mk">Common myth</span><p class="m">COMMIT writes the row into the table file.</p><p class="t">COMMIT writes the log record to disk. The table file is updated later, at a checkpoint, on its own schedule. If the server crashes in between, the restart replays the log into the table file. That ordering is the whole reason a commit survives a crash.</p></aside>
 <section id="cheatsheet"><div class="wrap">
   <div class="kicker">The cheat sheet · the whole site in 24 rules, on three screens</div>
   <h2>Each engine, in 8 rules. Scan it in a minute, then go deep.</h2>
   <p class="sub">I built this page for the moment you need an answer fast. You already know the deep dives exist. This page is the short version. One rule. One plain line. One small picture built from real file names and real commands. Every number here is the number from the deep dive it links to. 4 buffers, not "fast". A 100 MB sort limit, not "large". Read a card first. When a rule surprises you, follow its <b style="color:var(--ink)">Deep dive ↓</b> link. It drops you into the full problem and diagram pair in the guided path. After this page you will be able to name the rule that explains a slow query, and know exactly where to go deep on it.</p>
+  <div class="printbar"><button class="btn" type="button" data-print-engine="pg">Print the PostgreSQL sheet</button><button class="btn" type="button" data-print-engine="my">Print the MySQL sheet</button><button class="btn" type="button" data-print-engine="mo">Print the MongoDB sheet</button><button class="btn" type="button" data-print-engine="all">Print all three</button></div>
   <div class="cs-jump" style="margin-bottom:20px">
     <a href="#cs-pg" style="border-color:var(--line);background:var(--surface);color:var(--ink)">PostgreSQL: 8 rules</a>
     <a href="#cs-my" style="border-color:var(--line);background:var(--surface);color:var(--ink)">MySQL · InnoDB: 8 rules</a>
@@ -123,6 +127,7 @@ FROM pg_stat_activity ORDER BY age DESC;  <span class="c">← the top row owns y
   </div>
   <p class="sub" style="margin-top:20px"><b style="color:var(--ink)">Before you leave, check this:</b> run <span class="mono">EXPLAIN (ANALYZE, BUFFERS)</span> on your slowest query and read <span class="mono">Buffers: shared hit</span>. If the plan says Seq Scan on a big table, you found your next fix.</p>
 </div></section>
+<section class="nextpage"><div class="wrap"><a href="../reference/index.html"><div><span>Next</span>Reference<span>Explain output, the five logs and the go-live checklist.</span></div><i>→</i></a></div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
@@ -133,5 +138,6 @@ FROM pg_stat_activity ORDER BY age DESC;  <span class="c">← the top row owns y
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
 </body>
 </html>

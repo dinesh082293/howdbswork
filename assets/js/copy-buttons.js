@@ -6,7 +6,7 @@
 (function () {
   function blocks() {
     var out = [];
-    var sels = ['.lookcmd', 'pre.term', 'pre.evidence'];
+    var sels = ['.lookcmd', 'pre.term', 'pre.evidence', 'pre.cmdshow'];
     for (var i = 0; i < sels.length; i++) {
       var nodes = document.querySelectorAll(sels[i]);
       for (var j = 0; j < nodes.length; j++) out.push(nodes[j]);

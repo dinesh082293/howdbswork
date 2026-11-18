@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Three reading paths: prepare for a database interview, handle an incident on call, or choose a database. Each is an ordered list of pages."/>
+<link rel="icon" href="data:,"/>
+<title>Pick your door · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Reading paths · three ways in</div>
+  <h1>Pick your door</h1>
+  <p class="qline">Why are you here today?</p>
+  <p class="lede">The rest of the site is organized by topic. People arrive with a goal. Each path below is an ordered list of pages, with one line on why each one is there.</p>
+  <div class="pathgrid">
+    <a class="pathcard" href="#interview"><h3>I have an interview</h3><p>Staff DBA, DBRE or database engineer loops. Seven steps, in the order that builds an answer.</p><span class="go">See the path →</span></a>
+    <a class="pathcard" href="#on-call"><h3>I am on call and something is on fire</h3><p>Name the layer, run the checklist, find the queue. Eight pages, built to be read under pressure.</p><span class="go">See the path →</span></a>
+    <a class="pathcard" href="#choosing"><h3>I am choosing a database</h3><p>From the workload to the engine to the bill. Five steps.</p><span class="go">See the path →</span></a>
+  </div>
+</div></header>
+<section id="interview"><div class="wrap">
+  <div class="kicker">Path 1</div>
+  <h2>I have an interview</h2>
+  <p class="sub">Aim to be able to draw each step on a whiteboard and say what the file is called. That is the level these loops ask for.</p>
+  <ol class="steplist"><li><b><a href="../start-here/index.html#rules">Three rules that run every database</a></b><span>Durability, pages and the log. Everything else hangs off these three.</span></li><li><b><a href="../start-here/index.html#insert">Follow one insert, end to end</a></b><span>The story you will tell in the first five minutes of any internals question.</span></li><li><b><a href="../compare/index.html">Same task, three engines</a></b><span>A write, a crash, a lagging replica and a long transaction. These four come up in almost every loop.</span></li><li><b><a href="../labs/index.html#crash">Break a database in the crash lab</a></b><span>Say what recovery replays, and why a checkpoint shortens it.</span></li><li><b><a href="../staff-path/index.html#labs">The MVCC timeline and the B+ tree</a></b><span>Snapshots, row versions, page splits and why index depth stays small.</span></li><li><b><a href="../decisions/sync-replication-failover/index.html">What a commit waits for</a></b><span>The sync and async trade-off, with the price of each.</span></li><li><b><a href="../stories/index.html">Sixteen real failures</a></b><span>Pick three. Be ready to say what broke, what fixed it and what you would check first.</span></li></ol>
+</div></section>
+<section id="on-call"><div class="wrap">
+  <div class="kicker">Path 2</div>
+  <h2>I am on call and something is on fire</h2>
+  <p class="sub">Read top to bottom. Do not skip the first step. Most of the time spent in an incident is spent looking in the wrong layer.</p>
+  <ol class="steplist"><li><b><a href="../postgresql/index.html#architecture">Name the layer first: process, memory or disk</a></b><span>Every incident lives in one of the three. Naming it first saves ten minutes.</span></li><li><b><a href="../reference/index.html#checklist">The first five minutes checklist</a></b><span>What to check, in order, before you touch anything.</span></li><li><b><a href="../reference/index.html#logs-pattern">Which log answers which question</a></b><span>Five logs run everything. Know which one to open.</span></li><li><b><a href="../cheat-sheet/index.html#cheatsheet">The cheat sheet</a></b><span>Eight rules per engine, short enough to read while paged.</span></li><li><b><a href="../compare/index.html#replica-lag">Replica behind?</a></b><span>Where the queue builds, and the command that shows it.</span></li><li><b><a href="../labs/index.html#lock-pileup">Sessions piling up on one row?</a></b><span>How fast a pool runs out, and which timeouts to set.</span></li><li><b><a href="../compare/index.html#long-transaction">Disk or bloat growing without a reason?</a></b><span>A long transaction is the usual cause. Find it first.</span></li><li><b><a href="../postgresql/index.html#commands">Engine commands to run</a></b><span>The commands for <a href="../postgresql/index.html#commands">PostgreSQL</a>, <a href="../mysql/index.html#commands">MySQL</a> and <a href="../mongodb/index.html#commands">MongoDB</a>.</span></li></ol>
+</div></section>
+<section id="choosing"><div class="wrap">
+  <div class="kicker">Path 3</div>
+  <h2>I am choosing a database</h2>
+  <p class="sub">The engine is the last decision to make. First write down the workload: what reads, what writes, how big, and what a lost commit costs.</p>
+  <ol class="steplist"><li><b><a href="../start-here/index.html#design">Pick the database from the workload</a></b><span>Start from what the application does, not from fashion.</span></li><li><b><a href="../compare/index.html">The three engines, side by side</a></b><span>How each behaves in the same four situations.</span></li><li><b><a href="../cloud/index.html#cloud">On-prem or cloud</a></b><span>What changes when someone else runs the database.</span></li><li><b><a href="../decisions/cost-model/index.html">Why the bill is huge, and what to cut first</a></b><span>Where the money goes, and a safe order for cutting it.</span></li><li><b><a href="../start-here/index.html#hurting">When it starts to hurt</a></b><span>The signs that you outgrew a single node, and the options after.</span></li></ol>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../start-here/index.html"><div><span>Next</span>Start here<span>The beginner course, if you are not sure where to begin.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../references/index.html">References</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+</body>
+</html>

@@ -1576,5 +1576,65 @@
   "u": "concepts/index.html#read-replica",
   "s": "Concepts",
   "k": "read replica lag primary writes reads behind"
+ },
+ {
+  "t": "Same task, three engines: a write, a crash, a lagging replica, a long transaction",
+  "u": "compare/index.html",
+  "s": "Compare",
+  "k": "compare same task three engines write crash replica lag long transaction side by side"
+ },
+ {
+  "t": "What happens when I commit one row?",
+  "u": "compare/index.html#write",
+  "s": "Compare",
+  "k": "commit write wal redo journal fsync synchronous_commit write concern"
+ },
+ {
+  "t": "The server is killed in the middle of traffic. What does the restart do?",
+  "u": "compare/index.html#crash",
+  "s": "Compare",
+  "k": "crash recovery restart redo replay checkpoint undo doublewrite journal"
+ },
+ {
+  "t": "A replica falls behind. Why, and how do I see it?",
+  "u": "compare/index.html#replica-lag",
+  "s": "Compare",
+  "k": "replica lag replication behind pg_stat_replication seconds_behind_source oplog window"
+ },
+ {
+  "t": "One transaction stays open for an hour. What does it cost?",
+  "u": "compare/index.html#long-transaction",
+  "s": "Compare",
+  "k": "long transaction bloat vacuum history list length undo idle in transaction"
+ },
+ {
+  "t": "Labs: crash recovery, replica lag, lock pile-up, page count",
+  "u": "labs/index.html",
+  "s": "Labs",
+  "k": "labs simulation crash recovery replica lag lock pile-up page count scan index"
+ },
+ {
+  "t": "Crash recovery lab: pull the plug, then restart",
+  "u": "labs/index.html#crash",
+  "s": "Labs",
+  "k": "crash lab checkpoint redo replay lost commits durable"
+ },
+ {
+  "t": "Lock pile-up lab: one hot row, an exhausted pool",
+  "u": "labs/index.html#lock-pileup",
+  "s": "Labs",
+  "k": "lock wait pool exhausted hot row lock_timeout innodb_lock_wait_timeout maxTimeMS"
+ },
+ {
+  "t": "Pick your door: reading paths for interview, on call, choosing a database",
+  "u": "paths/index.html",
+  "s": "Paths",
+  "k": "paths reading list interview on call incident choosing database"
+ },
+ {
+  "t": "Why is my database bill huge?",
+  "u": "decisions/cost-model/index.html",
+  "s": "Decisions",
+  "k": "cost bill overpay rightsizing instance iops replicas unused indexes retention reserved"
  }
 ]

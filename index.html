@@ -14,7 +14,7 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="index.html">Home</a><a href="postgresql/index.html">PostgreSQL</a><a href="mysql/index.html">MySQL</a><a href="mongodb/index.html">MongoDB</a><a href="cheat-sheet/index.html">Cheat Sheet</a><a href="staff-path/index.html">Staff Path</a><a href="decisions/index.html">Decisions</a><a href="reference/index.html">Reference</a><a href="cloud/index.html">Cloud</a><a href="stories/index.html">Stories</a><a href="about/index.html">About</a></div>
+  <div class="navlinks"><a href="index.html">Home</a><a href="postgresql/index.html">PostgreSQL</a><a href="mysql/index.html">MySQL</a><a href="mongodb/index.html">MongoDB</a><a href="cheat-sheet/index.html">Cheat Sheet</a><a href="staff-path/index.html">Staff Path</a><a href="compare/index.html">Compare</a><a href="labs/index.html">Labs</a><a href="decisions/index.html">Decisions</a><a href="reference/index.html">Reference</a><a href="cloud/index.html">Cloud</a><a href="stories/index.html">Stories</a><a href="about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
@@ -27,6 +27,7 @@
   <div class="herocta">
     <a class="btn primary" href="start-here/index.html#insert">Follow one insert, end to end →</a>
     <a class="btn" href="staff-path/index.html#path">Guided path: zero to architect</a>
+    <a class="btn" href="paths/index.html">Find your path</a>
   </div>
 
   <p style="font-weight:700;margin:0 0 10px">Three engines, one job. Each solves it with a different physical layout, and the layout is the behavior. Once you know where the bytes sit, the performance follows.</p>
@@ -48,6 +49,17 @@
       <p style="margin:10px 0 0"><a href="mongodb/index.html">MongoDB · WiredTiger →</a></p></div>
   </div>
 </div></header>
+<section id="doors" style="padding-top:6px"><div class="wrap">
+  <div class="kicker">Pick your door</div>
+  <h2>Why are you here today?</h2>
+  <p class="sub">The pages are organized by topic. People arrive with a goal, so each door below is an ordered reading list.</p>
+  <div class="pathgrid">
+    <a class="pathcard" href="paths/index.html#interview"><h3>I have an interview</h3><p>Seven steps, in the order that builds an answer.</p><span class="go">Open the path →</span></a>
+    <a class="pathcard" href="paths/index.html#on-call"><h3>I am on call and something is on fire</h3><p>Name the layer, run the checklist, find the queue.</p><span class="go">Open the path →</span></a>
+    <a class="pathcard" href="paths/index.html#choosing"><h3>I am choosing a database</h3><p>From the workload, to the engine, to the bill.</p><span class="go">Open the path →</span></a>
+  </div>
+  <p class="sub">Prefer to compare? <a href="compare/index.html">Same task, three engines</a>, or <a href="labs/index.html">break a database in the labs</a>.</p>
+</div></section>
 <section id="architecture" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Architecture · one picture per engine</div>
   <h2>Same job, same shape, different files</h2>
@@ -224,6 +236,7 @@
   <h2>What changed, and when</h2>
   <p class="sub">I update this log when the site changes. New pages first. Small fixes do not get a line.</p>
   <ul style="font-size:15px;line-height:1.8;max-width:760px">
+    <li><b>Nov 17, 2026:</b> a round of reading changes: a Compare page (same task, three engines: a write, a crash, a lagging replica, a long transaction), a Labs page with four simulations (crash recovery, replica lag, lock pile-up, page count), three reading paths for interviews, incidents and choosing a database, a Decision 10 page on why a database bill is huge, a "common myth" box on the main pages, a question line, a reading time and a next-page link on every page, and print buttons for each engine on the cheat sheet.</li>
     <li><b>Nov 17, 2026:</b> 10 database concepts, explained in a library: index, normalization, join, transaction, ACID, deadlock, partitioning, sharding, replication, read replica, one picture and one line each.</li>
     <li><b>Nov 17, 2026:</b> architecture is now a full layered picture per engine: every process, memory area, and file as its own box, with the write path and the read path traced through it, on home and on each engine page. The log box is marked, because the log is written first.</li>
     <li><b>Nov 17, 2026:</b> comparisons now look like the Process vs Thread vs Async graphic: three columns, one color each, a tiny diagram in every row, numbered steps, and a bar for the one number that matters. The three engines on home, the three durability modes on Decisions, and the four ways to run each engine on Cloud.</li>
@@ -241,6 +254,7 @@
     <li><b>Nov 15, 2026:</b> the cheat sheet added, three sheets, one per engine, eight rules each.</li>
   </ul>
 </div></section>
+<section class="nextpage"><div class="wrap"><a href="start-here/index.html"><div><span>Next</span>Start here<span>The full beginner course: follow one insert, end to end.</span></div><i>→</i></a></div></section>
 <footer><div class="wrap">
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
@@ -250,6 +264,7 @@
 </div></footer><script src="assets/js/main.js"></script>
 <script src="assets/js/copy-buttons.js"></script>
 <script src="assets/js/search.js"></script>
+<script src="assets/js/polish.js"></script>
 <script type="module" src="assets/js/pglite-panel.js"></script>
 </body>
 </html>

@@ -14,12 +14,15 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>Reference</h1>
+  <p class="qline">Which numbers and plan lines should worry me?</p>
+  <p class="learn"><b>You will learn:</b> Read EXPLAIN output, the five logs that run everything, and a go-live checklist.</p>
 </div></header>
+<aside class="myth"><span class="mk">Common myth</span><p class="m">A sequential scan in EXPLAIN is always a problem.</p><p class="t">On a small table, or when the query needs a large share of the rows, reading the table in order is cheaper than jumping through an index, and the planner chooses it on purpose. Worry about a scan on a large table that returns a few rows.</p></aside>
 <section id="evidence" style="padding-top:6px"><div class="wrap">
   <p class="sub">I use this page when something is already slow. You do not need a theory here. You need a number that tells you what to fix. This page gives you that number three ways. Annotated EXPLAIN output. A side-by-side compare of the three engines. The five log failure modes. And a checklist with the exact commands. After it, you will read a plan and name the fix from one line.</p>
   <div class="kicker">In Practice · reading the evidence</div>
@@ -170,6 +173,7 @@ Execution Time: 0.052 ms</pre>
   </div>
   <p class="sub" style="margin-top:20px"><b style="color:var(--ink)">Before you leave, check this:</b> run <span class="mono">SELECT pid, state, wait_event_type, now()-query_start AS age, query FROM pg_stat_activity WHERE state != 'idle' ORDER BY age DESC;</span> If one old query sits at the top, you found your incident.</p>
 </div></section>
+<section class="nextpage"><div class="wrap"><a href="../labs/index.html"><div><span>Next</span>Labs<span>Break a database and watch what happens.</span></div><i>→</i></a></div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
@@ -180,6 +184,7 @@ Execution Time: 0.052 ms</pre>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
 <script src="../assets/js/explain-tool.js"></script>
 </body>
 </html>

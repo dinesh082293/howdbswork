@@ -14,11 +14,13 @@
 <body>
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
-  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
+  <div class="navlinks"><a href="../index.html">Home</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL</a><a href="../mongodb/index.html">MongoDB</a><a href="../cheat-sheet/index.html">Cheat Sheet</a><a href="../staff-path/index.html">Staff Path</a><a href="../compare/index.html">Compare</a><a href="../labs/index.html">Labs</a><a href="../decisions/index.html">Decisions</a><a href="../reference/index.html">Reference</a><a href="../cloud/index.html">Cloud</a><a href="../stories/index.html">Stories</a><a href="../about/index.html">About</a></div>
   <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
 </div></nav>
 <header class="hero"><div class="wrap">
   <h1>Zero to staff-level</h1>
+  <p class="qline">How do I get from zero to staff level, one step at a time?</p>
+  <p class="learn"><b>You will learn:</b> Work through six levels, with labs you can break: a B+ tree, an MVCC timeline and a table-growth slider.</p>
 </div></header>
 <section id="path"><div class="wrap">
   <div class="kicker">Guided path · 6 levels · one problem, one diagram each</div>
@@ -153,6 +155,7 @@ oplog last event time:   Sat Nov 15 2026 01:11:48 GMT-08:00  <span class="c">←
 db.getSiblingDB('local').oplog.rs.stats().maxSize</div></div><div class="wib"><h5>Where it breaks</h5><p><b>Root cause:</b> The oplog was sized once, as a percentage of disk at install time, and never recomputed after write volume grew, the window is a rate-dependent quantity being managed as a static one.</p><p><b>Blast radius:</b> A routine 4-hour maintenance exceeds a 3-hour window; the member returns to a full initial sync during Monday peak traffic, hours of extra load on the primary and a second full copy of the dataset moving across the network.</p><p><b>Mitigation:</b> Size the oplog so the window exceeds the longest planned maintenance plus margin; resize live with <span class='mono'>replSetResizeOplog</span>; recompute the window monthly against the current write rate and alert when it falls below your maintenance bound.</p></div><div class="staffmeta"><div class="sm warn"><h5>Common staff-level mistake</h5><p>Sizing the oplog by disk percentage at install and never recomputing the window after write volume grows 10×.</p></div><div class="sm warn"><h5>The metric that exposes it first</h5><p>Oplog window in hours, recomputed monthly against write rate, alert when it falls below your longest planned maintenance.</p></div></div></div></div><div class="takeaway">Remember: Scale work is window math: WAL generated per checkpoint, chunks balanced per shard, oplog hours per outage. If you cannot state the window, you do not know your headroom.</div><button class="markbtn" data-lvl="5">Mark as understood ✓</button></div></div>
 </div>
 </div></section>
+<aside class="myth"><span class="mk">Common myth</span><p class="m">BEGIN takes a snapshot.</p><p class="t">In PostgreSQL at Repeatable Read, and in InnoDB, the snapshot is taken at the first query inside the transaction. Statements between BEGIN and that first query pin nothing. The MVCC lab below shows it: B begins, A commits, and B still sees the new value until B has run its first SELECT.</p></aside>
 <section id="labs" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Diagrams · real structures only</div>
   <h2>Three structures worth seeing with your own eyes. Each one has its one problem.</h2>
@@ -288,6 +291,7 @@ db.getSiblingDB('local').oplog.rs.stats().maxSize</div></div><div class="wib"><h
   <p class="mono" id="refCount" style="font-size:12.5px;color:var(--muted);margin-top:14px">24 ideas shown</p>
   <p class="sub" style="margin-top:20px"><b style="color:var(--ink)">Before you leave, check this:</b> run <span class="mono">SELECT pid, now() - xact_start AS age, state FROM pg_stat_activity ORDER BY age DESC;</span> The top row owns your bloat if it is old.</p>
 </div></section>
+<section class="nextpage"><div class="wrap"><a href="../compare/index.html"><div><span>Next</span>Compare<span>Same task, three engines.</span></div><i>→</i></a></div></section>
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
   <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
@@ -299,5 +303,6 @@ db.getSiblingDB('local').oplog.rs.stats().maxSize</div></div><div class="wib"><h
 <script src="../assets/js/btree.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
 </body>
 </html>

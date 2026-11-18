@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it."/>
+<link rel="icon" href="data:,"/>
+<title>Why is my database bill huge? · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL</a><a href="../../mongodb/index.html">MongoDB</a><a href="../../cheat-sheet/index.html">Cheat Sheet</a><a href="../../staff-path/index.html">Staff Path</a><a href="../../compare/index.html">Compare</a><a href="../../labs/index.html">Labs</a><a href="../../decisions/index.html">Decisions</a><a href="../../reference/index.html">Reference</a><a href="../../cloud/index.html">Cloud</a><a href="../../stories/index.html">Stories</a><a href="../../about/index.html">About</a></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<header class="hero"><div class="wrap">
+  <div class="kicker">Decision 10 · Cost model</div>
+  <h1>Why is my database bill huge?</h1>
+  <p class="qline">What am I paying for that the workload does not need?</p>
+  <p class="lede">Most database bills are large for the same few reasons. This page lists them, shows how to find each one with a query, and gives a safe order for cutting. The bill is a result of the design, so the design is where the savings are.</p>
+</div></header>
+
+<section id="decision"><div class="wrap">
+  <div class="kicker">The decision</div>
+  <h2>Pay for the load you have, plus a reserve you chose on purpose</h2>
+  <p class="sub">The decision is not "spend less". It is to know what each line of the bill buys, and to size the reserve deliberately, not out of fear. A database that is too small fails loudly. A database that is too big fails quietly, on the invoice.</p>
+  <aside class="myth"><span class="mk">Common myth</span><p class="m">A bigger instance is the cheap fix for a slow database.</p><p class="t">A bigger instance multiplies the bill and keeps the bad query. If one query reads every page of a large table, a larger box reads them faster and costs twice as much per month. Fix the query or the index first, then size the instance for what is left.</p></aside>
+</div></section>
+
+<section id="where"><div class="wrap">
+  <div class="kicker">Where the money goes</div>
+  <h2>Six lines on the invoice</h2>
+  <table class="cmp-table" style="width:100%;max-width:900px;border-collapse:collapse;font-size:14.5px">
+    <thead><tr style="text-align:left;border-bottom:2px solid var(--line)"><th style="padding:8px">Line</th><th style="padding:8px">What it buys</th><th style="padding:8px">What usually inflates it</th></tr></thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:8px"><b>Compute</b></td><td style="padding:8px">CPU and memory for the primary and every replica</td><td style="padding:8px">Sized for the fear. Extra replicas. Connections held open.</td></tr>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:8px"><b>Storage</b></td><td style="padding:8px">Table and index files, logs, undo</td><td style="padding:8px">Old data, unused indexes, bloat, long transactions.</td></tr>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:8px"><b>I/O</b></td><td style="padding:8px">Provisioned IOPS and throughput, or pay-per-request</td><td style="padding:8px">Scans that should be lookups. A cache that is too small.</td></tr>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:8px"><b>Backups</b></td><td style="padding:8px">Snapshots and archived logs for point-in-time recovery</td><td style="padding:8px">Retention nobody reviewed. Copies kept in several regions.</td></tr>
+      <tr style="border-bottom:1px solid var(--line)"><td style="padding:8px"><b>Network</b></td><td style="padding:8px">Traffic between zones, regions and the internet</td><td style="padding:8px">Replicas in other regions. Applications in another zone than the primary.</td></tr>
+      <tr><td style="padding:8px"><b>Everything that is not production</b></td><td style="padding:8px">Dev, test, staging and forgotten copies</td><td style="padding:8px">Full-size copies that run all night and all weekend.</td></tr>
+    </tbody>
+  </table>
+</div></section>
+
+<section id="patterns"><div class="wrap">
+  <div class="kicker">The six patterns</div>
+  <h2>Find each one with a query</h2>
+  <p class="sub">The commands below are the standard ones for each engine. Run them on a replica when you can, and read the numbers over a full business cycle, not one quiet afternoon.</p>
+  <div class="cmp3"><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>1. An instance sized for the fear</h3><p style="font-size:14.5px;margin:0 0 8px">Someone picked the size for the worst day they could imagine, and nobody went back to check.</p><div class="see"><b>How to find it</b>Look at 30 days of CPU at the 95th percentile and the cache hit ratio. If CPU is under about 25 percent and the working set fits in half the memory, there is room.<pre class="cmdshow">-- PostgreSQL cache hit ratio
+SELECT sum(blks_hit)::float / nullif(sum(blks_hit) + sum(blks_read), 0)
+FROM pg_stat_database;</pre></div><p class="price"><b>The fix</b>Step down one size, not three. Keep enough room for the failover case. See "What breaks when you cut too hard" below.</p></div><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>2. IOPS and throughput nobody uses</h3><p style="font-size:14.5px;margin:0 0 8px">Provisioned I/O is billed whether the disk uses it or not.</p><div class="see"><b>How to find it</b>Compare the provisioned number with the 99th percentile of what the monitoring shows you used. Check the same figure for a month that includes your peak.<pre class="cmdshow">-- MySQL: how often the buffer pool misses
+SHOW GLOBAL STATUS LIKE 'Innodb_buffer_pool_read%';</pre></div><p class="price"><b>The fix</b>Lower the provisioned figure to the peak plus 30 percent. Raise it again when the peak grows.</p></div><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>3. Replicas nobody reads</h3><p style="font-size:14.5px;margin:0 0 8px">Every replica is a full copy of the data at full price. A replica that serves no reads and is not your failover target is pure cost.</p><div class="see"><b>How to find it</b>Look at the connections and the query rate on each replica. Zero reads over a month is an answer.<pre class="cmdshow">-- PostgreSQL, on the primary
+SELECT client_addr, state FROM pg_stat_replication;</pre></div><p class="price"><b>The fix</b>Remove it, or keep exactly one replica as the failover target, sized like the primary.</p></div></div>
+  <div class="cmp3"><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>4. Indexes that nothing uses</h3><p style="font-size:14.5px;margin:0 0 8px">Each unused index costs disk, cache space and a write on every change to the table.</p><div class="see"><b>How to find it</b>Ask the engine which indexes have never been read since statistics were last reset. Check across a full business cycle, such as a month end. Never drop an index that backs a unique or primary key.<pre class="cmdshow">-- PostgreSQL
+SELECT relname, indexrelname, idx_scan
+FROM pg_stat_user_indexes WHERE idx_scan = 0
+ORDER BY pg_relation_size(indexrelid) DESC LIMIT 20;
+-- MySQL
+SELECT * FROM sys.schema_unused_indexes;
+-- MongoDB
+db.orders.aggregate([{ $indexStats: {} }])</pre></div><p class="price"><b>The fix</b>Drop them one at a time, with the definition saved so you can recreate it.</p></div><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>5. Data that should have left</h3><p style="font-size:14.5px;margin:0 0 8px">Old rows, old logs and old events sit on fast, expensive storage and drag every scan and every backup with them.</p><div class="see"><b>How to find it</b>List the biggest tables and ask how old the oldest row is, and whether anyone reads it.<pre class="cmdshow">-- PostgreSQL
+SELECT relname, pg_size_pretty(pg_total_relation_size(oid))
+FROM pg_class WHERE relkind = 'r'
+ORDER BY pg_total_relation_size(oid) DESC LIMIT 10;
+-- MongoDB
+db.events.totalSize()</pre></div><p class="price"><b>The fix</b>Partition by time and drop whole partitions instead of running a huge DELETE. In MongoDB, use a TTL index. Archive what the law requires you to keep.</p></div><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>6. Connections forcing a bigger box</h3><p style="font-size:14.5px;margin:0 0 8px">PostgreSQL runs one process per connection. A thousand mostly idle connections cost memory that is then bought as a bigger instance.</p><div class="see"><b>How to find it</b>Compare the number of connections with the number doing work right now.<pre class="cmdshow">SELECT state, count(*) FROM pg_stat_activity
+GROUP BY state ORDER BY 2 DESC;</pre></div><p class="price"><b>The fix</b>Put a pooler in front, such as PgBouncer, and lower the number of server connections.</p></div></div>
+</div></section>
+
+<section id="order"><div class="wrap">
+  <div class="kicker">The order to cut in</div>
+  <h2>Cheapest and safest first, commitments last</h2>
+  <p class="sub">Each step makes the next one safer. Committing to a one or three year price is last because it locks in a size, so it should lock in the size you reached after the other steps.</p>
+  <ol class="steplist">
+    <li><b>Find the top queries by total time</b><span>Cost is work. Work is pages read. Start with what the database spends its time on.</span></li>
+    <li><b>Fix the queries and the indexes</b><span>One missing index can be the reason for a whole instance size. Remove the unused indexes at the same time.</span></li>
+    <li><b>Pool the connections</b><span>This often frees memory that was being bought as instance size.</span></li>
+    <li><b>Let old data leave</b><span>Partition by time, drop partitions, use TTL indexes, archive the rest.</span></li>
+    <li><b>Offload reads only if reads dominate</b><span>A replica is a full price copy. Add one only if the primary is the bottleneck for reads.</span></li>
+    <li><b>Rightsize the instance and the storage I/O</b><span>With the work reduced, step down one size at a time and watch.</span></li>
+    <li><b>Then commit to reserved capacity</b><span>The size is now known, so the commitment is safe.</span></li>
+  </ol>
+  <div class="derive"><b class="dt">Worked example, with stated assumptions, not measured</b>Assume a primary with 64 GB of memory and 16 vCPUs. The working set, the data touched in a normal week, is 18 GB. CPU at the 95th percentile is 22 percent, and there are 200 connections at about 10 MB each. Memory needed: 18 GB x 1.3 for headroom is about 23 GB, plus 2 GB for connections, plus 2 GB for the operating system, about 27 GB. The next size up from that is 32 GB. CPU: 22 percent of 16 vCPUs is about 3.5 vCPUs in use. On 8 vCPUs that is about 44 percent at the 95th percentile, which still leaves room. So the candidate is 32 GB and 8 vCPUs, half the current size, tried first on a replica or in staging. The numbers are an illustration of the method. Use your own working set and your own percentiles.</div>
+</div></section>
+
+<section id="breaks"><div class="wrap">
+  <div class="kicker">What breaks when you cut too hard</div>
+  <h2>Six ways to save money and cause an outage</h2>
+  <ul style="font-size:15px;line-height:1.75;max-width:860px">
+    <li><b>Memory below the working set.</b> Performance does not degrade smoothly. The cache stops holding the hot pages, reads go to disk, and latency jumps. Keep memory above the working set.</li>
+    <li><b>No failover headroom.</b> After a failover, one server carries the load that two were sharing. The standby must be sized for the full workload.</li>
+    <li><b>Burstable instances.</b> They run well on credits and then slow down hard when the credits are gone. A database with steady load does not belong on one.</li>
+    <li><b>Storage that cannot shrink.</b> Many managed services let you grow storage but not shrink it. Check this before you grow a volume as a quick fix.</li>
+    <li><b>Fewer replicas, longer recovery.</b> Removing the standby saves money and moves your recovery time from seconds to the time it takes to restore a backup.</li>
+    <li><b>Shorter backup retention.</b> It shrinks the point-in-time recovery window. Check what the business and the regulators require first.</li>
+  </ul>
+</div></section>
+
+<section id="operating"><div class="wrap">
+  <div class="kicker">How to operate it</div>
+  <h2>A monthly review that takes an hour</h2>
+  <ol class="steplist">
+    <li><b>CPU, memory and I/O at the 95th percentile</b><span>Compare with the instance and the provisioned I/O. Write the numbers down so next month has something to compare with.</span></li>
+    <li><b>The top ten queries by total time</b><span>Did a new one appear? Did one grow?</span></li>
+    <li><b>Unused indexes, biggest first</b><span>Drop one or two, with the definition saved.</span></li>
+    <li><b>The biggest tables and their oldest rows</b><span>Is the retention still right?</span></li>
+    <li><b>Replicas and non-production environments</b><span>Is each one used? Can the test copy sleep at night?</span></li>
+    <li><b>Backup retention and copies</b><span>Does it still match what is required, and no more?</span></li>
+  </ol>
+  <div class="derive"><b class="dt">Tested on</b>Nothing yet. The behavior described follows the documentation of PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, and the commands are the standard ones, but this page has not been run through the automated command check. The worked example uses stated assumptions, and none of its figures were measured. Prices are not quoted on purpose, because they change and differ by provider.</div>
+</div></section>
+<section class="nextpage"><div class="wrap"><a href="../../cloud/index.html"><div><span>Next</span>On-prem vs cloud<span>What changes when someone else runs the database.</span></div><i>→</i></a></div></section>
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p><a href="../../references/index.html">References</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+</body>
+</html>
