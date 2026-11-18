@@ -108,7 +108,7 @@
       <div class="arch-box good"><b>#ib_redo0-31</b><span>The redo ring, 32 files. The log, written first.</span></div>
       <div class="arch-box"><b>mysql-bin.*</b><span>Logical record. Replicas replay it.</span></div>
       <div class="arch-box"><b>undo_001/002</b><span>Undo logs, the old row versions.</span></div>
-      <div class="arch-box"><b>ibdata1</b><span>System tablespace, holds the doublewrite buffer.</span></div>
+      <div class="arch-box"><b>ibdata1</b><span>System tablespace: internal bookkeeping. The doublewrite buffer lives in #ib_*.dblwr files since 8.0.20.</span></div>
       <div class="arch-box"><b>mysql.ibd</b><span>The data dictionary.</span></div>
     </div></div>
   </div>
