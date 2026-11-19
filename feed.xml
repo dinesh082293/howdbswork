@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>A Your turn question at the end of twelve more lessons</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-2bc9192adf5d</guid>
+    <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
+    <description>a Your turn question at the end of twelve more lessons: the three engine pages, Compare, Ten concepts, the failover and cost decisions, anti-patterns, the capacity calculator, migrations, Cloud and the lab notebooks. Each one is a situation from real systems, with my answer folded until you ask for it.</description>
+  </item>
+  <item>
     <title>Scale it is now on all 13 design docs, each following its own growth path (payments shard...</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-98fbf04d754f</guid>
