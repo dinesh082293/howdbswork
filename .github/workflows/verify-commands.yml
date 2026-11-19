@@ -59,6 +59,9 @@ jobs:
       - name: Check engine pages stay consistent
         run: python3 scripts/check-engines.py --root .
 
+      - name: Test the query coach rules
+        run: node scripts/test-coach.mjs
+
       - name: Run PostgreSQL commands
         run: docker exec -i ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 < ci-out/pg.sql
 

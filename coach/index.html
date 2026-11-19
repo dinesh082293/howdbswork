@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Paste a SQL query, and optionally the table definitions and an EXPLAIN plan. The coach lists what to look at, why, the fix, and the lesson that explains it. Runs in your browser."/>
+<link rel="icon" href="data:,"/>
+<title>Query coach · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><details class="navgrp"><summary>Learn</summary><div class="navmenu"><p class="navblurb">Start from zero: what happens when you write a row, the words you need, and a path to staff level.</p><a href="../start-here/index.html">Start here</a><a href="../concepts/index.html">Ten concepts</a><a href="../staff-path/index.html">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div></details><details class="navgrp"><summary>Engines</summary><div class="navmenu"><p class="navblurb">PostgreSQL, MySQL and MongoDB from the files on disk up, then side by side, then the wider landscape.</p><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL · InnoDB</a><a href="../mongodb/index.html">MongoDB · WiredTiger</a><a href="../compare/index.html">Same task, three engines</a><a href="../families/index.html">Database families</a></div></details><details class="navgrp here"><summary>Practice</summary><div class="navmenu"><p class="navblurb">See it happen: simulations, a real PostgreSQL in your browser, and experiments run on real servers.</p><a href="../labs/index.html">Labs</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a><a href="../coach/index.html" aria-current="page">Query coach</a></div></details><details class="navgrp"><summary>Design</summary><div class="navmenu cols2"><p class="navblurb">What kind of application data goes in which database, and why, as design docs.</p><a href="../designs/index.html">Application designs</a><a href="../designs/store-orders/index.html">Store orders and inventory</a><a href="../designs/payments-ledger/index.html">Payments and ledgers</a><a href="../designs/booking-reservations/index.html">Bookings and reservations</a><a href="../designs/accounts-sessions/index.html">Accounts and sessions</a><a href="../designs/multi-tenant-saas/index.html">Multi-tenant SaaS</a><a href="../designs/product-catalog/index.html">Product catalog</a><a href="../designs/social-feed/index.html">Social feed</a><a href="../designs/search-ai-retrieval/index.html">Search and AI retrieval</a><a href="../designs/chat-messaging/index.html">Chat and messaging</a><a href="../designs/iot-telemetry/index.html">IoT and telemetry</a><a href="../designs/audit-event-log/index.html">Audit and event logs</a><a href="../designs/leaderboards-counters/index.html">Leaderboards and counters</a><a href="../designs/analytics-reporting/index.html">Analytics and reporting</a><a href="../designs/agent-memory/index.html">Agent memory and state</a><a href="../designs/template/index.html">Design doc template</a><a href="../designs/review/index.html">Submit a design for review</a></div></details><details class="navgrp"><summary>Get it right</summary><div class="navmenu"><p class="navblurb">The decisions and habits that decide whether the design holds up: queries, concurrency, durability and cost.</p><a href="../queries/index.html">Queries that look fine and are not</a><a href="../isolation/index.html">Lost updates and write skew</a><a href="../designs/anti-patterns/index.html">Anti-patterns</a><a href="../decisions/index.html">Decisions</a><a href="../decisions/sync-replication-failover/index.html">What a commit waits for</a><a href="../decisions/cost-model/index.html">Why the bill is huge</a></div></details><details class="navgrp"><summary>Run it</summary><div class="navmenu"><p class="navblurb">Where it runs, how big it must be, how to change it, and what to do when it breaks.</p><a href="../designs/hosting/index.html">Where to run the database</a><a href="../cloud/index.html">On-prem vs cloud, by engine</a><a href="../designs/capacity/index.html">Capacity calculator</a><a href="../designs/migrations/index.html">Migration playbooks</a><a href="../cheat-sheet/index.html">Cheat sheet</a><a href="../reference/index.html">Reference: plans, logs, checklist</a><a href="../stories/index.html">Real failures</a><a href="../oncall/index.html">On call tonight</a></div></details><details class="navgrp"><summary>About</summary><div class="navmenu"><p class="navblurb">Who writes this, what was corrected, what to read next, and how to reach me.</p><a href="../about/index.html">About</a><a href="../corrections/index.html">Corrections</a><a href="../references/index.html">Reading list</a><a href="../work-with-me/index.html">Work with me</a><a href="../assistant/index.html">Use it from your AI assistant</a><a href="../sitemap/index.html">All pages</a></div></details></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<!-- CRUMBS:BEGIN --><div class="crumbs"><div class="wrap"><a href="../index.html">Home</a><span>›</span><a href="../sitemap/index.html#practice">Practice</a><span>›</span><b aria-current="page">Query coach</b><em>Lesson 13 of 44</em></div></div><!-- CRUMBS:END -->
+<header class="hero"><div class="wrap">
+  <div class="kicker">Practice · Query coach</div>
+  <h1>Query coach</h1>
+  <p class="qline">Is there anything wrong with this query before I run it?</p>
+  <p class="lede">Paste a query. Add the table definitions and an EXPLAIN plan if you have them. The coach lists what I would look at in a review: what is risky, what will be slow, and small fixes, each with the reason and a link to the lesson behind it. It runs in your browser. Nothing you paste is sent anywhere or stored.</p>
+</div></header>
+<section id="coach"><div class="wrap">
+  <div class="qc-box">
+    <div class="qc-row">
+      <fieldset class="qc-eng"><legend>Engine</legend>
+        <label><input type="radio" name="coachEng" value="pg" checked> PostgreSQL</label>
+        <label><input type="radio" name="coachEng" value="my"> MySQL</label>
+      </fieldset>
+      <div class="qc-ex"><span>Try an example:</span>
+        <button type="button" class="labbtn" data-coach-ex="paging">A slow page</button>
+        <button type="button" class="labbtn" data-coach-ex="lost">A lost update</button>
+        <button type="button" class="labbtn" data-coach-ex="index">With table definitions</button>
+        <button type="button" class="labbtn" data-coach-ex="migration">A migration</button>
+        <button type="button" class="labbtn" data-coach-ex="plan">With a plan</button>
+      </div>
+    </div>
+    <label class="qc-lab" for="coachSql">Your query, or several separated by semicolons</label>
+    <textarea id="coachSql" class="qc-ta" rows="7" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="SELECT id, total FROM orders WHERE customer_id = $1 ORDER BY created_at DESC LIMIT 20;"></textarea>
+    <details id="coachSchemaBox" class="qc-more"><summary>Add the table definitions (optional)</summary>
+      <p class="qc-help">The CREATE TABLE and CREATE INDEX statements for the tables the query uses. In PostgreSQL, <code>pg_dump --schema-only -t orders</code>; in MySQL, <code>SHOW CREATE TABLE orders</code>. With them, the coach checks indexes, join columns and types.</p>
+      <textarea id="coachSchema" class="qc-ta" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="CREATE TABLE orders (...);&#10;CREATE INDEX ... ON orders (...);"></textarea>
+    </details>
+    <details id="coachPlanBox" class="qc-more"><summary>Add an EXPLAIN plan (optional)</summary>
+      <p class="qc-help">PostgreSQL: the text output of <code>EXPLAIN (ANALYZE, BUFFERS)</code>. MySQL: <code>EXPLAIN</code> in table format, or <code>EXPLAIN ANALYZE</code>. ANALYZE runs the query, so use a copy or a replica for writes.</p>
+      <textarea id="coachPlan" class="qc-ta" rows="6" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+    </details>
+    <div class="qc-actions"><button type="button" id="coachGo" class="qc-go">Check it</button><button type="button" id="coachClear" class="labbtn">Clear</button></div>
+  </div>
+  <div id="coachOut" class="qc-out" aria-live="polite"></div>
+</div></section>
+<section id="checks"><div class="wrap">
+  <div class="kicker">What it checks</div>
+  <h2>The patterns behind the findings</h2>
+  <div class="cmp3">
+    <div class="cmp3-col" style="border-top-color:var(--teal)"><h3>The query</h3><ol>
+      <li>UPDATE or DELETE that changes every row; TRUNCATE</li><li>Functions, casts and arithmetic on a filtered column</li><li>LIKE with a leading wildcard</li><li>OFFSET paging, with a keyset rewrite</li><li>NOT IN with a subquery (the NULL trap)</li><li>Read, then write: lost updates across statements</li><li>Queue reads without SKIP LOCKED</li><li>SELECT *, ORDER BY random, comma joins, UNION, HAVING, long IN lists, single-row inserts, retention deletes</li></ol></div>
+    <div class="cmp3-col" style="border-top-color:var(--teal)"><h3>With table definitions</h3><ol>
+      <li>No index starting with a filtered column, and the column order of the ones that exist</li><li>ORDER BY with LIMIT that has to sort everything first</li><li>Join columns without an index</li><li>Text columns compared with numbers</li><li>No primary key, UUID strings as an InnoDB key, foreign keys without an index</li><li>Money in floating point, timestamps without a time zone, redundant indexes</li></ol></div>
+    <div class="cmp3-col" style="border-top-color:var(--teal)"><h3>Migrations and plans</h3><ol>
+      <li>CREATE INDEX without CONCURRENTLY, type changes, volatile defaults, constraints without NOT VALID, SET NOT NULL, lock_timeout (PostgreSQL)</li><li>ALTER algorithms, metadata locks, MODIFY COLUMN copies (MySQL)</li><li>In a plan: full scans with the rows thrown away, estimates far from actual rows, sorts and hashes spilling to disk, nested loops run thousands of times, pages read from disk</li></ol></div>
+  </div>
+  <p class="sub" style="margin-top:12px">It is a set of pattern checks and a light parser, not an optimizer, and it does not see your data. A query with no findings can still be slow; the plan is the real answer. For a line-by-line reading of a PostgreSQL plan, use the <a href="../reference/index.html#evidence">annotated EXPLAIN</a> on Reference. Building with an AI assistant? The same checks are a tool in the <a href="../assistant/index.html">MCP server</a>.</p>
+</div></section>
+<!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Practice · page 4 of 4</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px">See it happen: simulations, a real PostgreSQL in your browser, and experiments run on real servers.</p><div class="secnav-list"><a href="../labs/index.html">Labs</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a><a href="../coach/index.html" aria-current="page" class="on">Query coach</a></div><div class="secnav-pn"><a class="pn prev" href="../notebooks/index.html"><span>← Previous</span>Lab notebooks</a><a class="pn next" href="../designs/index.html"><span>Next section: Design →</span>Application designs</a></div></div></section><!-- SECTION:END -->
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 19, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../sitemap/index.html">All pages</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script src="../assets/js/reader.js"></script>
+<script src="../assets/js/querycoach.js"></script>
+</body>
+</html>

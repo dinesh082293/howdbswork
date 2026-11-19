@@ -9,7 +9,7 @@ import vm from 'node:vm';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DATA = JSON.parse(readFileSync(join(HERE, 'data.json'), 'utf8'));
-const VERSION = '0.1.0';
+const VERSION = '0.2.0';
 
 // The Estimate it formulas, loaded from the same file the site uses.
 function loadEstimates() {
@@ -20,6 +20,15 @@ function loadEstimates() {
   return ctx.window.HDW_ESTIMATES || {};
 }
 const EST = loadEstimates();
+
+// The query coach rules, loaded from the same file the Query coach page uses.
+function loadCoach() {
+  const ctx = { window: {} };
+  vm.createContext(ctx);
+  vm.runInContext(readFileSync(join(HERE, 'querycoach.js'), 'utf8'), ctx);
+  return ctx.window.HDW_COACH;
+}
+const COACH = loadCoach();
 
 const STOP = new Set('a an and are as at be but by can do does for from how i if in into is it its my of on or our should so that the their them then there these this to use we what when where which who why will with would you your want need app application database db store data'.split(' '));
 function words(s) { return (s || '').toLowerCase().match(/[a-z0-9][a-z0-9-]*/g)?.filter(w => !STOP.has(w) && w.length > 1) || []; }
@@ -67,6 +76,15 @@ const TOOLS = [
       inputs: { type: 'object', description: 'Input name to number. Unknown names are ignored; values are clamped to the slider range.', additionalProperties: { type: 'number' } } }, required: ['design'] }
   },
   {
+    name: 'review_query',
+    description: 'Review SQL before running it: the howdbswork.com Query coach rules. Flags risky statements (UPDATE without WHERE, NOT IN with NULLs, lost updates, locking migrations), slow shapes (functions on indexed columns, OFFSET paging, leading wildcards), and, given table definitions or an EXPLAIN plan, missing indexes, type mismatches and plan red flags. Each finding has the reason, the fix and a lesson link. Pattern checks, not an optimizer.',
+    inputSchema: { type: 'object', properties: {
+      sql: { type: 'string', description: 'One or more SQL statements.' },
+      engine: { type: 'string', enum: ['postgresql', 'mysql'], description: 'Defaults to postgresql.' },
+      schema: { type: 'string', description: 'Optional CREATE TABLE and CREATE INDEX statements for the tables involved.' },
+      plan: { type: 'string', description: 'Optional EXPLAIN output: PostgreSQL text format, MySQL table or tree format.' } }, required: ['sql'] }
+  },
+  {
     name: 'find_lesson',
     description: 'Find the howdbswork.com lessons that explain a database topic (MVCC, vacuum, replication lag, isolation, indexes, failover, cost and so on). Returns titles, one-line summaries and links.',
     inputSchema: { type: 'object', properties: { topic: { type: 'string' } }, required: ['topic'] }
@@ -106,6 +124,12 @@ function call(name, a) {
       `\n\nResults:\n` + R.r.map(r => `- ${stripHtml(r[0])}: ${stripHtml(r[1])}${r[2] ? '  <- worth a closer look' : ''}`).join('\n') +
       `\n\nNote: ${stripHtml(R.note)}\n\nThe same numbers, live with sliders: ${link}\n`;
   }
+  if (name === 'review_query') {
+    const R = COACH.review({ engine: a.engine === 'mysql' ? 'my' : 'pg', sql: a.sql || '', schema: a.schema || '', plan: a.plan || '' });
+    const abs = h => DATA.site + h.replace(/^(\.\.\/)+/, '').replace('index.html', '');
+    if (!R.findings.length) return 'No findings from the Query coach rules (' + R.statements + ' statement(s)' + (R.tables.length ? ', tables: ' + R.tables.join(', ') : '') + '). That does not make it fast: check the plan with EXPLAIN ANALYZE on real data. ' + (a.schema ? '' : 'Pass the table definitions as "schema" to check indexes. ') + `Coach: ${DATA.site}coach/`;
+    return R.findings.map((f, i) => `${i + 1}. [${f.sev.toUpperCase()}] ${f.title}\n   Why: ${f.why}\n   Fix: ${f.fix}` + (f.link ? `\n   Read: ${f.link[1]} (${abs(f.link[0])})` : '')).join('\n\n') + `\n\nThe same checks, in the browser: ${DATA.site}coach/`;
+  }
   if (name === 'find_lesson') {
     const q = words(a.topic);
     const ranked = DATA.lessons.map(l => {
@@ -133,7 +157,7 @@ function handle(msg) {
         protocolVersion: params?.protocolVersion || '2025-06-18',
         capabilities: { tools: {} },
         serverInfo: { name: 'howdbswork', version: VERSION },
-        instructions: 'Database design answers from howdbswork.com, written by a database engineer. Use recommend_store for "which database for X", estimate for sizing, find_lesson to explain an internal. Cite the links you get back.'
+        instructions: 'Database design answers from howdbswork.com, written by a database engineer. Use recommend_store for "which database for X", estimate for sizing, review_query before running SQL, find_lesson to explain an internal. Cite the links you get back.'
       });
     }
     if (method === 'ping') return reply(id, {});

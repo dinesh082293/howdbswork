@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Export the site's design docs and lessons for the MCP server in mcp/.
-Writes mcp/data.json and copies assets/js/estimate.js to mcp/estimate.js,
+Writes mcp/data.json and copies assets/js/estimate.js and querycoach.js into mcp/,
 so the server answers from the same text and formulas as the pages."""
 import json, re, html, shutil, os
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -71,6 +71,7 @@ def main():
     out = {"site": SITE, "designs": designs, "lessons": lessons}
     json.dump(out, open(os.path.join(ROOT, "mcp/data.json"), "w"), indent=1, ensure_ascii=False)
     shutil.copy(os.path.join(ROOT, "assets/js/estimate.js"), os.path.join(ROOT, "mcp/estimate.js"))
+    shutil.copy(os.path.join(ROOT, "assets/js/querycoach.js"), os.path.join(ROOT, "mcp/querycoach.js"))
     # llms.txt: the same list, for assistants that read the web.
     L = ["# Real Databases, Simply (howdbswork.com)", "",
          "> How PostgreSQL, MySQL and MongoDB work in real systems: internals, side-by-side comparisons, measured lab",
