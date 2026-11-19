@@ -382,3 +382,93 @@ window.HDW_GOALS = window.HDW_GOALS || (function () {
   document.addEventListener('selectionchange', function () { clearTimeout(tmr); tmr = setTimeout(check, 250); });
   btn.addEventListener('click', function () { setTimeout(hide, 100); });
 })();
+/* Finished a part: when every lesson in this page's part is read, offer a
+   card to share. The image is drawn in the browser; nothing is uploaded. */
+(function () {
+  var COL = { Learn: '#2f6da3', Practice: '#0f766e', Design: '#b96a12', Operate: '#c2185b' };
+  var SITE = 'https://howdbswork.com/';
+  function info() {
+    var head = document.querySelector('.secnav-head .kicker');
+    var chips = document.querySelectorAll('.secnav-list a');
+    if (!head || !chips.length) return null;
+    var m = head.firstChild && String(head.firstChild.textContent).match(/Part (\d+) of (\d+) · ([^·]+)/);
+    if (!m) return null;
+    var read = Array.prototype.filter.call(chips, function (a) { return a.classList.contains('read'); }).length;
+    var q = document.querySelector('.secnav .sub b');
+    return { k: +m[1], of: +m[2], name: m[3].trim(), n: chips.length, read: read, q: q ? q.textContent.trim() : '' };
+  }
+  function wrap(ctx, text, x, y, maxW, lh, maxLines) {
+    var words = text.split(' '), line = '', lines = 0;
+    for (var i = 0; i < words.length; i++) {
+      var t = line ? line + ' ' + words[i] : words[i];
+      if (ctx.measureText(t).width > maxW && line) { ctx.fillText(line, x, y); y += lh; line = words[i]; if (++lines >= maxLines - 1) { line = words.slice(i).join(' '); break; } }
+      else line = t;
+    }
+    if (line) { while (ctx.measureText(line).width > maxW && line.length > 4) line = line.slice(0, -2) + '…'; ctx.fillText(line, x, y); }
+    return y;
+  }
+  function draw(cv, p, who) {
+    var c = cv.getContext('2d'), col = COL[p.name] || '#131a17';
+    c.fillStyle = '#fbfbf9'; c.fillRect(0, 0, 1200, 630);
+    c.fillStyle = col; c.fillRect(0, 0, 22, 630);
+    c.fillStyle = col; c.font = '600 24px "IBM Plex Mono", monospace';
+    c.fillText(('Part ' + p.k + ' of ' + p.of + ' · ' + p.name).toUpperCase(), 84, 110);
+    c.fillStyle = '#131a17'; c.font = '700 76px "Source Serif 4", Georgia, serif';
+    c.fillText((who ? who + ' finished ' : 'I finished ') + p.name, 84, 210, 1030);
+    c.fillStyle = '#5b6b62'; c.font = '400 32px "IBM Plex Sans", sans-serif';
+    wrap(c, p.n + ' lessons on one question: ' + p.q, 84, 290, 1000, 44, 3);
+    for (var i = 0; i < p.n; i++) { c.fillStyle = col; c.globalAlpha = 0.85; c.fillRect(84 + i * 40, 420, 30, 30); }
+    c.globalAlpha = 1;
+    c.fillStyle = '#5b6b62'; c.font = '500 22px "IBM Plex Mono", monospace';
+    c.fillText(p.n + ' of ' + p.n + ' lessons · ' + new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' }), 84, 488);
+    c.fillStyle = '#131a17'; c.font = '600 26px "IBM Plex Sans", sans-serif';
+    c.fillText('▦ Real databases, simply', 84, 566);
+    c.fillStyle = '#5b6b62'; c.font = '500 26px "IBM Plex Sans", sans-serif';
+    c.textAlign = 'right'; c.fillText('howdbswork.com', 1116, 566); c.textAlign = 'left';
+  }
+  function open(p) {
+    var box = document.querySelector('.donecard');
+    if (box) { box.hidden = !box.hidden; return; }
+    box = document.createElement('div'); box.className = 'donecard';
+    var text = 'I finished Part ' + p.k + ' of Real databases, simply: ' + p.name + '. ' + p.n + ' lessons on "' + p.q + '" ' + SITE;
+    box.innerHTML = '<canvas width="1200" height="630" aria-label="Your card"></canvas>' +
+      '<div class="dc-ctl"><label>Name on the card <input type="text" maxlength="40" placeholder="optional" class="dc-name"></label>' +
+      '<button type="button" class="labbtn dc-dl">Download the image</button><button type="button" class="labbtn dc-share" hidden>Share…</button>' +
+      '<a class="labbtn dc-li" target="_blank" rel="noopener" href="https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(SITE) + '">Post on LinkedIn</a>' +
+      '<button type="button" class="labbtn dc-copy">Copy the text</button></div>' +
+      '<p class="dc-note">The image is made in your browser and only leaves it if you share it. LinkedIn shows the site\'s own card; attach the image to your post if you want yours.</p>';
+    var host = document.querySelector('.donebar');
+    host.parentNode.insertBefore(box, host.nextSibling);
+    var cv = box.querySelector('canvas'), nm = box.querySelector('.dc-name');
+    function redraw() { draw(cv, p, nm.value.trim()); }
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(redraw);
+    nm.addEventListener('input', redraw);
+    var file = 'finished-part-' + p.k + '.png';
+    box.querySelector('.dc-dl').addEventListener('click', function () {
+      cv.toBlob(function (b) { var a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = file; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500); });
+    });
+    var sh = box.querySelector('.dc-share');
+    cv.toBlob(function (b) {
+      try { var f = new File([b], file, { type: 'image/png' }); if (navigator.canShare && navigator.canShare({ files: [f] })) sh.hidden = false; } catch (e) {}
+    });
+    sh.addEventListener('click', function () {
+      cv.toBlob(function (b) { var f = new File([b], file, { type: 'image/png' }); navigator.share({ files: [f], text: text }).catch(function () {}); });
+    });
+    box.querySelector('.dc-copy').addEventListener('click', function (e) {
+      var btn = e.target;
+      (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(function () { btn.textContent = 'Copied'; setTimeout(function () { btn.textContent = 'Copy the text'; }, 1500); }, function () {});
+    });
+  }
+  function check() {
+    var p = info();
+    if (!p || p.read < p.n || document.querySelector('.donebar')) return;
+    var list = document.querySelector('.secnav-list');
+    var bar = document.createElement('div'); bar.className = 'donebar';
+    bar.innerHTML = '<b>You have read all ' + p.n + ' lessons in Part ' + p.k + ', ' + p.name + '.</b> <button type="button" class="dc-open">Make a card to share</button>';
+    list.parentNode.insertBefore(bar, list);
+    bar.querySelector('.dc-open').addEventListener('click', function () { open(p); });
+  }
+  // the read counter updates on scroll; check after it has had a chance to
+  setTimeout(check, 1800);
+  addEventListener('scroll', function () { if (!document.querySelector('.donebar')) setTimeout(check, 50); }, { passive: true });
+})();

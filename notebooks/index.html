@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="color-scheme" content="light dark"/>
-<meta name="description" content="Eight experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines and agent memory."/>
+<meta name="description" content="Nine experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines, agent memory, and Redis and Cassandra under failure."/>
 <link rel="icon" href="data:,"/>
 <title>Lab notebooks · Real Databases, Simply</title>
 <!-- SEO:BEGIN -->
@@ -12,7 +12,7 @@
 <meta property="og:site_name" content="Real databases, simply"/>
 <meta property="og:type" content="article"/>
 <meta property="og:title" content="Lab notebooks"/>
-<meta property="og:description" content="Eight experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines and agent memory."/>
+<meta property="og:description" content="Nine experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines, agent memory, and Redis and Cassandra under failure."/>
 <meta property="og:url" content="https://howdbswork.com/notebooks/"/>
 <meta property="og:image" content="https://howdbswork.com/assets/og/notebooks.png"/>
 <meta property="og:image:width" content="1200"/>
@@ -35,7 +35,7 @@
   <h1>Lab notebooks</h1>
   <p class="qline">What actually happens when you run it?</p>
   <p class="learn"><b>You will learn:</b> what a long transaction, a durable commit, an index, two concurrent sessions and common query shapes cost on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, whether the rules in the design docs hold, and how Redis, ClickHouse and Cassandra behave in the roles the design docs give them.</p>
-  <p class="lede">Most pages on this site explain a mechanism. These notebooks show it happening. I wrote eight experiments, and a workflow in this site's repository runs them on real servers, PostgreSQL 18.7 (with pgvector for the last one), MySQL 8.4.13, MongoDB 8.0.38, Redis 7.4, ClickHouse 24.8 and Cassandra 5.0, on a GitHub Actions runner. The output below is pasted as captured, with the run time. Nothing in it is written by hand.</p>
+  <p class="lede">Most pages on this site explain a mechanism. These notebooks show it happening. I wrote nine experiments, and a workflow in this site's repository runs them on real servers, PostgreSQL 18.7 (with pgvector for Notebook 8), MySQL 8.4.13, MongoDB 8.0.38, Redis 7.4, ClickHouse 24.8 and Cassandra 5.0, on a GitHub Actions runner. The output below is pasted as captured, with the run time. Nothing in it is written by hand.</p>
   <div class="scnnav"><a href="#long-transaction">1 · Long transaction</a><a href="#commit-cost">2 · Commit cost</a><a href="#scan-vs-index">3 · Scan against index</a><a href="#anomalies">4 · Two sessions</a><a href="#queries">5 · Query shapes</a><a href="#design-checks">6 · Design checks</a><a href="#other-engines">7 · Redis, ClickHouse, Cassandra</a><a href="#agent-memory">8 · Agent memory</a><a href="#failure">9 · Redis and Cassandra failing</a></div>
 </div></header>
 <section style="padding-top:12px;padding-bottom:0"><div class="wrap">
