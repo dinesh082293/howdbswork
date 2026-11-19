@@ -58,6 +58,10 @@ REVOKE UPDATE, DELETE ON audit_log FROM app_user;</pre>
   <div class="kicker">4 · How it grows</div>
   <h2>Start simple, change one thing at a time</h2>
   <ol class="steplist"><li><b>A table in the main database</b><span>Same transaction as the action.</span></li><li><b>The table dominates storage and backups</b><span>Monthly partitions, export old ones to object storage.</span></li><li><b>Many services produce events</b><span>A shared event stream, with the audit store as one consumer.</span></li></ol>
+
+  <h3 id="scale-it" style="margin-top:28px">Scale it: watch this design grow</h3>
+  <p class="sub">Pick a stage, then throw something at it. The numbers are a model to show the shape of each change, not a measurement; the measured numbers are in the <a href="../../notebooks/index.html">lab notebooks</a>.</p>
+  <div class="scaleit" data-slug="audit-event-log"></div>
 </div></section>
 <section id="breaks"><div class="wrap">
   <div class="kicker">5 · What breaks first</div>
@@ -98,5 +102,6 @@ REVOKE UPDATE, DELETE ON audit_log FROM app_user;</pre>
 <script src="../../assets/js/polish.js"></script>
 <script src="../../assets/js/reader.js"></script>
 <script src="../../assets/js/estimate.js"></script>
+<script src="../../assets/js/scaleit.js"></script>
 </body>
 </html>

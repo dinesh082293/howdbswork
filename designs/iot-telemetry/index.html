@@ -61,6 +61,10 @@ GROUP BY minute ORDER BY minute;</pre>
   <div class="kicker">4 · How it grows</div>
   <h2>Start simple, change one thing at a time</h2>
   <ol class="steplist"><li><b>PostgreSQL with time partitions</b><span>Works for a modest number of devices.</span></li><li><b>Write rate or storage grows</b><span>A time-series extension or a column store, with compression and rollups.</span></li><li><b>Very large fleets</b><span>A message queue in front to absorb bursts, and several ingest workers writing batches.</span></li></ol>
+
+  <h3 id="scale-it" style="margin-top:28px">Scale it: watch this design grow</h3>
+  <p class="sub">Pick a stage, then throw something at it. The numbers are a model to show the shape of each change, not a measurement; the measured numbers are in the <a href="../../notebooks/index.html">lab notebooks</a>.</p>
+  <div class="scaleit" data-slug="iot-telemetry"></div>
 </div></section>
 <section id="breaks"><div class="wrap">
   <div class="kicker">5 · What breaks first</div>
@@ -101,5 +105,6 @@ GROUP BY minute ORDER BY minute;</pre>
 <script src="../../assets/js/polish.js"></script>
 <script src="../../assets/js/reader.js"></script>
 <script src="../../assets/js/estimate.js"></script>
+<script src="../../assets/js/scaleit.js"></script>
 </body>
 </html>

@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>Scale it is now on all 13 design docs, each following its own growth path (payments shard...</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-98fbf04d754f</guid>
+    <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
+    <description>Scale it is now on all 13 design docs, each following its own growth path (payments shard by account, bookings add a waiting room, telemetry puts a queue in front, and so on). Also a new Follow it on Lost updates and write skew: two sessions update the same row in PostgreSQL and InnoDB, with what REPEATABLE READ changes in PostgreSQL and what one forgotten transaction does in MySQL.</description>
+  </item>
+  <item>
     <title>Scale it on the store, social feed and chat design docs</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-fe0d368e8427</guid>
