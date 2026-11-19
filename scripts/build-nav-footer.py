@@ -141,7 +141,7 @@ def build_section(sm, order, where, prefix, rel):
                 f'<p class="sub">Read them in order as a course, or go straight to the part that matches your question.</p>'
                 f'<div class="partgrid">{"".join(cards)}</div>'
                 f'<p class="sub" style="margin-top:14px">Not sure where to begin? <a href="{prefix}paths/index.html">Pick a reading path for your goal</a>, '
-                f'or see <a href="{prefix}sitemap/index.html">every page on one page</a>.</p></div></section>')
+                f'or open <a href="{prefix}sitemap/index.html">your map of every lesson</a>, with the ones you have read ticked.</p></div></section>')
     if rel not in where:
         return ""
     sec, i = where[rel]
