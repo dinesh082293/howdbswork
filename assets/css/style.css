@@ -1151,3 +1151,4 @@ details.deep>*:not(summary){margin-left:16px;margin-right:16px}
 .tag.rd{background:var(--rd-bg);color:var(--rd)} .tag.cs{background:var(--cs-bg);color:var(--cs)} .tag.vx{background:var(--vx-bg);color:var(--vx)}
 .deeplink{margin:10px 0 0;font-size:14px;font-weight:600}
 .filegrid:has(> .filecard:only-child){grid-template-columns:minmax(0,860px)}
+.nf-hits ul{list-style:none;padding:0;margin:14px 0 18px;max-width:640px}.nf-hits li{padding:8px 0;border-bottom:1px solid var(--line)}.nf-hits li a{font-weight:600}.nf-hits li span{color:var(--muted);font-size:13px;margin-left:6px}

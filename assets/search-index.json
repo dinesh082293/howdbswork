@@ -1572,7 +1572,7 @@
   "k": "read replica lag primary writes reads behind"
  },
  {
-  "t": "Same task, three engines: a write, a crash, a lagging replica, a long transaction",
+  "t": "Engines side by side: a write, a crash, a lagging replica, a long transaction",
   "u": "compare/index.html",
   "s": "Compare",
   "k": "compare same task three engines write crash replica lag long transaction side by side"
