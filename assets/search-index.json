@@ -1170,7 +1170,7 @@
   "k": "start here path chooser 10 minutes 30 minutes 2 hours guided path"
  },
  {
-  "t": "Sixteen times a real database broke",
+  "t": "Nineteen times a real database broke",
   "u": "index.html#stories-strip",
   "s": "Home",
   "k": "stories real incidents uber notion adyen figma dropbox github slack shopify epic fortnite gitlab instacart mongodb"
@@ -2014,5 +2014,59 @@
   "u": "health/index.html",
   "s": "Practice",
   "k": "health check report script audit review unused indexes bloat long transaction replication top queries"
+ },
+ {
+  "t": "Discord: tombstones made one channel take 20 seconds",
+  "u": "stories/index.html#discord-tombstones",
+  "s": "Stories",
+  "k": "discord cassandra tombstones deletes gc_grace_seconds repair null columns"
+ },
+ {
+  "t": "Discord: 177 Cassandra nodes to 72 ScyllaDB nodes",
+  "u": "stories/index.html#discord-scylla",
+  "s": "Stories",
+  "k": "discord cassandra scylladb hot partition request coalescing migration"
+ },
+ {
+  "t": "Instagram: Redis hashes cut memory from 21 GB to 5 GB",
+  "u": "stories/index.html#instagram-redis",
+  "s": "Stories",
+  "k": "instagram redis memory hash listpack ziplist encoding"
+ },
+ {
+  "t": "Database security: network, roles, copies, audit",
+  "u": "security/index.html",
+  "s": "Security",
+  "k": "security tls ssl scram authentication roles least privilege grant audit pgaudit encryption masking ransomware"
+ },
+ {
+  "t": "Least-privilege roles for the application",
+  "u": "security/index.html#roles",
+  "s": "Security",
+  "k": "roles grant privileges owner application read-only pg_read_all_data"
+ },
+ {
+  "t": "Data modeling basics: keys, types, constraints",
+  "u": "data-modeling/index.html",
+  "s": "Data modeling",
+  "k": "data modeling schema design primary key uuid uuidv7 bigint identity types numeric decimal timestamptz constraints foreign key embed reference"
+ },
+ {
+  "t": "What changed in PostgreSQL 18",
+  "u": "releases/index.html#pg18",
+  "s": "Releases",
+  "k": "postgresql 18 release checksums md5 async io io_method pg_upgrade statistics skip scan uuidv7"
+ },
+ {
+  "t": "What changed in MySQL 8.4 LTS",
+  "u": "releases/index.html#mysql84",
+  "s": "Releases",
+  "k": "mysql 8.4 lts mysql_native_password innodb defaults adaptive hash index change buffering replica source mysqlpump"
+ },
+ {
+  "t": "What changed in MongoDB 8.0",
+  "u": "releases/index.html#mongo80",
+  "s": "Releases",
+  "k": "mongodb 8.0 transparent huge pages thp tcmalloc defaultmaxtimems query settings movecollection"
  }
 ]

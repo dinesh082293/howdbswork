@@ -116,6 +116,10 @@
      "Application designs"
     ],
     [
+     "data-modeling/index.html",
+     "Data modeling basics"
+    ],
+    [
      "designs/store-orders/index.html",
      "Store orders and inventory"
     ],
@@ -197,7 +201,7 @@
    "id": "operate",
    "name": "Operate",
    "question": "How do I run it in production?",
-   "blurb": "What to check when it is slow or broken, where it runs and what it costs, how big it must be, pooling, backups, upgrades and other changes made safely.",
+   "blurb": "What to check when it is slow or broken, where it runs and what it costs, how big it must be, pooling, backups, security, upgrades and other changes made safely.",
    "pages": [
     [
      "symptoms/index.html",
@@ -228,12 +232,20 @@
      "Backups and restore time"
     ],
     [
+     "security/index.html",
+     "Security"
+    ],
+    [
      "designs/migrations/index.html",
      "Migration playbooks"
     ],
     [
      "decisions/major-upgrades/index.html",
      "Major version upgrades"
+    ],
+    [
+     "releases/index.html",
+     "What changed in the latest releases"
     ],
     [
      "oncall/index.html",

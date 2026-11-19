@@ -36,6 +36,7 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 ## Design
 
 - [Application designs](https://howdbswork.com/designs/): Fourteen design docs for common applications, with a picker: what kind of data goes in which database, and why.
+- [Data modeling basics](https://howdbswork.com/data-modeling/): Primary keys, types, constraints, normalizing and embedding, and deletes, for PostgreSQL, MySQL and MongoDB: the table design choices that are cheap on day one and expensive later.
 - [Store orders and inventory](https://howdbswork.com/designs/store-orders/): Orders, order lines, payments references and stock live in one relational database, PostgreSQL or MySQL. Carts can live in Redis. Product search goes to a.
 - [Payments and ledgers](https://howdbswork.com/designs/payments-ledger/): A relational database with a double-entry ledger that is append-only, with idempotency keys and synchronous replication. Correctness first, speed.
 - [Bookings and reservations](https://howdbswork.com/designs/booking-reservations/): A relational database with the rule enforced by the database itself: a unique constraint on (resource, slot), or an exclusion constraint on time ranges in.
@@ -65,10 +66,12 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 - [Why the bill is huge](https://howdbswork.com/decisions/cost-model/): Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it.
 - [Connection pooling](https://howdbswork.com/decisions/connection-pooling/): How many database connections you need, what each costs in PostgreSQL, MySQL and MongoDB, where PgBouncer, ProxySQL or RDS Proxy fit, and the pool-size arithmetic.
 - [Backups and restore time](https://howdbswork.com/decisions/backup-restore/): How to back up PostgreSQL, MySQL and MongoDB so you can restore to any moment: physical backups, log archiving, PITR, restore-time arithmetic and what breaks.
+- [Security](https://howdbswork.com/security/): Database security in five layers for PostgreSQL, MySQL and MongoDB: network, encrypted and authenticated connections, least-privilege roles, backups and dev copies, and auditing, with the commands to check each.
 - [Migration playbooks](https://howdbswork.com/designs/migrations/): Four migration playbooks: add change data capture, split a database, move from MySQL to PostgreSQL, and add a cache, each with checks and a way back.
 - [Major version upgrades](https://howdbswork.com/decisions/major-upgrades/): How to upgrade PostgreSQL, MySQL and MongoDB major versions: pg_upgrade, logical replication, newer replicas, rolling upgrades, feature compatibility, and what breaks afterwards.
+- [What changed in the latest releases](https://howdbswork.com/releases/): What operators need to know in PostgreSQL 18, MySQL 8.4 LTS and MongoDB 8.0: changed defaults, upgrade breakers, and new features worth using.
 - [On call tonight](https://howdbswork.com/oncall/): Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call.
-- [Real failures](https://howdbswork.com/stories/): Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.
+- [Real failures](https://howdbswork.com/stories/): Nineteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab, Instacart, Discord and Instagram, each with the numbers, the fix, and the lesson. Plus a diagram per story.
 - [Cheat sheet](https://howdbswork.com/cheat-sheet/): Each engine in 8 rules: PostgreSQL, MySQL/InnoDB and MongoDB/WiredTiger: one rule, one plain line, one diagram, with deep-dive links.
 - [Reference: plans, logs, checklist](https://howdbswork.com/reference/): Quick lookup: side-by-side engine comparison, annotated EXPLAIN output, the log-file pattern and failure modes, and the DBA checklist.
 

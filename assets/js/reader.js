@@ -333,3 +333,52 @@ window.HDW_GOALS = window.HDW_GOALS || (function () {
   run(courseContinue);
   run(courseMap);
 })();
+/* Suggest a fix: select text anywhere in a page and a small button offers to
+   open a GitHub issue with the page, the nearest heading and the quote filled
+   in. The footer link does the same for the whole page. */
+(function () {
+  var REPO = 'https://github.com/dinesh082293/howdbswork/issues/new';
+  function heading(node) {
+    var el = node && (node.nodeType === 1 ? node : node.parentElement);
+    while (el && el !== document.body) {
+      var sec = el.closest('section,.incident,.sy,.cs-panel');
+      if (!sec) break;
+      var h = sec.querySelector('h3,h2');
+      if (h) { var c = h.cloneNode(true); Array.prototype.forEach.call(c.querySelectorAll('.hlink'), function (x) { x.remove(); }); return c.textContent.trim(); }
+      el = sec.parentElement;
+    }
+    var h1 = document.querySelector('h1'); return h1 ? h1.textContent.trim() : document.title;
+  }
+  function url(quote, where) {
+    var page = location.origin.indexOf('howdbswork.com') >= 0 ? location.href.split('#')[0] : 'https://howdbswork.com' + location.pathname;
+    var title = 'Fix: ' + (where || document.title).slice(0, 80);
+    var body = 'Page: ' + page + (where ? '\nSection: ' + where : '') + (quote ? '\n\nThe text:\n> ' + quote.replace(/\s+/g, ' ').slice(0, 600) : '') +
+      '\n\nWhat is wrong, and what it should say (a link to the docs or a source helps):\n\n';
+    return REPO + '?title=' + encodeURIComponent(title) + '&body=' + encodeURIComponent(body);
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('a.fixlink'), function (a) {
+    a.href = url('', document.querySelector('h1') ? document.querySelector('h1').textContent.trim() : '');
+    a.target = '_blank'; a.rel = 'noopener';
+  });
+  var btn = document.createElement('a');
+  btn.className = 'fixbtn'; btn.textContent = 'Suggest a fix'; btn.target = '_blank'; btn.rel = 'noopener'; btn.hidden = true;
+  document.body.appendChild(btn);
+  function hide() { btn.hidden = true; }
+  function check() {
+    var sel = window.getSelection && window.getSelection();
+    var txt = sel ? String(sel).trim() : '';
+    if (!sel || sel.rangeCount === 0 || txt.length < 12 || txt.length > 1500) return hide();
+    var r = sel.getRangeAt(0), anc = r.commonAncestorContainer;
+    var el = anc.nodeType === 1 ? anc : anc.parentElement;
+    if (!el || el.closest('nav,footer,input,textarea,.rs-term,pre,.sitesearch')) return hide();
+    var box = r.getBoundingClientRect();
+    if (!box || (!box.width && !box.height)) return hide();
+    btn.href = url(txt, heading(anc));
+    btn.hidden = false;
+    var top = window.scrollY + box.bottom + 8, left = window.scrollX + Math.min(Math.max(8, box.left), document.documentElement.clientWidth - 140);
+    btn.style.top = top + 'px'; btn.style.left = left + 'px';
+  }
+  var tmr;
+  document.addEventListener('selectionchange', function () { clearTimeout(tmr); tmr = setTimeout(check, 250); });
+  btn.addEventListener('click', function () { setTimeout(hide, 100); });
+})();
