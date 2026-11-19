@@ -1493,7 +1493,7 @@
    "title": "Lab notebooks",
    "section": "Practice",
    "url": "https://howdbswork.com/notebooks/",
-   "description": "Eight experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines and agent memory.",
+   "description": "Nine experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines, agent memory, and Redis and Cassandra under failure.",
    "headings": [
     "What one open transaction costs",
     "What I take from it",
