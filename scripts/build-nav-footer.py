@@ -12,7 +12,7 @@ link). This script rewrites only the <nav>...</nav> and
 <footer>...</footer> blocks of each page, adjusting relative links for
 the page's depth, and changes nothing else outside the marked regions
 (<!-- CRUMBS:BEGIN/END -->, <!-- SECTION:BEGIN/END -->,
-<!-- SITEMAP:BEGIN/END -->).
+<!-- SITEMAP:BEGIN/END -->, <!-- CONTINUE:BEGIN/END -->).
 
 The stamp line is built from assets/data/engines.json, so a version or
 month change flows through here instead of being edited per page.
@@ -46,6 +46,27 @@ def load_sitemap():
     return sm, order, where
 
 
+def lessons(order):
+    """Lesson numbers: every page in reading order, except the About section."""
+    out, n = {}, 0
+    for path, title, sec in order:
+        if sec["id"] == "about":
+            continue
+        n += 1
+        out[path] = n
+    return out, n
+
+
+def build_continue(order, prefix):
+    nums, total = lessons(order)
+    data = [[prefix + p, t, sec["name"], nums[p]] for p, t, sec in order if p in nums]
+    blob = _esc(json.dumps(data, ensure_ascii=False))
+    return (f'<section class="continue"><div class="wrap"><div id="continue" data-total="{total}" data-order="{blob}">'
+            f'<a class="contcard" href="{prefix}{order[0][0]}"><span class="ck">Start the course</span>'
+            f'<b>Lesson 1 · {_esc(order[0][1])}</b><span class="cs">{total} lessons in six parts, in reading order.</span>'
+            f'<i>Start →</i></a></div></div></section>')
+
+
 def build_navlinks(sm, prefix, rel):
     out = [f'<a href="{prefix}index.html"{" aria-current=\"page\"" if rel == "index.html" else ""}>Home</a>']
     for sec in sm["sections"]:
@@ -59,6 +80,16 @@ def build_navlinks(sm, prefix, rel):
     return "".join(out)
 
 
+_LESSONS = {}
+_TOTAL = [0]
+
+
+def _lesson_label(rel, i, sec):
+    if rel in _LESSONS:
+        return f"Lesson {_LESSONS[rel]} of {_TOTAL[0]}"
+    return f"{i + 1} of {len(sec['pages'])}"
+
+
 def build_crumbs(sm, where, prefix, rel):
     if rel not in where:
         return ""
@@ -67,7 +98,7 @@ def build_crumbs(sm, where, prefix, rel):
     return (f'<div class="crumbs"><div class="wrap"><a href="{prefix}index.html">Home</a><span>›</span>'
             f'<a href="{prefix}sitemap/index.html#{sec["id"]}">{_esc(sec["name"])}</a><span>›</span>'
             f'<b aria-current="page">{_esc(title)}</b>'
-            f'<em>{i + 1} of {len(sec["pages"])}</em></div></div>')
+            f'<em>{_lesson_label(rel, i, sec)}</em></div></div>')
 
 
 def build_section(sm, order, where, prefix, rel):
@@ -108,10 +139,19 @@ def build_section(sm, order, where, prefix, rel):
 
 def build_sitemap_body(sm, prefix):
     blocks = []
+    part = 0
     for s in sm["sections"]:
         lis = "".join(f'<li><a href="{prefix}{p}">{_esc(t)}</a></li>' for p, t in s["pages"])
-        blocks.append(f'<div class="mapsec" id="{s["id"]}"><h2>{_esc(s["name"])}</h2>'
-                      f'<p class="sub">{_esc(s["blurb"])}</p><ol>{lis}</ol></div>')
+        start = _LESSONS.get(s["pages"][0][0])
+        if start:
+            part += 1
+            label = f"Part {part} · {_esc(s['name'])}"
+            ol = f'<ol start="{start}">{lis}</ol>'
+        else:
+            label = _esc(s["name"])
+            ol = f'<ul>{lis}</ul>'
+        blocks.append(f'<div class="mapsec" id="{s["id"]}"><h2>{label}</h2>'
+                      f'<p class="sub">{_esc(s["blurb"])}</p>{ol}</div>')
     return '<div class="mapsecs">' + "".join(blocks) + "</div>"
 
 
@@ -149,6 +189,9 @@ def main():
     )
 
     sm, order, where = load_sitemap()
+    nums, total = lessons(order)
+    _LESSONS.update(nums)
+    _TOTAL[0] = total
     changed = []
     # The template itself is not a page: never rewrite it.
     pages = sorted(
@@ -200,6 +243,9 @@ def main():
         new_text = put(new_text, "SECTION", build_section(sm, order, where, prefix, rel), anchor_before="<footer>")
         if rel == "sitemap/index.html":
             new_text = put(new_text, "SITEMAP", build_sitemap_body(sm, prefix))
+        if rel in ("index.html", "sitemap/index.html"):
+            anchor = "</div></header>"
+            new_text = put(new_text, "CONTINUE", build_continue(order, prefix), anchor_after=anchor)
         if new_text != text:
             page.write_text(new_text)
             changed.append(str(page.relative_to(ROOT)))

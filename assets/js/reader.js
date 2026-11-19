@@ -208,6 +208,26 @@
     });
   }
 
+  /* 7. the course: continue where you left off, and progress */
+  function courseContinue() {
+    var box = document.getElementById('continue');
+    if (!box) return;
+    var order = JSON.parse(box.getAttribute('data-order') || '[]'), total = +box.getAttribute('data-total');
+    var r = getRead(), done = 0, last = -1;
+    order.forEach(function (o, i) { if (r[pageKey(o[0])]) { done++; last = i; } });
+    if (!done) return;
+    var next = null;
+    for (var k = last + 1; k < order.length && !next; k++) if (!r[pageKey(order[k][0])]) next = order[k];
+    for (var j = 0; j < order.length && !next; j++) if (!r[pageKey(order[j][0])]) next = order[j];
+    var pct = Math.round(100 * done / total);
+    function e(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    box.innerHTML = next
+      ? '<a class="contcard" href="' + e(next[0]) + '"><span class="ck">Pick up where you left off · ' + done + ' of ' + total + ' read</span>' +
+        '<b>Lesson ' + next[3] + ' · ' + e(next[1]) + '</b><span class="cs">' + e(next[2]) + '</span>' +
+        '<span class="cbar"><span style="width:' + pct + '%"></span></span><i>Continue →</i></a>'
+      : '<div class="contcard"><span class="ck">All ' + total + ' lessons read</span><b>You have read the whole course.</b><span class="cs">New pages appear in What\'s new and the RSS feed.</span><span class="cbar"><span style="width:100%"></span></span></div>';
+  }
+
   function run(f) { try { f(); } catch (e) {} }
   run(progressBar);
   var hs = []; run(function () { hs = headings(); });
@@ -217,4 +237,5 @@
   run(markLinks);
   run(trackRead);
   run(quizzes);
+  run(courseContinue);
 })();
