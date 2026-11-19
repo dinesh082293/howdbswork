@@ -6,13 +6,13 @@ shell and the footer, and assets/data/sitemap.json for the order of the
 site. From the sitemap this script builds, per page: the grouped nav
 menus, the breadcrumb under the nav, the section index with previous and
 next links above the footer, the site map on the home page, and the
-sitemap page itself, plus the latest What's new entries on the home page.
+sitemap page itself.
 The template holds the footer (the site description, the "Checked against
 docs" stamp and the footer links). This script rewrites only the <nav>...</nav> and
 <footer>...</footer> blocks of each page, adjusting relative links for
 the page's depth, and changes nothing else outside the marked regions
 (<!-- CRUMBS:BEGIN/END -->, <!-- SECTION:BEGIN/END -->,
-<!-- SITEMAP:BEGIN/END -->, <!-- CONTINUE:BEGIN/END -->, <!-- NEWS:BEGIN/END -->).
+<!-- SITEMAP:BEGIN/END -->, <!-- CONTINUE:BEGIN/END -->).
 
 The stamp line is built from assets/data/engines.json, so a version or
 month change flows through here instead of being edited per page.
@@ -176,16 +176,6 @@ def build_section(sm, order, where, prefix, rel):
             f'<div class="secnav-pn">{prev_html}{next_html}</div></div></section>')
 
 
-def build_news(prefix, n=5):
-    """The latest entries of the What's new page, for the home page."""
-    src = (ROOT / "whats-new/index.html").read_text()
-    ul = src.split('<ul class="newslist">', 1)[1].split("</ul>", 1)[0]
-    items = re.findall(r"<li>.*?</li>", ul, flags=re.S)[:n]
-    fix = lambda t: re.sub(r'href="\.\./', 'href="' + prefix, t)
-    return ('<ul class="newslist">' + "".join(fix(i) for i in items) + '</ul>'
-            f'<p class="sub"><a href="{prefix}whats-new/index.html">Everything that changed →</a> · <a href="{prefix}feed.xml">RSS feed</a></p>')
-
-
 def build_sitemap_body(sm, prefix):
     blocks = []
     part = 0
@@ -287,8 +277,6 @@ def main():
         new_text = put(new_text, "SECTION", build_section(sm, order, where, prefix, rel), anchor_before="<footer>")
         if rel == "sitemap/index.html":
             new_text = put(new_text, "SITEMAP", build_sitemap_body(sm, prefix))
-        if rel == "index.html":
-            new_text = put(new_text, "NEWS", build_news(prefix))
         if rel in ("index.html", "sitemap/index.html"):
             anchor = "</div></header>"
             new_text = put(new_text, "CONTINUE", build_continue(order, prefix), anchor_after=anchor)

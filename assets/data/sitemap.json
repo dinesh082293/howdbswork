@@ -213,15 +213,11 @@
    "id": "about",
    "name": "About",
    "question": "Who writes this?",
-   "blurb": "Who writes this, what changed, what was corrected, what to read next, and how to reach me.",
+   "blurb": "Who writes this, what was corrected, what to read next, and how to reach me.",
    "pages": [
     [
      "about/index.html",
      "About"
-    ],
-    [
-     "whats-new/index.html",
-     "What's new"
     ],
     [
      "corrections/index.html",

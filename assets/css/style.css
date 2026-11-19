@@ -969,8 +969,6 @@ h2:hover .hlink,h3:hover .hlink,.hlink:focus{opacity:1}
 .partcard ol li::marker{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
 .partcard .pmore{font-size:13.5px;padding-left:28px}
 .partcard .pgo{margin-top:auto;padding-top:8px;font-weight:700;font-size:14.5px}
-.newslist{font-size:15px;line-height:1.75;max-width:860px;padding-left:20px}
-.newslist li{margin-bottom:8px}
 .footlinks{line-height:1.9}
 @media(max-width:860px){.doors{grid-template-columns:minmax(0,1fr)}.partgrid{grid-template-columns:minmax(0,1fr)}}
 .partcard li a.read::after{content:" ✓";color:var(--teal);font-weight:700}
