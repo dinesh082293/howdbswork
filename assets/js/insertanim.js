@@ -85,6 +85,14 @@
     if (parent) parent.appendChild(e);
     return e;
   }
+  // Colour the words that name memory, disk, the log and the replica.
+  function colorize(t) {
+    var e = String(t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; });
+    return e.replace(/\b(in memory|memory|data file|disk|WAL record|WAL|redo log|binlog|journal|oplog|the log|log record|log)\b|\b(standby|replicas?|secondaries|secondary)\b/gi, function (m, a, b) {
+      var cls = b ? 'w-rep' : (/memory/i.test(m) ? 'w-mem' : (/disk|data file/i.test(m) ? 'w-disk' : 'w-log'));
+      return '<span class="' + cls + '">' + m + '</span>';
+    });
+  }
   function center(r) { return [r[0] + r[2] / 2, r[1] + r[3] / 2]; }
 
   var svg, N = {};
@@ -236,7 +244,7 @@
     } else verdict.hidden = true;
     root.querySelector('.ia-capbody .ia-step').textContent = i < 0 ? 'Ready' : 'Step ' + (i + 1) + ' of ' + order.length;
     root.querySelector('.ia-capbody .ia-title').textContent = cap.t;
-    root.querySelector('.ia-text').textContent = cap.s;
+    root.querySelector('.ia-text').innerHTML = colorize(cap.s);
     var det = root.querySelector('.ia-more');
     det.hidden = i < 0; if (i >= 0) det.querySelector('p').textContent = DETAIL[order[i]];
     var dots = root.querySelectorAll('.ia-dot');
@@ -277,6 +285,7 @@
     '<div class="ia-top"><div class="seg ia-eng" role="group" aria-label="Database">' +
     Object.keys(ENG).map(function (k) { return '<button type="button" data-e="' + k + '" aria-pressed="' + (k === st.eng) + '">' + ENG[k].name + '</button>'; }).join('') +
     '</div><code class="ia-sql"></code></div>' +
+    '<div class="legend4" aria-label="Colour key"><span class="w-mem"><b>Memory</b></span><span class="w-disk"><b>Disk</b></span><span class="w-log"><b>Log</b></span><span class="w-rep"><b>Replica</b></span></div>' +
     '<div class="ia-stage"></div>' +
     '<div class="ia-cap" aria-live="polite"><div class="ia-pred" hidden><div class="ia-step">Predict first</div><div class="ia-title">' + PRED.q + '</div><div class="ia-opts">' +
     PRED.opts.map(function (o) { return '<button type="button" class="ia-opt" data-p="' + o[0] + '">' + o[1] + '</button>'; }).join('') +

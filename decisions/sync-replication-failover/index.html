@@ -59,6 +59,8 @@ details summary:hover{color:var(--teal)}
     <button type="button" data-engine="mo" aria-pressed="false">MongoDB</button>
   </div>
 </div></div>
+<section class="five"><div class="wrap"><p class="readguide"><b>How to read this page:</b> 1 minute for the box below. 10 minutes for the decision record and sections 1 to 4 and 6. The rest is folded: open it when you run this in production.</p>
+</div></section>
 <section id="compare" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Cross-engine comparison</div>
   <h2>The same decision, three engines</h2>
@@ -355,6 +357,7 @@ COMMIT/*!*/;</pre>
 <section id="breaks" style="padding-top:6px"><div class="wrap">
   <div class="kicker">10-minute layer · section 5 of 8</div>
   <h2>5. What breaks</h2>
+  <details class="deep"><summary><span>Go deeper: what breaks, failure by failure</span><em>7 min</em></summary>
   <h3 style="margin:18px 0 8px;font-size:17px">PostgreSQL</h3>
   <p class="sub"><b style="color:var(--ink)">Failure 1: the synchronous standby goes down.</b> Blast radius: all writes hang. Every commit waits for an ACK that never comes. Reads continue. Detection: <span class="mono">pg_stat_activity</span> fills with <span class="mono">SyncRep</span> wait events, and <span class="mono">pg_stat_replication</span> shows no row with <span class="mono">sync_state = 'sync'</span>. First metric to move: count of sessions waiting on <span class="mono">SyncRep</span>. Mitigation: quorum <span class="mono">ANY 1 (s1, s2)</span> so one standby loss does not stop writes, or remove the dead standby from <span class="mono">synchronous_standby_names</span> and reload.</p>
   <p class="sub"><b style="color:var(--ink)">Failure 2: the standby is up but slow.</b> A saturated disk makes the standby fsync take 50 ms instead of 0.5 ms. Blast radius: commit p99 rises by the same 50 ms on every session. Detection: <span class="mono">flush_lag</span> and <span class="mono">replay_lag</span> in <span class="mono">pg_stat_replication</span> grow. First metric to move: commit p99 latency. Mitigation: the standby needs the same disk performance as the primary. A slow standby is a slow primary.</p>
@@ -393,6 +396,7 @@ COMMIT/*!*/;</pre>
     <p class="logbox" id="foStatus">Healthy: the primary accepts writes, S1 ACKs every commit before it returns, S2 trails a little behind. Press Kill the primary to watch the failover.</p>
     <p id="foLost" style="font-size:14px;font-weight:700;margin:10px 0 0"></p>
   </div>
+</details>
 </div></section>
 <section id="alternatives" style="padding-top:6px"><div class="wrap">
   <div class="kicker">10-minute layer · section 6 of 8</div>
@@ -409,6 +413,7 @@ COMMIT/*!*/;</pre>
   <div class="kicker">10-minute layer · section 7 of 8</div>
   <h2>7. Operating it</h2>
   <p class="sub">Three metrics, per engine. These are the only three to alert on first. Everything else is diagnosis.</p>
+  <details class="deep"><summary><span>Go deeper: operating it day to day</span><em>5 min</em></summary>
   <h3 style="margin:18px 0 8px;font-size:17px">PostgreSQL</h3>
   <ol style="font-size:15px;line-height:1.7;max-width:820px">
     <li><span class="mono">sync_state</span> in <span class="mono">pg_stat_replication</span>. Alert when no row has <span class="mono">sync_state = 'sync'</span> for more than 30 s. That means the safety feature is off.</li>
@@ -462,11 +467,13 @@ COMMIT/*!*/;</pre>
   <div class="diagram"><p class="dcap">Capacity: the standby must keep up</p><div class="dflow">
     <div class="dbox"><b>Primary</b>generates 50 MB/s of WAL at peak</div><span class="darrow">→</span>    <div class="dbox good"><b>Standby</b>must apply more than 50 MB/s, sustained</div>
   </div></div>
+</details>
 </div></section>
 <section id="versions" style="padding-top:6px"><div class="wrap">
   <div class="kicker">10-minute layer · section 8 of 8</div>
   <h2>8. Version notes</h2>
   <p class="sub">PostgreSQL 10 added quorum commit, the <span class="mono">ANY</span> and <span class="mono">FIRST</span> forms of <span class="mono">synchronous_standby_names</span>. Before that, the setting was a plain list and only the first standby counted. PostgreSQL 17 moved checkpoint counters from <span class="mono">pg_stat_bgwriter</span> to <span class="mono">pg_stat_checkpointer</span>, which changes where the checkpoint numbers in the operating section come from, not the replication mechanism. PostgreSQL 18 adds nothing to synchronous replication itself.</p>
+  <details class="deep"><summary><span>Go deeper: version notes</span><em>1 min</em></summary>
   <p class="sub">MySQL 5.7 made <span class="mono">AFTER_SYNC</span> the default wait point. Before that, <span class="mono">AFTER_COMMIT</span> was the default, and other sessions could read data a failover would lose. MySQL 8.0.14 added the <span class="mono">group_replication_consistency</span> levels, including <span class="mono">BEFORE_ON_PRIMARY_FAILOVER</span>, which holds reads and writes on a new primary until it applies its backlog. The default is still <span class="mono">EVENTUAL</span>. MySQL 8.0.30 changed the redo log files to <span class="mono">#innodb_redo/#ib_redoN</span>. That changes the file names in the crash story, not the replication protocol.</p>
   <p class="sub">MongoDB 5.0 made <span class="mono">w: "majority"</span> the default write concern. Before that, the default was <span class="mono">w: 1</span>, and an application that set nothing got primary-only acknowledgment. MongoDB 4.4 removed the old plan cache commands, which is unrelated to replication and noted here only because it is the same class of mistake: a command that worked in an old version and silently does nothing in the current one.</p>
   <div class="diagram"><p class="dcap">PostgreSQL versions</p><div class="dflow">
@@ -478,11 +485,13 @@ COMMIT/*!*/;</pre>
   <div class="diagram"><p class="dcap">MongoDB versions</p><div class="dflow">
     <div class="dbox"><b>4.4</b>old plan cache commands removed</div><span class="darrow">→</span>    <div class="dbox good"><b>5.0</b>w: majority becomes the default</div>
   </div></div>
+</details>
 </div></section>
 <section id="postmortem" style="padding-top:6px"><div class="wrap">
   <div class="kicker">2 AM story · as a postmortem</div>
   <h2>Postmortem: the binlog that filled the disk</h2>
   <p class="sub">The timeline is in phases because the site does not record clock times for it.</p>
+  <details class="deep"><summary><span>Go deeper: a 2 a.m. postmortem</span><em>3 min</em></summary>
   <p class="sub"><b style="color:var(--ink)">Detection:</b> writes started failing. Then the database refused writes entirely. The disk was full.</p>
   <p class="sub"><b style="color:var(--ink)">Diagnosis:</b> the disk was broken down by owner before anything was touched. The binlog was the filler. The purge had not kept up, and the reason was not a dead replica. MySQL purges binlogs by time: <span class="mono">binlog_expire_logs_seconds</span> sets the age, 2592000 seconds (30 days) by default, auto-purge is on by default, and expired files go at startup and when the binlog is flushed. A replica that is disconnected holds nothing back. Only a connected replica that has not yet read a file keeps that one file. The dead replica did not pin the binlog history. That is PostgreSQL replication-slot behavior, not MySQL.</p>
   <p class="sub"><b style="color:var(--ink)">Root cause:</b> binlog retention times write rate outgrew the disk, with no bound sized to either. The site does not record the retention value, the write rate, or how long the fill took, so it does not record which of the three usual causes it was: retention set too long for the disk, retention set to 0 or auto-purge off, or a write burst that filled the disk faster than purge could keep up. Check <span class="mono">SHOW BINARY LOGS</span>, <span class="mono">SHOW VARIABLES LIKE 'binlog_expire_logs_seconds'</span>, and the disk usage by owner before naming the cause.</p>
@@ -496,10 +505,12 @@ COMMIT/*!*/;</pre>
   </div></div>
   <p class="sub"><b style="color:var(--ink)">Numbers to check:</b> the site records no disk size, no retention value, and no durations for this incident, so none are stated here. Fill them in from the incident record: total disk size and how full the binlog directory was, the <span class="mono">binlog_expire_logs_seconds</span> value at the time, the write rate in binlog bytes per day, the age of the oldest binlog file, and how long the fill took from the last healthy disk reading to 100 percent.</p>
   <p class="sub"><b style="color:var(--ink)">Why this postmortem is on this page:</b> a dead replica is not what blocked the purge, and that distinction is the point. The dead replica still matters on this page for a different reason: it is the state that silently degrades semi-sync to async, and a single synchronous standby that dies turns into hung writes. One dead replica, two different failure modes in the replication modes, plus a disk fill with a separate cause. Watch replica health for the replication modes, and size retention against write rate for the disk. The two fixes are different, so keep them in separate runbook steps.</p>
+</details>
 </div></section>
 <section id="anti-patterns" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Anti-patterns · and the way out</div>
   <h2>Anti-patterns and the migration path out</h2>
+  <details class="deep"><summary><span>Go deeper: anti-patterns and the way out</span><em>2 min</em></summary>
   <ol style="font-size:15px;line-height:1.7;max-width:820px">
     <li><b>One named sync standby, no quorum.</b> <span class="mono">synchronous_standby_names = 's1'</span>. One standby failure stops all writes. Migration: <span class="mono">ALTER SYSTEM SET synchronous_standby_names = 'ANY 1 (s1, s2)'; SELECT pg_reload_conf();</span> Then verify <span class="mono">sync_state = 'sync'</span> appears for one of the two.</li>
     <li><b><span class="mono">synchronous_commit = on</span> with no <span class="mono">synchronous_standby_names</span>.</b> The commit returns after local flush only, and nothing says so. Migration: set the names, reload, and check <span class="mono">pg_stat_replication</span> for a <span class="mono">sync</span> row. Add the check to the deploy checklist.</li>
@@ -510,25 +521,30 @@ COMMIT/*!*/;</pre>
     <li><b>Failover by hand with no fencing step.</b> The old primary comes back and accepts writes. Migration: Patroni for PostgreSQL, Orchestrator for MySQL, or a written fence step that stops the old primary and confirms it is stopped before any promotion. The built-in election in MongoDB and Group Replication already fences by quorum. Use it.</li>
   </ol>
   <table class="breaks"><thead><tr><th>Anti-pattern</th><th>Fix</th></tr></thead><tbody><tr><td>One named sync standby, no quorum</td><td><span class="mono">ANY 1 (s1, s2)</span>, then verify a <span class="mono">sync</span> row appears</td></tr><tr><td><span class="mono">synchronous_commit = on</span> with no <span class="mono">synchronous_standby_names</span></td><td>Set the names, reload, check <span class="mono">pg_stat_replication</span>, add the check to the deploy checklist</td></tr><tr><td>Semi-sync enabled, never checked</td><td>Alert on <span class="mono">Rpl_semi_sync_source_status</span>, check it weekly</td></tr><tr><td>Sync standby in the same AZ, called disaster recovery</td><td>Move the sync standby to a second AZ, keep an async replica in a third region</td></tr><tr><td><span class="mono">w: 1</span> for money</td><td><span class="mono">w: "majority"</span> per operation, or the replica set default, then check the rollback directory for a week</td></tr><tr><td><span class="mono">AFTER_COMMIT</span> instead of <span class="mono">AFTER_SYNC</span></td><td>Set <span class="mono">AFTER_SYNC</span>, verify it, do not assume it</td></tr><tr><td>Failover by hand with no fencing step</td><td>Patroni, Orchestrator, or a written fence step that stops the old primary first</td></tr></tbody></table>
+</details>
 </div></section>
 <section id="unsure" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Uncertainty, stated plainly</div>
   <h2>Where I am less sure</h2>
   <p class="sub">The fsync and round-trip numbers in section 4 are assumptions, not measurements. Fsync latency on a small WAL record varies from 0.1 ms to 2 ms depending on the disk, and shared cloud disks are worse under contention. Cross-region round trips depend on the region pair. The mechanisms in this page do not depend on those numbers. The serial caps do. Measure them on the actual hardware before quoting them.</p>
+  <details class="deep"><summary><span>Go deeper: where I am less sure</span><em>1 min</em></summary>
   <p class="sub">Aurora is not covered here. Aurora ships redo to a storage quorum instead of WAL files, so there are no WAL files to fill the disk and the classic checkpoint model does not apply. The sync standby model in this page is the on-prem and RDS model. Aurora deserves its own page.</p>
   <p class="sub">Patroni failover time is stated as tens of seconds on defaults, dominated by the 30 s leader key expiry. The exact time depends on the distributed consensus store, the failure detection settings, and how much backlog the standby must replay. I have not measured it on this site's hardware.</p>
   <table class="breaks"><thead><tr><th>Assumption</th><th>Status</th></tr></thead><tbody><tr><td>Fsync 0.1 to 2 ms, round trips by region pair</td><td>Assumed, not measured. Measure on the actual hardware before quoting the caps.</td></tr><tr><td>Aurora behaves like on-prem sync</td><td>Not covered. Aurora ships redo to a storage quorum, so this page does not apply. It needs its own page.</td></tr><tr><td>Patroni failover, tens of seconds on defaults</td><td>Stated from the documented defaults, not measured on this site's hardware.</td></tr></tbody></table>
+</details>
 </div></section>
 <section id="tested" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Proof · what was measured, and how</div>
   <h2>Tested on</h2>
   <p class="sub">Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <details class="deep"><summary><span>Go deeper: what was measured, and how</span><em>2 min</em></summary>
   <p class="sub">Measured on: nothing measured yet. Captured on: Nov 17, 2026, lab run, PostgreSQL 18, MySQL 8.4.13, MongoDB 8.0.</p>
   <p class="sub">Hardware and dataset: not yet fixed. The benchmark method below names what to run. No measured benchmark numbers are published on this page yet. The numbers in section 4 are derived from the stated assumptions, not measured. That distinction is the point of this box.</p>
   <p class="sub"><b style="color:var(--ink)">Method, PostgreSQL:</b> pgbench with one client doing serial single-row commits, <span class="mono">synchronous_commit</span> off, then on, then <span class="mono">remote_apply</span>. Record commit p99 and transactions per second at each level. Then repeat with 16 clients to show group commit. Compare p99 before and after. The scripts will live in the repo under <span class="mono">benchmarks/</span>.</p>
   <p class="sub"><b style="color:var(--ink)">Method, MySQL:</b> the same shape with sysbench, semi-sync off, then on with <span class="mono">AFTER_SYNC</span>, then Group Replication in single-primary mode. Record commit p99 and the <span class="mono">Rpl_semi_sync_source_status</span> value during a replica kill.</p>
   <p class="sub"><b style="color:var(--ink)">Method, MongoDB:</b> an insert loop with <span class="mono">w: 1</span>, then <span class="mono">w: "majority"</span>, then <span class="mono">w: "majority", j: true</span>. Record p99 and throughput. Then kill the primary mid-loop and count rolled-back writes under each setting.</p>
   <table class="breaks"><thead><tr><th>Engine</th><th>Tool</th><th>What it measures</th></tr></thead><tbody><tr><td>PostgreSQL</td><td>pgbench, 1 client then 16</td><td>Commit p99 and throughput, sync off, on, remote_apply</td></tr><tr><td>MySQL</td><td>sysbench</td><td>Commit p99, semi-sync off, on with AFTER_SYNC, Group Replication, plus the status variable during a replica kill</td></tr><tr><td>MongoDB</td><td>Insert loop, then a primary kill</td><td>p99 and throughput at w: 1, w: majority, w: majority plus j: true, then rolled-back writes under each setting</td></tr></tbody></table>
+</details>
 </div></section>
 <section id="appendix" style="padding-top:6px"><div class="wrap">
 <details>

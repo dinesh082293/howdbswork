@@ -2,13 +2,13 @@
 :root{
   --bg:#fbfbf9; --surface:#ffffff; --surface2:#f2f4f1; --ink:#131a17; --muted:#5b6b62; --line:#dde3dd;
   --pg:#2f6da3; --pg-bg:#e8f0f8; --my:#b96a12; --my-bg:#fdf0dd; --mo:#2e7d32; --mo-bg:#e6f3e6;
-  --teal:#0f766e; --teal-bg:#e6f4f1; --problem-bg:#fff7e6; --problem-line:#f59e0b; --problem-ink:#78350f;
+  --teal:#0f766e; --teal-bg:#e6f4f1; --c-mem:#00897b; --c-mem-bg:#e3f3f1; --c-disk:#b96a12; --c-disk-bg:#fdf0dd; --c-log:#6a5acd; --c-log-bg:#eeebfb; --c-rep:#c2185b; --c-rep-bg:#fbe7ef; --problem-bg:#fff7e6; --problem-line:#f59e0b; --problem-ink:#78350f;
   --term-bg:#101613; --term-ink:#cfe3d4; --term-dim:#7d8f83; --term-hl:#f5c86b;
   --radius:14px;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#0d1110; --surface:#151b18; --surface2:#1c2420; --ink:#e8ede9; --muted:#9aaca1; --line:#2a352f;
-  --pg:#7db3dd; --pg-bg:#1a2c3f; --my:#f0b26b; --my-bg:#332412; --mo:#8bc98e; --mo-bg:#1d2f1e; --teal:#5ec8bc; --teal-bg:#17302c; --problem-bg:#2a2113; --problem-line:#f59e0b; --problem-ink:#fde68a; }
+  --pg:#7db3dd; --pg-bg:#1a2c3f; --my:#f0b26b; --my-bg:#332412; --mo:#8bc98e; --mo-bg:#1d2f1e; --teal:#5ec8bc; --teal-bg:#17302c; --c-mem:#1f9a8c; --c-mem-bg:#15302c; --c-disk:#c97a2c; --c-disk-bg:#332412; --c-log:#8b7fe0; --c-log-bg:#221f38; --c-rep:#e25a8f; --c-rep-bg:#3a1626; --problem-bg:#2a2113; --problem-line:#f59e0b; --problem-ink:#fde68a; }
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -1067,3 +1067,45 @@ h2:hover .hlink,h3:hover .hlink,.hlink:focus{opacity:1}
 .sc-pred.ok{background:var(--teal-bg)}.sc-pred.no{background:var(--my-bg)}
 .sc-picks{display:inline-flex;gap:6px}.sc-pick{min-width:44px}
 .fi-pred{max-width:1100px;margin:6px 0 10px}
+
+/* ===== One colour language: memory, disk, log, replica ===== */
+.w-mem,.w-disk,.w-log,.w-rep{white-space:nowrap}
+.w-mem::before,.w-disk::before,.w-log::before,.w-rep::before{content:"";display:inline-block;width:.6em;height:.6em;margin-right:.28em;vertical-align:.02em}
+.w-mem::before{background:var(--c-mem);border-radius:2px}
+.w-disk::before{background:var(--c-disk);border-radius:50%}
+.w-log::before{background:var(--c-log);transform:rotate(45deg) scale(.85)}
+.w-rep::before{background:var(--c-rep);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.legend4{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--muted);margin:2px 0 6px}
+.legend4 b{font-weight:600;color:var(--ink)}
+/* the insert animation in the shared colours */
+.ia-memr rect{fill:var(--c-mem-bg)}
+.ia-diskr rect{fill:var(--c-disk-bg)}
+.ia-box[data-k="page"].ia-hl rect,.ia-box[data-k="index"].ia-hl rect{stroke:var(--c-mem)}
+.ia-box[data-k="logbuf"] rect,.ia-box[data-k="logfile"] rect{stroke:var(--c-log);stroke-dasharray:5 4}
+.ia-box[data-k="logbuf"].ia-hl rect,.ia-box[data-k="logfile"].ia-hl rect{stroke:var(--c-log);stroke-dasharray:none}
+.ia-box[data-k="datafile"].ia-hl rect{stroke:var(--c-disk)}
+.ia-box[data-k="replica"] rect{stroke:var(--c-rep)}
+.ia-box[data-k="replica"].ia-hl rect{stroke:var(--c-rep);stroke-width:3}
+.ia-rec rect{fill:var(--c-log-bg);stroke:var(--c-log)}
+.ia-fsync{fill:var(--c-log)}
+.ia-dirty rect{fill:var(--c-disk-bg);stroke:var(--c-disk)}
+.ia-wire{stroke:var(--c-rep)}
+/* Follow it and Scale it */
+.fi-node.visited{border-color:var(--c-mem);background:var(--c-mem-bg)}
+.fi-node.visited.slow{border-color:var(--c-disk);background:var(--c-disk-bg)}
+.sc-cache{border-color:var(--c-mem)}
+.sc-rep{border-color:var(--c-rep)}
+/* ===== Overview first ===== */
+.five .wrap{max-width:1100px}
+.fivelist{font-size:16px;line-height:1.6;padding-left:22px;max-width:860px;margin:6px 0 0}
+.fivelist li{margin-bottom:8px}
+.readguide{font-size:15px;background:var(--surface2);border-radius:12px;padding:12px 16px;margin:0;max-width:860px}
+details.deep{margin-top:10px;border:1px solid var(--line);border-radius:12px;background:var(--surface);max-width:1100px}
+details.deep>summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;min-height:48px;font-weight:700;font-size:15px}
+details.deep>summary::-webkit-details-marker{display:none}
+details.deep>summary span::before{content:"+ ";color:var(--teal)}
+details.deep[open]>summary span::before{content:"− "}
+details.deep>summary em{font-style:normal;font-weight:400;font-size:13px;color:var(--muted);font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+details.deep[open]{padding-bottom:12px}
+details.deep[open]>summary{border-bottom:1px solid var(--line);margin-bottom:12px}
+details.deep>*:not(summary){margin-left:16px;margin-right:16px}

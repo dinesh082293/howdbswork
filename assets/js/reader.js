@@ -34,6 +34,25 @@ window.HDW_GOALS = window.HDW_GOALS || (function () {
     }
   };
 })();
+/* Folded "Go deeper" sections open by themselves when a link, the Contents
+   panel or the address bar points at something inside them. */
+(function () {
+  function reveal(id) {
+    if (!id) return;
+    var t = document.getElementById(decodeURIComponent(id)); if (!t) return;
+    var d = t.closest && t.closest('details'); var opened = false;
+    while (d) { if (!d.open) { d.open = true; opened = true; } d = d.parentElement && d.parentElement.closest('details'); }
+    if (opened) setTimeout(function () { t.scrollIntoView(); }, 0);
+  }
+  function fromHash() { if (location.hash.length > 1 && location.hash.indexOf('#estimate?') !== 0) reveal(location.hash.slice(1)); }
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href*="#"]'); if (!a) return;
+    var u = a.getAttribute('href'), i = u.indexOf('#');
+    if (i === 0 || (a.pathname === location.pathname && a.host === location.host)) reveal(u.slice(i + 1));
+  }, true);
+  window.addEventListener('hashchange', fromHash);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fromHash); else fromHash();
+})();
 /* Reading aids, on every page:
    1. a thin progress bar at the top;
    2. a Contents button that lists the page's headings and marks where you are;
