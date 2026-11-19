@@ -131,6 +131,7 @@
   </div>
   <p class="sub">That is the vocabulary. Next: <a href="../start-here/index.html">Start here</a>, one insert end to end, then the three rules that run every database on this site.</p>
 </div></section>
+<section id="your-turn"><div class="wrap"><div class="es-turn"><div class="kicker">Your turn</div><p class="es-q">The primary is slow because of writes. Someone suggests adding two read replicas. In your own words, why will that not help, and what would?</p><p class="es-hint">Write your answer down first. Then open mine.</p><details class="es-ans"><summary>Show my answer</summary><div class="es-a"><p><b>Why not:</b> every replica has to apply every write the primary makes. Replicas take reads off the primary; they do nothing for writes. They also add lag, so anything that reads its own writes from a replica may not see them.</p><p><b>What helps:</b> making each write cheaper (fewer indexes, smaller rows, batching), moving writes that do not need to be there (sessions, counters) to a store built for them, and only then splitting the writes across several primaries.</p></div></details></div></div></section>
 <!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Learn · page 2 of 4</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px">Start from zero: what happens when you write a row, the words you need, and a path to staff level.</p><div class="secnav-list"><a href="../start-here/index.html">Start here</a><a href="../concepts/index.html" aria-current="page" class="on">Ten concepts</a><a href="../staff-path/index.html">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div><div class="secnav-pn"><a class="pn prev" href="../start-here/index.html"><span>← Previous</span>Start here</a><a class="pn next" href="../staff-path/index.html"><span>Next →</span>Staff path, zero to architect</a></div></div></section><!-- SECTION:END -->
 <footer><div class="wrap">
   <p style="margin-bottom:16px"><a href="../index.html">← Back to home</a></p>
@@ -138,7 +139,7 @@
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
-  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p class="reviewed">Last updated Nov 19, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
   <p><a href="../sitemap/index.html">All pages</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a></p>
 </div></footer>
 <script src="../assets/js/search.js"></script>
