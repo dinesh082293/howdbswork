@@ -1888,5 +1888,89 @@
   "u": "compare/index.html#beyond",
   "s": "Compare",
   "k": "redis cassandra vector compare beyond"
+ },
+ {
+  "t": "Something is slow or broken: symptoms to causes",
+  "u": "symptoms/index.html",
+  "s": "Symptoms",
+  "k": "symptom slow broken outage incident troubleshooting first commands"
+ },
+ {
+  "t": "Too many connections",
+  "u": "symptoms/index.html#connections",
+  "s": "Symptoms",
+  "k": "too many connections max_connections pool exhausted connection refused idle in transaction"
+ },
+ {
+  "t": "CPU at 100%",
+  "u": "symptoms/index.html#cpu",
+  "s": "Symptoms",
+  "k": "cpu high load pg_stat_statements statement_analysis profiler collscan"
+ },
+ {
+  "t": "The disk is filling up",
+  "u": "symptoms/index.html#disk",
+  "s": "Symptoms",
+  "k": "disk full space replication slot binlog oplog growth"
+ },
+ {
+  "t": "A replica is far behind",
+  "u": "symptoms/index.html#lag",
+  "s": "Symptoms",
+  "k": "replica lag replication behind seconds_behind_source standby"
+ },
+ {
+  "t": "Queries waiting on locks, or timing out",
+  "u": "symptoms/index.html#locks",
+  "s": "Symptoms",
+  "k": "lock wait timeout deadlock blocked blocker metadata lock"
+ },
+ {
+  "t": "One query suddenly got slow, index not used",
+  "u": "symptoms/index.html#plan",
+  "s": "Symptoms",
+  "k": "slow query plan changed index not used statistics analyze explain"
+ },
+ {
+  "t": "Everything slow and the disk busy",
+  "u": "symptoms/index.html#io",
+  "s": "Symptoms",
+  "k": "io disk busy cache hit ratio buffer pool working set iops"
+ },
+ {
+  "t": "Out of memory, or the server restarted",
+  "u": "symptoms/index.html#memory",
+  "s": "Symptoms",
+  "k": "oom out of memory killed restart work_mem buffer pool"
+ },
+ {
+  "t": "Writes and commits are slow",
+  "u": "symptoms/index.html#commits",
+  "s": "Symptoms",
+  "k": "commit slow write latency fsync synchronous replication walsync"
+ },
+ {
+  "t": "Tables grow but rows do not",
+  "u": "symptoms/index.html#bloat",
+  "s": "Symptoms",
+  "k": "bloat dead tuples vacuum history list length long transaction"
+ },
+ {
+  "t": "Backups, PITR and restore time",
+  "u": "decisions/backup-restore/index.html",
+  "s": "Decisions",
+  "k": "backup restore pitr point in time recovery rpo rto pgbackrest xtrabackup pbm mongodump archive"
+ },
+ {
+  "t": "Connection pooling: how many connections you need",
+  "u": "decisions/connection-pooling/index.html",
+  "s": "Decisions",
+  "k": "connection pool pooling pgbouncer proxysql rds proxy max_connections little law transaction mode"
+ },
+ {
+  "t": "Major version upgrades",
+  "u": "decisions/major-upgrades/index.html",
+  "s": "Decisions",
+  "k": "upgrade major version pg_upgrade logical replication blue green featurecompatibilityversion checkforserverupgrade"
  }
 ]

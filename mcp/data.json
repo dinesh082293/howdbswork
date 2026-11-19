@@ -1825,7 +1825,7 @@
    "url": "https://howdbswork.com/decisions/",
    "description": "Ten decisions a database engineer has to make, each with the price stated up front. PostgreSQL, MySQL and MongoDB, compared on the same decision.",
    "headings": [
-    "All ten decisions"
+    "All eleven decisions"
    ]
   },
   {
@@ -1883,6 +1883,44 @@
     "In public, on GitHub",
     "In private",
     "The questions every review asks"
+   ]
+  },
+  {
+   "title": "Something is slow or broken",
+   "section": "Operate",
+   "url": "https://howdbswork.com/symptoms/",
+   "description": "From the symptom to the cause: too many connections, CPU at 100%, disk filling, replica lag, lock waits, a query that got slow, and the first commands to run in PostgreSQL, MySQL and MongoDB.",
+   "headings": [
+    "Too many connections",
+    "Likely causes, most common first",
+    "Run these first",
+    "CPU at 100%",
+    "Likely causes, most common first",
+    "Run these first",
+    "The disk is filling up",
+    "Likely causes, most common first",
+    "Run these first",
+    "A replica is far behind",
+    "Likely causes, most common first",
+    "Run these first",
+    "Queries waiting on locks, or timing out",
+    "Likely causes, most common first",
+    "Run these first",
+    "One query suddenly got slow",
+    "Likely causes, most common first",
+    "Run these first",
+    "Everything is slow and the disk is busy",
+    "Likely causes, most common first",
+    "Run these first",
+    "Out of memory, or the server restarted",
+    "Likely causes, most common first",
+    "Run these first",
+    "Writes and commits are slow",
+    "Likely causes, most common first",
+    "Run these first",
+    "Tables grow but rows do not",
+    "Likely causes, most common first",
+    "Run these first"
    ]
   },
   {
@@ -1948,6 +1986,43 @@
    ]
   },
   {
+   "title": "Connection pooling",
+   "section": "Operate",
+   "url": "https://howdbswork.com/decisions/connection-pooling/",
+   "description": "How many database connections you need, what each costs in PostgreSQL, MySQL and MongoDB, where PgBouncer, ProxySQL or RDS Proxy fit, and the pool-size arithmetic.",
+   "headings": [
+    "Small pools, sized from the work, with a pooler in front when the client count is large",
+    "Why the engines differ",
+    "And what it changes",
+    "From traffic to pool size",
+    "The incidents I would plan for",
+    "Why not just...",
+    "What I watch",
+    "What changed recently",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Backups and restore time",
+   "section": "Operate",
+   "url": "https://howdbswork.com/decisions/backup-restore/",
+   "description": "How to back up PostgreSQL, MySQL and MongoDB so you can restore to any moment: physical backups, log archiving, PITR, restore-time arithmetic and what breaks.",
+   "headings": [
+    "Physical backups plus a continuous log archive, restored on a schedule",
+    "Physical, logical and snapshot: what each is for",
+    "The tools I would reach for",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "The arithmetic before the incident, not during it",
+    "The failures that show up only during a restore",
+    "Why not just...",
+    "Checks I would automate",
+    "What changed recently",
+    "Check yourself"
+   ]
+  },
+  {
    "title": "Migration playbooks",
    "section": "Operate",
    "url": "https://howdbswork.com/designs/migrations/",
@@ -1961,6 +2036,24 @@
     "How I check it worked",
     "Add a cache in front of the database",
     "How I check it worked"
+   ]
+  },
+  {
+   "title": "Major version upgrades",
+   "section": "Operate",
+   "url": "https://howdbswork.com/decisions/major-upgrades/",
+   "description": "How to upgrade PostgreSQL, MySQL and MongoDB major versions: pg_upgrade, logical replication, newer replicas, rolling upgrades, feature compatibility, and what breaks afterwards.",
+   "headings": [
+    "Upgrade through a replica on the new version, rehearsed on a copy, with a way back",
+    "The paths, from simplest to safest",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "Usually after the upgrade, not during it",
+    "Why not just...",
+    "The rehearsal checklist",
+    "Support windows and recent changes",
+    "Check yourself"
    ]
   },
   {

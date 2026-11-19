@@ -185,8 +185,12 @@
    "id": "operate",
    "name": "Operate",
    "question": "How do I run it in production?",
-   "blurb": "Where it runs and what it costs, how big it must be, how to change it safely, and what to do when it breaks.",
+   "blurb": "What to check when it is slow or broken, where it runs and what it costs, how big it must be, pooling, backups, upgrades and other changes made safely.",
    "pages": [
+    [
+     "symptoms/index.html",
+     "Something is slow or broken"
+    ],
     [
      "designs/hosting/index.html",
      "Where to run the database"
@@ -204,8 +208,20 @@
      "Why the bill is huge"
     ],
     [
+     "decisions/connection-pooling/index.html",
+     "Connection pooling"
+    ],
+    [
+     "decisions/backup-restore/index.html",
+     "Backups and restore time"
+    ],
+    [
      "designs/migrations/index.html",
      "Migration playbooks"
+    ],
+    [
+     "decisions/major-upgrades/index.html",
+     "Major version upgrades"
     ],
     [
      "oncall/index.html",
