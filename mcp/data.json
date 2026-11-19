@@ -1598,6 +1598,21 @@
    ]
   },
   {
+   "title": "Data modeling basics",
+   "section": "Design",
+   "url": "https://howdbswork.com/data-modeling/",
+   "description": "Primary keys, types, constraints, normalizing and embedding, and deletes, for PostgreSQL, MySQL and MongoDB: the table design choices that are cheap on day one and expensive later.",
+   "headings": [
+    "If you read nothing else on this page",
+    "The key decides where every insert lands",
+    "The smallest type that is always right",
+    "Rules the database enforces for every client",
+    "Where each fact lives",
+    "What happens to a row when it is no longer wanted",
+    "Check yourself"
+   ]
+  },
+  {
    "title": "Store orders and inventory",
    "section": "Design",
    "url": "https://howdbswork.com/designs/store-orders/",
@@ -2063,6 +2078,29 @@
    ]
   },
   {
+   "title": "Security",
+   "section": "Operate",
+   "url": "https://howdbswork.com/security/",
+   "description": "Database security in five layers for PostgreSQL, MySQL and MongoDB: network, encrypted and authenticated connections, least-privilege roles, backups and dev copies, and auditing, with the commands to check each.",
+   "headings": [
+    "If you read nothing else on this page",
+    "Not reachable from where it should not be",
+    "Encrypted, and with a real identity",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "The application can change rows, not the schema",
+    "Backups, replicas and dev copies are the data too",
+    "Know who did what, afterwards",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "Where do I stand right now?",
+    "The incidents I would plan against",
+    "Check yourself"
+   ]
+  },
+  {
    "title": "Migration playbooks",
    "section": "Operate",
    "url": "https://howdbswork.com/designs/migrations/",
@@ -2097,6 +2135,27 @@
    ]
   },
   {
+   "title": "What changed in the latest releases",
+   "section": "Operate",
+   "url": "https://howdbswork.com/releases/",
+   "description": "What operators need to know in PostgreSQL 18, MySQL 8.4 LTS and MongoDB 8.0: changed defaults, upgrade breakers, and new features worth using.",
+   "headings": [
+    "PostgreSQL 18 (September 2025)",
+    "Changes that can break an upgrade",
+    "Faster, with nothing to change",
+    "New things worth using",
+    "Vacuum and monitoring",
+    "MySQL 8.4 LTS (April 2024)",
+    "Changes that can break an upgrade",
+    "InnoDB defaults that changed",
+    "New things worth using",
+    "MongoDB 8.0 (October 2024)",
+    "Changes that affect how you run it",
+    "New things worth using",
+    "The same checklist every time"
+   ]
+  },
+  {
    "title": "On call tonight",
    "section": "Operate",
    "url": "https://howdbswork.com/oncall/",
@@ -2107,10 +2166,10 @@
    "title": "Real failures",
    "section": "Operate",
    "url": "https://howdbswork.com/stories/",
-   "description": "Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.",
+   "description": "Nineteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab, Instacart, Discord and Instagram, each with the numbers, the fix, and the lesson. Plus a diagram per story.",
    "headings": [
-    "What sixteen failures have in common",
-    "All sixteen at a glance",
+    "What nineteen failures have in common",
+    "All nineteen at a glance",
     "PostgreSQL: the layout is the cost",
     "Uber: one update became four writes, and the WAL crossed an ocean",
     "Notion: VACUUM stalled, and the database nearly stopped writing",
@@ -2129,7 +2188,11 @@
     "Slack: the shard key was the hot spot",
     "Shopify: the verifiers were the project",
     "MongoDB: the cache is the database",
-    "Fortnite: a release changed the call pattern, and the cache ran out"
+    "Fortnite: a release changed the call pattern, and the cache ran out",
+    "Cassandra and Redis: the partition and the byte",
+    "Discord: a channel with one message took 20 seconds to load",
+    "Discord: 177 Cassandra nodes became 72, after the hot partitions",
+    "Instagram: 300 million keys did not fit, until they became hashes"
    ]
   },
   {
