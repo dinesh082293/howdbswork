@@ -105,54 +105,10 @@
 <section id="insert"><div class="wrap">
   <div class="kicker">The main event · one insert, start to finish</div>
   <h2>Follow one row: INSERT INTO users, end to end</h2>
-  <p class="sub">On a healthy system the whole insert returns in about 1 ms. Inside that millisecond, 11 steps run in a fixed order across four places: the log file, the data page, the index, and the replica. Pick an engine, press Play, and step through all 11. The four panels underneath show the state of each place changing. Nothing on this page is asserted without a location you can inspect.</p>
-
+  <p class="sub">Press play and watch one new row travel from your app into memory, to the log on disk, back to your app as "done", to the replica, and finally into the data file. Switch the database to see the same order with different file names.</p>
   <div class="lab">
-    <div class="problem"><b class="label">Problem</b><div><p>The order is not an implementation detail. It is the durability guarantee.</p><small>If the data page reached disk before its log record, one reordering, a crash in that window leaves a page describing a change that recovery cannot verify or undo. Every engine below enforces the same order: log first, page later, commit only after the log is on disk. The file names differ. The order does not.</small></div></div>
-
-    <div class="seg" id="insSeg">
-      <button aria-pressed="true" data-ie="pg">PostgreSQL</button>
-      <button aria-pressed="false" data-ie="my">MySQL · InnoDB</button>
-      <button aria-pressed="false" data-ie="mo">MongoDB · WiredTiger</button>
-    </div>
-
-    <p class="sqlbar" id="insSql">INSERT INTO users (id, name) VALUES (42, 'Asha');</p>
-    <p style="font-size:13.5px;color:var(--muted);margin:0 0 4px">One new user: id <b class="mono" style="color:var(--ink)">42</b>, name <b class="mono" style="color:var(--ink)">'Asha'</b>. The table already has users 10, 25 and 87. Follow row 42.</p>
-
-    <div class="istages" id="insStages">
-      <div class="istage"><b>1 · App</b>sends the statement<span class="mono" id="st0">libpq / JDBC / driver</span></div>
-      <div class="istage"><b>2 · Server</b>parse, check, find page<span class="mono" id="st1">backend process</span></div>
-      <div class="istage"><b>3 · Log file</b>written FIRST<span class="mono" id="st2">pg_wal/</span></div>
-      <div class="istage"><b>4 · Data page</b>row placed in memory<span class="mono" id="st3">shared_buffers</span></div>
-      <div class="istage"><b>5 · Index</b>key → pointer added<span class="mono" id="st4">users_pkey</span></div>
-      <div class="istage"><b>6 · Replica + disk</b>log replayed, page flushed later<span class="mono" id="st5">checkpoint</span></div>
-    </div>
-
-    <div class="insdetail">
-      <h4 id="insTitle">Press Play, or tap any step below</h4>
-      <p id="insText">Every step names the real file or memory area it touches, and the four boxes underneath show the state changing for real: what landed in the log file, what is in the data page, what is in the index, and what the replica has.</p>
-    </div>
-
-    <div class="ipanels">
-      <div class="ipanel"><h5 id="ipLogH">Log file: on disk</h5><div id="insLog"><span class="empty">Empty. Nothing written yet.</span></div></div>
-      <div class="ipanel"><h5 id="ipPageH">Data page</h5><div id="insPage"><span class="empty">Existing rows live here. Row 42 is not in yet.</span></div></div>
-      <div class="ipanel"><h5 id="ipIndexH">Index: sorted keys</h5><div id="insIndex"><div class="ikeys"><span>10</span><span>25</span><span>87</span></div><span class="empty" style="display:block;margin-top:6px">42 has no entry yet. A search for 42 would find nothing.</span></div></div>
-      <div class="ipanel"><h5 id="ipRepH">Replica</h5><div id="insReplica"><span class="empty">The replica has users 10, 25, 87, same as the primary. No row 42 yet.</span></div></div>
-    </div>
-
-    <div class="controls">
-      <button class="btn primary" id="insPlay">▶ Play all steps</button>
-      <button class="btn" id="insPrev">← Back</button>
-      <button class="btn" id="insNext">Next step →</button>
-      <button class="btn" id="insReset">↺ Start over</button>
-      <label style="font-size:13.5px;font-weight:600">Speed <select id="insSpeedSel"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select></label>
-      <span class="mono" id="insProgress" style="font-size:12.5px;color:var(--muted)">Step 0 of 11</span>
-    </div>
-    <p style="font-size:13px;color:var(--muted);margin:8px 0 0">Keys, while this walkthrough is on screen: → next step, ← back, Space play or pause.</p>
-
-    <div class="isteps" id="insSteps"></div>
-
-    <p style="font-size:14px;color:var(--muted);margin:14px 0 0"><b style="color:var(--ink)">The one moment that matters:</b> the row is truly safe at the COMMIT step, when the <i>log</i> is forced to disk. Not when the data page is written. The page can follow minutes later, at the next checkpoint. Switch databases above and replay it. The file names change (WAL, redo log plus binlog, journal plus oplog). The order of the trick does not.</p>
+    <div class="insanim" id="insAnim"></div>
+    <p class="takeaway" style="margin-top:14px"><b>The one moment that matters:</b> the row is safe at COMMIT, when the <i>log</i> reaches disk. The data file catches up later, at a checkpoint. Every engine follows that order; only the file names change.</p>
     <div class="lab" id="liveSql" style="margin-top:18px">
       <h3 style="margin:0 0 6px;font-size:17px">Try it live: a real Postgres, in your browser</h3>
       <p style="font-size:14px;color:var(--muted);margin:0 0 12px">No install, no account. This panel runs a real PostgreSQL in your browser. It starts with the same users table as the walkthrough above, ids 10, 25, and 87. Run the insert, then the select, then the EXPLAIN, and watch the same numbers come out of a real plan.</p>
@@ -551,13 +507,14 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
 <footer><div class="wrap">
   <p><b style="color:var(--ink)">Real databases, simply.</b> How PostgreSQL, MySQL and MongoDB work in real systems, and which database each kind of application data belongs in. Written by Dinesh, who runs production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
-  <p class="reviewed">Last updated Nov 18, 2026</p>
+  <p class="reviewed">Last updated Nov 19, 2026</p>
   <p class="footlinks"><a href="../sitemap/index.html">All pages</a> · <a href="../corrections/index.html">Corrections</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a> · <a href="../work-with-me/index.html">Work with me</a> · <a href="../assistant/index.html">Use it from your AI assistant</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/insertanim.js"></script>
 <script type="module" src="../assets/js/pglite-panel.js"></script>
 </body>
 </html>
