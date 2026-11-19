@@ -1227,3 +1227,53 @@ body.ev-js[data-ev="nx"] .ev-block:not([data-eng="nx"]){display:none}
 .dc-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-top:10px}.dc-ctl label{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:8px}
 .dc-ctl input{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-height:36px;width:180px}
 .dc-ctl a.labbtn{text-decoration:none}.dc-note{font-size:13px;color:var(--muted);margin:8px 0 0}
+/* animated architecture */
+.aa{border:1px solid var(--line);background:var(--surface);border-radius:16px;padding:14px;margin:6px 0 16px}
+.aa-stage svg{width:100%;height:auto;display:block;font-family:'IBM Plex Sans',sans-serif}
+.aa-band rect{fill:var(--surface2);stroke:var(--line);stroke-width:1;transition:stroke .3s,stroke-width .3s}
+.aa-band.aa-mem rect{fill:var(--c-mem-bg)}.aa-band.aa-disk rect{fill:var(--c-disk-bg)}
+.aa-band.hl rect{stroke-width:2}.aa-band.aa-proc.hl rect{stroke:var(--ink)}.aa-band.aa-mem.hl rect{stroke:var(--c-mem)}.aa-band.aa-disk.hl rect{stroke:var(--c-disk)}
+.aa-bandlab{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.08em;fill:var(--muted)}
+.aa-box rect{fill:var(--surface);stroke:var(--line);stroke-width:1.2;transition:stroke .25s,stroke-width .25s,fill .25s}
+.aa-box.hl rect{stroke:var(--ink);stroke-width:2.4}.aa-box.aa-mem.hl rect{stroke:var(--c-mem)}.aa-box.aa-disk.hl rect{stroke:var(--c-disk)}.aa-box.aa-out.hl rect{stroke:var(--c-rep)}
+.aa-lab{font-size:13.5px;font-weight:700;fill:var(--ink)}.aa-subl{font-size:10.5px;fill:var(--muted)}
+.aa-led{fill:var(--line);transition:fill .25s}.aa-box.hl .aa-led{fill:var(--teal);animation:aa-blink .7s ease-in-out infinite alternate}
+@keyframes aa-blink{from{opacity:.35}to{opacity:1}}
+.aa-bk rect{fill:var(--surface2);stroke:var(--muted);opacity:0;transform-box:fill-box;transform-origin:center;transform:scale(.4);transition:opacity .35s,transform .35s cubic-bezier(.3,1.6,.5,1)}
+.aa-bk text{font-size:10px;fill:var(--ink);opacity:0;transition:opacity .35s}.aa-bk.on rect{opacity:1;transform:scale(1)}.aa-bk.on text{opacity:1}
+.aa-page rect{fill:var(--surface);stroke:var(--c-mem);stroke-width:1.2;transition:fill .35s,stroke .35s}
+.aa-page line{stroke:var(--muted);stroke-width:1.4;stroke-linecap:round;opacity:.55}
+.aa-page.aa-empty rect{fill:none;stroke-dasharray:3 3;stroke:var(--muted)}.aa-page.aa-empty line{opacity:0}
+.aa-page.aa-dirty rect{fill:var(--c-disk-bg);stroke:var(--c-disk);stroke-width:2}
+.aa-page .aa-deadline{opacity:0}.aa-page.aa-dead .aa-deadline{opacity:1;stroke:#d92d20;stroke-dasharray:2 2}
+.aa-page.aa-hit rect{animation:aa-flash .9s ease-out 2}@keyframes aa-flash{0%{fill:var(--c-mem)}100%{fill:var(--surface)}}
+.aa-walrec{fill:var(--c-log);opacity:0;transition:opacity .35s}.aa-walrec.on{opacity:.9}
+.aa-seg{fill:none;stroke:var(--c-log);stroke-width:1}.aa-seg.on{fill:var(--c-log-bg)}
+.aa-fsync{fill:var(--c-log);transition:width .9s ease-out}
+.aa-ck{font-size:11px;font-weight:600;fill:var(--c-disk);opacity:0;transition:opacity .4s}.aa-ck.on{opacity:1}
+.aa-pill rect{stroke-width:1.5}.aa-pill text{font-size:11.5px;font-weight:700}
+.aa-pill-q rect{fill:var(--ink)}.aa-pill-q text{fill:var(--bg)}
+.aa-pill-r rect,.aa-pill-a rect{fill:var(--teal)}.aa-pill-r text,.aa-pill-a text{fill:#fff}
+.aa-pill-p rect,.aa-pill-c rect{fill:var(--c-disk)}.aa-pill-p text,.aa-pill-c text{fill:#fff}
+.aa-pill-w rect{fill:var(--c-log)}.aa-pill-w text{fill:#fff}
+.aa-pill-v rect{fill:var(--surface);stroke:var(--ink)}.aa-pill-v text{fill:var(--ink)}
+.aa-cap{margin:10px 2px 0;min-height:132px}.aa-layers{display:flex;gap:6px;margin-bottom:6px;min-height:22px}
+.aa-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-radius:999px;padding:3px 9px;background:var(--surface2);color:var(--ink)}
+.aa-chip-mem{background:var(--c-mem-bg);color:var(--c-mem)}.aa-chip-disk{background:var(--c-disk-bg);color:var(--c-disk)}
+.aa-step{font-size:12.5px;color:var(--muted);font-family:'IBM Plex Mono',monospace}.aa-title{font-size:19px;font-weight:700;margin:2px 0 4px}
+.aa-sub{font-size:15px;margin:0 0 6px;max-width:860px}.aa-more summary{cursor:pointer;font-size:14px;color:var(--teal);font-weight:600}.aa-detail{font-size:14px;color:var(--muted);margin:6px 0 0;max-width:860px}
+.aa-ctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.aa-btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer;min-height:38px;min-width:42px}
+.aa-play{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.aa-dots{display:flex;gap:6px;margin-left:6px;flex-wrap:wrap}.aa-dot{width:12px;height:12px;min-width:0;min-height:0;flex:0 0 auto;border-radius:50%;border:1.5px solid var(--muted);background:transparent;padding:0;cursor:pointer}
+.aa-dot.done{background:var(--muted)}.aa-dot.on{background:var(--teal);border-color:var(--teal);transform:scale(1.25)}
+.aa-seg-rep{stroke:var(--c-rep)}.aa-seg-rep.on{fill:var(--c-rep-bg)}.aa-seg-dead{stroke:var(--muted)}.aa-seg-dead.on{fill:var(--surface2);stroke:#d92d20}
+.aa-page.aa-row rect{fill:var(--c-mem-bg);stroke:var(--c-mem)}.aa-page.aa-bloom rect{fill:var(--c-mem-bg);stroke:var(--c-mem);stroke-dasharray:2 2}.aa-page.aa-bloom line{opacity:.25}
+.aa-page.aa-file rect{fill:var(--c-disk-bg);stroke:var(--c-disk)}
+.aa-bk.aa-drop rect{opacity:.35;stroke-dasharray:2 2}.aa-bk.aa-drop text{text-decoration:line-through;opacity:.5}
+.aa-bk.aa-wait rect{stroke:#d92d20;animation:aa-blink .5s ease-in-out infinite alternate}
+.aa-box.aa-busy rect{stroke:#d92d20;stroke-width:2.6}
+.aa-pill-d rect{fill:var(--surface2);stroke:var(--muted)}.aa-pill-d text{fill:var(--ink)}
+.aa-ge{stroke:var(--line);stroke-width:1.5;transition:stroke .4s,stroke-width .4s}.aa-ge.on{stroke:var(--teal);stroke-width:2.6}
+.aa-gn{fill:var(--surface);stroke:var(--muted);stroke-width:1.5;transition:fill .4s,stroke .4s}.aa-gn.on{fill:var(--teal);stroke:var(--teal)}
+.aa-gn.slow{fill:var(--c-disk);stroke:var(--c-disk)}.aa-gnew{opacity:0;transition:opacity .5s}.aa-gnew.show{opacity:1}circle.aa-gnew{fill:var(--c-log);stroke:var(--c-log)}line.aa-gnew{stroke:var(--c-log)}

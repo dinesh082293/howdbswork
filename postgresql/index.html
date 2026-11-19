@@ -44,6 +44,8 @@
 <section id="architecture"><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The architecture: processes, memory, disk</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Read each column top to bottom. A request enters at the process layer. Memory serves it when it can. Disk makes it permanent. When something is slow or broken, it lives in exactly one of these three layers. Name the layer first. That is the first diagnostic step.</p>
+  <div class="archanim" data-engine="pg"></div>
+  <p class="sub" style="margin:4px 0 12px">The same layers as a still diagram, with every part named:</p>
   <div class="filegrid" style="margin-bottom:22px"><div class="filecard pg"><header>PostgreSQL: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">Request path</p><div class="dflow">
         <div class="dbox"><b>Processes</b>postmaster + 1 backend per connection · checkpointer · bgwriter · WAL writer · autovacuum workers</div><span class="darrow">→</span>
@@ -218,6 +220,7 @@ SELECT relname, n_dead_tup
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/archanim.js"></script>
 <script src="../assets/js/followit.js"></script>
 <script src="../assets/js/explain-tool.js"></script>
 <script type="module" src="../assets/js/pglite-panel.js"></script>
