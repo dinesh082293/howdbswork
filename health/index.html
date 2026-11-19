@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Run a read-only script on PostgreSQL, MySQL or MongoDB, paste the output, and get a report: connections, cache, long transactions, bloat, unused indexes, replication, top queries and settings."/>
+<link rel="icon" href="data:,"/>
+<title>Health check · Real Databases, Simply</title>
+<!-- SEO:BEGIN -->
+<link rel="canonical" href="https://howdbswork.com/health/"/>
+<meta property="og:site_name" content="Real databases, simply"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Health check"/>
+<meta property="og:description" content="Run a read-only script on PostgreSQL, MySQL or MongoDB, paste the output, and get a report: connections, cache, long transactions, bloat, unused indexes, replication, top queries and settings."/>
+<meta property="og:url" content="https://howdbswork.com/health/"/>
+<meta property="og:image" content="https://howdbswork.com/assets/og/health.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<!-- SEO:END -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><details class="navgrp"><summary>Learn</summary><div class="navmenu cols2"><p class="navblurb">From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then Redis, Cassandra and vector search, side by side, and the query and concurrency traps.</p><a href="../start-here/index.html">Start here</a><a href="../concepts/index.html">Ten concepts</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL · InnoDB</a><a href="../mongodb/index.html">MongoDB · WiredTiger</a><a href="../redis/index.html">Redis</a><a href="../cassandra/index.html">Cassandra</a><a href="../vector-databases/index.html">Vector databases</a><a href="../compare/index.html">Engines side by side</a><a href="../families/index.html">Database families</a><a href="../queries/index.html">Queries that look fine and are not</a><a href="../isolation/index.html">Lost updates and write skew</a><a href="../staff-path/index.html">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div></details><details class="navgrp here"><summary>Practice</summary><div class="navmenu"><p class="navblurb">Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and tools for your own database: a query coach, an EXPLAIN reader, a config checker and a health check.</p><a href="../labs/index.html">Labs</a><a href="../index-playground/index.html">Watch an index grow</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a><a href="../coach/index.html">Query coach</a><a href="../plan/index.html">EXPLAIN reader</a><a href="../config/index.html">Config checker</a><a href="../health/index.html" aria-current="page">Health check</a></div></details><details class="navgrp"><summary>Design</summary><div class="navmenu cols2"><p class="navblurb">What kind of application data goes in which database, and why, as design docs, plus the anti-patterns and the decisions behind them.</p><a href="../designs/index.html">Application designs</a><a href="../designs/store-orders/index.html">Store orders and inventory</a><a href="../designs/payments-ledger/index.html">Payments and ledgers</a><a href="../designs/booking-reservations/index.html">Bookings and reservations</a><a href="../designs/accounts-sessions/index.html">Accounts and sessions</a><a href="../designs/multi-tenant-saas/index.html">Multi-tenant SaaS</a><a href="../designs/product-catalog/index.html">Product catalog</a><a href="../designs/social-feed/index.html">Social feed</a><a href="../designs/search-ai-retrieval/index.html">Search and AI retrieval</a><a href="../designs/chat-messaging/index.html">Chat and messaging</a><a href="../designs/iot-telemetry/index.html">IoT and telemetry</a><a href="../designs/audit-event-log/index.html">Audit and event logs</a><a href="../designs/leaderboards-counters/index.html">Leaderboards and counters</a><a href="../designs/analytics-reporting/index.html">Analytics and reporting</a><a href="../designs/agent-memory/index.html">Agent memory and state</a><a href="../designs/anti-patterns/index.html">Anti-patterns</a><a href="../decisions/index.html">Decisions</a><a href="../decisions/sync-replication-failover/index.html">What a commit waits for</a><a href="../designs/template/index.html">Design doc template</a><a href="../designs/review/index.html">Submit a design for review</a></div></details><details class="navgrp"><summary>Operate</summary><div class="navmenu cols2"><p class="navblurb">What to check when it is slow or broken, where it runs and what it costs, how big it must be, pooling, backups, upgrades and other changes made safely.</p><a href="../symptoms/index.html">Something is slow or broken</a><a href="../designs/hosting/index.html">Where to run the database</a><a href="../cloud/index.html">On-prem vs cloud, by engine</a><a href="../designs/capacity/index.html">Capacity calculator</a><a href="../decisions/cost-model/index.html">Why the bill is huge</a><a href="../decisions/connection-pooling/index.html">Connection pooling</a><a href="../decisions/backup-restore/index.html">Backups and restore time</a><a href="../designs/migrations/index.html">Migration playbooks</a><a href="../decisions/major-upgrades/index.html">Major version upgrades</a><a href="../oncall/index.html">On call tonight</a><a href="../stories/index.html">Real failures</a><a href="../cheat-sheet/index.html">Cheat sheet</a><a href="../reference/index.html">Reference: plans, logs, checklist</a></div></details><details class="navgrp"><summary>About</summary><div class="navmenu"><p class="navblurb">Who writes this, what was corrected, what to read next, and how to reach me.</p><a href="../about/index.html">About</a><a href="../corrections/index.html">Corrections</a><a href="../references/index.html">Reading list</a><a href="../work-with-me/index.html">Work with me</a><a href="../assistant/index.html">Use it from your AI assistant</a><a href="../sitemap/index.html">All pages</a></div></details></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<!-- CRUMBS:BEGIN --><div class="crumbs"><div class="wrap"><a href="../index.html">Home</a><span>›</span><a href="../labs/index.html">Practice</a><span>›</span><b aria-current="page">Health check</b><em>Lesson 22 of 55</em></div></div><!-- CRUMBS:END -->
+<header class="hero"><div class="wrap">
+  <h1>Health check</h1>
+  <p class="qline">What would a database engineer look at first on my server?</p>
+  <p class="lede">Run one read-only script against your database, paste its output here, and get a report: connections, cache, the oldest open transaction, the biggest tables, dead rows, unused indexes, replication, the queries that take the most time, and the settings. It is the first hour of a database review, done by a script.</p>
+</div></header>
+<section id="run" style="padding-top:4px"><div class="wrap">
+<div class="kicker">Step 1</div><h2>Run the script</h2>
+<p class="sub">The scripts only read: SELECT statements and status commands, nothing that changes data or settings. Read them before you run them; they are short.</p>
+<div class="ev-bar" data-fallback="pg"><span class="kicker">Engine</span><button type="button" data-eng="pg">PostgreSQL</button><button type="button" data-eng="my">MySQL</button><button type="button" data-eng="mo">MongoDB</button></div>
+<div class="ev-block" data-eng="pg"><h3 style="font-size:16px;margin:12px 0 6px">PostgreSQL 13 and later</h3><p class="sub" style="margin:0 0 8px"><a href="../assets/health/health-pg.sql" download>Download health-pg.sql</a>, then run:</p><pre class="cmdshow">psql -At -F&#x27;|&#x27; -X -d yourdb -f health-pg.sql &gt; report.txt</pre><p class="cc-meta">Needs a role that can read the statistics views; the built-in pg_monitor role is enough. Run it in the database your application uses.</p></div><div class="ev-block" data-eng="my"><h3 style="font-size:16px;margin:12px 0 6px">MySQL 8.0 and later</h3><p class="sub" style="margin:0 0 8px"><a href="../assets/health/health-my.sql" download>Download health-my.sql</a>, then run:</p><pre class="cmdshow">mysql -B -N -u youruser -p &lt; health-my.sql &gt; report.txt</pre><p class="cc-meta">Needs SELECT on performance_schema, information_schema and sys, and PROCESS to see other sessions' transactions.</p></div><div class="ev-block" data-eng="mo"><h3 style="font-size:16px;margin:12px 0 6px">MongoDB 6.0 and later</h3><p class="sub" style="margin:0 0 8px"><a href="../assets/health/health-mo.js" download>Download health-mo.js</a>, then run:</p><pre class="cmdshow">mongosh --quiet &quot;mongodb://youruser@yourhost/admin&quot; health-mo.js &gt; report.txt</pre><p class="cc-meta">Needs the clusterMonitor role, or one that can run serverStatus, replSetGetStatus and $indexStats.</p></div>
+</div></section>
+<section id="paste"><div class="wrap">
+<div class="kicker">Step 2</div><h2>Paste the output</h2>
+<p class="cc-priv"><b>Private by design.</b> Everything runs in your browser. Nothing you paste is sent anywhere, saved, or seen by me. Still, remove host names, user names and anything sensitive before pasting if your company requires it.</p>
+<div class="healthcheck">
+<div class="cc-row"><label>Server memory, GB <input class="hc-ram" type="number" min="1" placeholder="optional" inputmode="numeric"></label><button type="button" class="cc-linkbtn hc-sample">Try it with a sample report</button></div>
+<textarea class="cc-in hc-in" rows="10" spellcheck="false" aria-label="Health check output" placeholder="Paste the whole output of the script here"></textarea>
+<div class="cc-row"><button type="button" class="labbtn hc-go">Read the report</button></div>
+<div class="hc-out" aria-live="polite"></div>
+<script type="text/plain" id="hcSample">engine|pg
+version|16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)
+uptime_s|84
+stats_since_s|-1
+db|postgres|9075735
+cache|131047|321
+max_conn|100
+conn|active|1
+conn|background|5
+xid_age|postgres|10
+xid_age|template1|10
+xid_age|template0|10
+table|public.t1|1392640|13334|0|24|3|20000
+unused_index|public.t1_v|public.t1|155648|0
+standby|f|0
+setting|archive_mode|off|
+setting|autovacuum|on|
+setting|effective_cache_size|524288|8kB
+setting|fsync|on|
+setting|full_page_writes|on|
+setting|idle_in_transaction_session_timeout|0|ms
+setting|log_min_duration_statement|-1|ms
+setting|maintenance_work_mem|65536|kB
+setting|max_connections|100|
+setting|max_wal_size|1024|MB
+setting|random_page_cost|4|
+setting|shared_buffers|16384|8kB
+setting|shared_preload_libraries||
+setting|statement_timeout|0|ms
+setting|synchronous_commit|on|
+setting|track_io_timing|off|
+setting|wal_level|replica|
+setting|work_mem|4096|kB</script>
+</div>
+</div></section>
+<section id="next"><div class="wrap"><div class="kicker">After the report</div><h2>What the report cannot tell you</h2>
+<ul style="font-size:15px;line-height:1.7;max-width:860px"><li>Counters such as index usage and statement times start from the last restart or statistics reset. A server up for an hour has not seen a full week of traffic.</li><li>It sees one server. Replicas keep their own index usage and their own long transactions; run it there too.</li><li>It does not see your application: retries, pool sizes, how queries are built. The <a href="../symptoms/index.html">symptom pages</a> connect what you see to the likely cause.</li><li>If you want a second pair of eyes on a report, <a href="../work-with-me/index.html">that is something I do</a>.</li></ul>
+</div></section>
+<!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Part 2 of 4 · Practice · lessons 15 to 22</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px"><b>Can I see it happen?</b> Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and tools for your own database: a query coach, an EXPLAIN reader, a config checker and a health check.</p><div class="secnav-list"><a href="../labs/index.html">Labs</a><a href="../index-playground/index.html">Watch an index grow</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a><a href="../coach/index.html">Query coach</a><a href="../plan/index.html">EXPLAIN reader</a><a href="../config/index.html">Config checker</a><a href="../health/index.html" aria-current="page" class="on">Health check</a></div><div class="secnav-pn"><a class="pn prev" href="../config/index.html"><span>← Previous</span>Config checker<em>Paste PostgreSQL, MySQL or MongoDB settings and see which are risky, which cost speed, and what to change. Runs in your…</em></a><a class="pn next" href="../designs/index.html"><span>Next part (3 of 4): Design →</span>Application designs<em>Fourteen design docs for common applications, with a picker: what kind of data goes in which database, and why.</em></a></div></div></section><!-- SECTION:END -->
+<footer><div class="wrap">
+  <p><b style="color:var(--ink)">Real databases, simply.</b> How PostgreSQL, MySQL, MongoDB, Redis, Cassandra and vector databases work in real systems, and which database each kind of application data belongs in. Written by Dinesh, who runs production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 19, 2026</p>
+  <p class="footlinks"><a href="../sitemap/index.html">All pages</a> · <a href="../corrections/index.html">Corrections</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a> · <a href="../work-with-me/index.html">Work with me</a> · <a href="../assistant/index.html">Use it from your AI assistant</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script src="../assets/js/reader.js"></script>
+<script src="../assets/js/healthcheck.js"></script>
+<script src="../assets/js/configcheck.js"></script>
+<script src="../assets/js/engineview.js"></script>
+</body>
+</html>

@@ -1996,5 +1996,23 @@
   "u": "vector-databases/index.html#try",
   "s": "Vector databases",
   "k": "vector lab ef_search recall slider filter tenant hnsw memory calculator halfvec"
+ },
+ {
+  "t": "EXPLAIN reader: see where a query spends its time",
+  "u": "plan/index.html",
+  "s": "Practice",
+  "k": "explain analyze plan reader query plan visualizer tree slow step seq scan sort spill misestimate mongodb explain executionstats mysql explain analyze"
+ },
+ {
+  "t": "Config checker for PostgreSQL, MySQL and MongoDB",
+  "u": "config/index.html",
+  "s": "Practice",
+  "k": "config checker postgresql.conf my.cnf mongod.conf settings tuning shared_buffers innodb_buffer_pool_size work_mem show variables show all"
+ },
+ {
+  "t": "Database health check report",
+  "u": "health/index.html",
+  "s": "Practice",
+  "k": "health check report script audit review unused indexes bloat long transaction replication top queries"
  }
 ]

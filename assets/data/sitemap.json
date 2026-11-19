@@ -69,7 +69,7 @@
    "id": "practice",
    "name": "Practice",
    "question": "Can I see it happen?",
-   "blurb": "Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and a coach for your own queries.",
+   "blurb": "Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and tools for your own database: a query coach, an EXPLAIN reader, a config checker and a health check.",
    "pages": [
     [
      "labs/index.html",
@@ -90,6 +90,18 @@
     [
      "coach/index.html",
      "Query coach"
+    ],
+    [
+     "plan/index.html",
+     "EXPLAIN reader"
+    ],
+    [
+     "config/index.html",
+     "Config checker"
+    ],
+    [
+     "health/index.html",
+     "Health check"
     ]
    ]
   },

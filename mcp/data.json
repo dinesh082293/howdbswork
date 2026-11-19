@@ -1526,6 +1526,38 @@
    ]
   },
   {
+   "title": "EXPLAIN reader",
+   "section": "Practice",
+   "url": "https://howdbswork.com/plan/",
+   "description": "Paste a PostgreSQL, MySQL or MongoDB query plan and see it as a tree, with the slow step found and the usual causes named. Runs in your browser.",
+   "headings": [
+    "Three habits that make plans worth reading"
+   ]
+  },
+  {
+   "title": "Config checker",
+   "section": "Practice",
+   "url": "https://howdbswork.com/config/",
+   "description": "Paste PostgreSQL, MySQL or MongoDB settings and see which are risky, which cost speed, and what to change. Runs in your browser.",
+   "headings": [
+    "Settings are only half the picture"
+   ]
+  },
+  {
+   "title": "Health check",
+   "section": "Practice",
+   "url": "https://howdbswork.com/health/",
+   "description": "Run a read-only script on PostgreSQL, MySQL or MongoDB, paste the output, and get a report: connections, cache, long transactions, bloat, unused indexes, replication, top queries and settings.",
+   "headings": [
+    "Run the script",
+    "PostgreSQL 13 and later",
+    "MySQL 8.0 and later",
+    "MongoDB 6.0 and later",
+    "Paste the output",
+    "What the report cannot tell you"
+   ]
+  },
+  {
    "title": "Application designs",
    "section": "Design",
    "url": "https://howdbswork.com/designs/",

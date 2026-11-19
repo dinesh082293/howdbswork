@@ -62,6 +62,22 @@ jobs:
       - name: Test the query coach rules
         run: node scripts/test-coach.mjs
 
+      - name: Test the config checker, EXPLAIN reader and health report
+        run: |
+          node scripts/test-config.mjs
+          node scripts/test-plan.mjs
+          node scripts/test-health.mjs
+
+      - name: Run the health check scripts on the live servers
+        run: |
+          docker exec ci-pg psql -U postgres -d shop -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements'
+          docker exec -i ci-pg psql -U postgres -d shop -At -F'|' -X < assets/health/health-pg.sql > /tmp/health-pg.txt
+          docker exec -i ci-my mysql -uroot -prootpass -B -N < assets/health/health-my.sql > /tmp/health-my.txt
+          docker cp assets/health/health-mo.js ci-mo:/tmp/health-mo.js
+          docker exec ci-mo mongosh --quiet /tmp/health-mo.js > /tmp/health-mo.txt
+          head -40 /tmp/health-pg.txt /tmp/health-my.txt /tmp/health-mo.txt
+          node scripts/test-health.mjs /tmp/health-pg.txt /tmp/health-my.txt /tmp/health-mo.txt
+
       - name: Run PostgreSQL commands
         run: docker exec -i ci-pg psql -U postgres -d shop -v ON_ERROR_STOP=1 < ci-out/pg.sql
 
