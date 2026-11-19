@@ -6,7 +6,7 @@
 (function () {
   var NS = 'http://www.w3.org/2000/svg';
   var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var DUR = 3400;
+  var FLIGHT = 1300, STEP = 1650, HOLD = 2800;
   var BAND = { proc: 'Processes', mem: 'Memory', disk: 'Disk' };
 
   /* Box: [id, label, sub, weight, opts]. opts.full: own row on phones.
@@ -21,7 +21,8 @@
     proc: [['postmaster', 'postmaster', 'listens, starts the rest'], ['backend', 'backends', 'one per connection'], ['walwriter', 'WAL writer', 'flushes the log'], ['checkpointer', 'checkpointer', 'writes dirty pages'], ['autovac', 'autovacuum', 'removes dead rows'], ['walsender', 'WAL sender', 'streams to standbys']],
     mem: [['buffers', 'shared_buffers', '8 KB pages, about 25% of RAM', 3, { full: 1 }], ['walbuf', 'WAL buffers', 'log records', 1], ['workmem', 'work_mem', 'per sort or hash', 1]],
     disk: [['base', 'base/', 'table and index files', 2.2, { full: 1 }], ['wal', 'pg_wal/', '16 MB log segments', 1.8], ['xact', 'pg_xact/', 'commit status', 1]],
-    widgets: { bk: ['spawn', 'backend', 3, 'b'], pages: ['slots', 'buffers', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty', 'empty']], rec: ['bar', 'walbuf'], seg: ['segs', 'wal', 5, 3], ck: ['mark', 'wal', '⚑ checkpoint'], sb: ['segs', 'standby', 4, 3, 'rep'] },
+    widgets: { bk: ['spawn', 'backend', 3, 'b'], pages: ['slots', 'buffers', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty', 'empty']], rec: ['bar', 'walbuf'], seg: ['segs', 'wal', 5, 3], ck: ['mark', 'wal', '⚑ checkpoint'], sr: ['rep', 'standby', ['WAL receiver', 'pg_wal/ (its copy)', 'startup: replays'], ['clean', 'clean', 'clean', 'clean']] },
+    rep: { box: 'standby', name: 'Standby', promotedName: 'New primary', primary: 'primary', unit: 'commit', label: 'Replication', modes: ['async', 'synchronous'], def: 0, lostText: 'the last commit is lost', keptText: 'every commit is here' },
     scenes: [
       { layers: ['proc'], hl: ['client', 'postmaster', 'backend'], t: 'A client connects, and gets its own process',
         s: 'The postmaster accepts the connection and starts a backend process just for it. A hundred connections means a hundred processes, each with its own memory.',
@@ -39,10 +40,11 @@
         s: 'The backend writes a WAL record describing the change into the WAL buffers, then changes the page in shared_buffers. The page is now dirty: newer in memory than on disk.',
         d: 'An UPDATE in PostgreSQL writes a new row version and leaves the old one behind as a dead row. Vacuum deals with it later.',
         moves: [['q', 'client', 'backend', 0, 'UPDATE'], ['w', 'backend', 'walbuf', 0.4, 'WAL record'], ['q', 'backend', 'pages:2', 0.65, 'change']], fx: function (S) { S.pages[2] = 'dirty'; S.dead.pages = 2; S.rec = 1; } },
-      { layers: ['mem', 'disk'], hl: ['walbuf', 'walwriter', 'wal', 'xact'], t: 'COMMIT: the WAL reaches disk, then the app hears back',
-        s: 'The WAL record is flushed to pg_wal/ and the commit is recorded in pg_xact/. Only then does the client get its answer. The table file has still not changed.',
-        d: 'This one flush is the price of a durable commit: a fraction of a millisecond on local NVMe, more on network storage. Notebook 2 measures it.',
-        moves: [['w', 'walbuf', 'wal', 0, 'flush'], ['w', 'wal', 'xact', 0.45, 'committed'], ['a', 'backend', 'client', 0.7, '✓ COMMIT']], fx: function (S) { S.rec = 0; S.seg = 4; S.fsync = 'wal'; } },
+      { layers: ["mem", "disk"], hl: ["walbuf", "walwriter", "wal", "xact"], t: "COMMIT: the WAL reaches disk, then the app hears back",
+        s: "The WAL record is flushed to pg_wal/ and the commit is recorded in pg_xact/, then the client gets its answer. With asynchronous replication the standby has not received it yet: it is one commit behind.",
+        d: "This one flush is the price of a durable commit: a fraction of a millisecond on local NVMe, more on network storage. Notebook 2 measures it.",
+        moves: [["w", "walbuf", "wal", 0, "flush"], ["w", "wal", "xact", 0.45, "committed"], ["a", "backend", "client", 0.7, "✓ COMMIT"]], fx: function (S) { S.rec = 0; S.seg = 4; S.fsync = 'wal'; S.lag = S.sync ? 0 : 1; },
+        alt: { t: "COMMIT with a synchronous standby: it confirms first", s: "The WAL record is flushed locally and streamed to the standby, which writes it to its own pg_wal/ and confirms. Only then does the app hear back. Every acknowledged commit is now on two machines.", d: "The cost is a network round trip on every commit. synchronous_commit = on with synchronous_standby_names waits for the standby to flush; remote_apply also waits for it to replay.", moves: [["w", "walbuf", "wal", 0, "flush"], ["w", "walsender", "rep:0", 0.2, "WAL"], ["w", "rep:0", "rep:1", 0.4, "write"], ["a", "rep:0", "backend", 0.6, "✓ flushed"], ["w", "wal", "xact", 0.75, "committed"], ["a", "backend", "client", 0.9, "✓ COMMIT"]], lines: ["COMMIT: the WAL record is flushed to pg_wal/", "The WAL sender streams it to the standby", "The standby writes it to its own pg_wal/", "The standby confirms: flushed", "The commit is recorded in pg_xact/", "Only now does the app hear back"], fx: function (S) { S.rec = 0; S.seg = 4; S.fsync = 'wal'; S.lag = 0; } } },
       { layers: ['proc', 'disk'], hl: ['checkpointer', 'buffers', 'base', 'wal'], t: 'Later, the checkpointer writes dirty pages to disk',
         s: 'In the background, the checkpointer writes every dirty page to its file in base/ and marks a checkpoint in the WAL. A crash now only needs the WAL written after it.',
         d: 'checkpoint_timeout and max_wal_size decide how often this happens. Too often means write bursts; too rarely means longer crash recovery.',
@@ -51,10 +53,18 @@
         s: 'The old version left by the UPDATE is invisible to every transaction now. Autovacuum finds it and marks the space free for new rows.',
         d: 'One transaction left open for hours stops this cleanup for every table, which is how tables bloat. The symptom pages show how to find it.',
         moves: [['v', 'autovac', 'pages:2', 0, 'vacuum']], fx: function (S) { S.dead.pages = -1; } },
-      { layers: ['proc', 'disk'], hl: ['wal', 'walsender', 'standby'], t: 'The WAL sender streams the log to a standby',
-        s: 'The same WAL records that made the commit durable are streamed to the standby, which replays them and ends up with the same pages.',
-        d: 'The standby replays the log, not the SQL, so it gets the same bytes. The gap between the two is replication lag; pg_stat_replication shows it.',
-        moves: [['w', 'wal', 'walsender', 0, 'WAL'], ['w', 'walsender', 'standby', 0.4, 'WAL stream']], fx: function (S) { S.sb = 4; } }
+      { layers: ["proc", "disk"], hl: ["wal", "walsender", "standby"], t: "The standby receives the WAL and replays it",
+        s: "The WAL sender streams the new records, the standby's WAL receiver writes them to its own pg_wal/, and the startup process replays them into its copy of the page. Now it is in step.",
+        d: "The standby replays the log, not the SQL, so it ends up with the same bytes. pg_stat_replication on the primary shows how far behind each standby is.",
+        moves: [["w", "wal", "walsender", 0, "WAL"], ["w", "walsender", "rep:0", 0.2, "WAL stream"], ["w", "rep:0", "rep:1", 0.4, "write"], ["w", "rep:1", "rep:2", 0.6, "replay"], ["p", "rep:2", "rpages:2", 0.8, "page"]], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; },
+        lines: ["The WAL sender reads the new WAL", "and streams it to the standby's WAL receiver", "The receiver writes it to the standby's pg_wal/", "The startup process replays it", "and the standby's copy of the page changes"],
+        alt: { t: "The standby replays the WAL it already has", s: "With a synchronous standby the WAL arrived during the commit. Replay still runs on its own schedule, so a read on the standby can briefly see the old row.", d: "synchronous_commit = remote_apply makes the commit wait for replay too, so reads on the standby are never behind. It costs more on every commit.", moves: [["w", "rep:1", "rep:2", 0, "replay"], ["p", "rep:2", "rpages:2", 0.4, "page"]], lines: ["The startup process replays the WAL it already received", "and the standby's copy of the page changes"], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; } } },
+      { layers: ["proc", "mem", "disk"], hl: ["client", "standby"], t: "The primary fails: a commit that was not streamed is gone",
+        s: "One more commit is acknowledged, and the primary crashes before streaming it. The standby is promoted and the app reconnects, but that commit does not exist on the new primary. With asynchronous replication, the replication lag is what you lose.",
+        d: "This is the trade in Decision 2 on this site: what a commit waits for, and what each choice costs when a server dies.",
+        moves: [["q", "client", "backend", 0, "UPDATE"], ["a", "backend", "client", 0.25, "✓ COMMIT"], ["x", "postmaster", "postmaster", 0.5, "crash"], ["q", "client", "standby", 0.75, "reconnect"]], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = S.sync ? 2 : 1; S.lag = 0; },
+        lines: ["One more UPDATE commits on the primary", "The app is told it committed", "The primary crashes before streaming it", "The standby is promoted, and that commit is not on it"],
+        alt: { t: "The primary fails: nothing acknowledged is lost", s: "With a synchronous standby, the last commit reached the standby before the app heard back. The promoted standby has every commit the app was told about.", d: "The price was the extra round trip on every commit. And if the only synchronous standby is down, commits wait: plan for two standbys or a quorum.", moves: [["q", "client", "backend", 0, "UPDATE"], ["w", "walsender", "rep:0", 0.2, "WAL"], ["a", "rep:0", "backend", 0.4, "✓ flushed"], ["a", "backend", "client", 0.6, "✓ COMMIT"], ["x", "postmaster", "postmaster", 0.75, "crash"], ["q", "client", "standby", 0.9, "reconnect"]], lines: ["One more UPDATE commits on the primary", "Its WAL reaches the standby first", "The standby confirms", "Then the app is told it committed", "The primary crashes", "The standby is promoted, with every commit"], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = 2; S.lag = 0; } } }
     ]
   };
 
@@ -64,7 +74,8 @@
     proc: [['mysqld', 'mysqld', 'one process, many threads'], ['conn', 'connection threads', 'one per connection'], ['logw', 'log writer', 'writes and flushes redo'], ['cleaner', 'page cleaner', 'flushes dirty pages'], ['purge', 'purge', 'removes old versions'], ['dump', 'binlog dump', 'sends to replicas']],
     mem: [['pool', 'buffer pool', '16 KB pages, 60 to 75% of RAM', 3, { full: 1 }], ['logbuf', 'log buffer', 'redo records', 1], ['bcache', 'binlog cache', 'per session', 1]],
     disk: [['ibd', 'shop/users.ibd', 'the table is its primary key', 1.6, { full: 1 }], ['redo', '#innodb_redo/', 'redo log', 1.2], ['binlog', 'binlog.000042', 'row events', 1.2], ['undo', 'undo_001', 'old row versions', 1]],
-    widgets: { th: ['spawn', 'conn', 3, 't'], pages: ['slots', 'pool', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty', 'empty']], rec: ['bar', 'logbuf'], brec: ['bar', 'bcache'], seg: ['segs', 'redo', 4, 2], bseg: ['segs', 'binlog', 4, 2], hist: ['segs', 'undo', 4, 1, 'dead'], rp: ['segs', 'replica', 4, 3, 'rep'] },
+    widgets: { th: ['spawn', 'conn', 3, 't'], pages: ['slots', 'pool', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty', 'empty']], rec: ['bar', 'logbuf'], brec: ['bar', 'bcache'], seg: ['segs', 'redo', 4, 2], bseg: ['segs', 'binlog', 4, 2], hist: ['segs', 'undo', 4, 1, 'dead'], sr: ['rep', 'replica', ['I/O thread', 'relay log', 'applier threads'], ['clean', 'clean', 'clean', 'clean']] },
+    rep: { box: 'replica', name: 'Replica', promotedName: 'New primary', primary: 'source', unit: 'transaction', label: 'Replication', modes: ['async', 'semi-sync'], def: 0, lostText: 'the last commit is lost', keptText: 'every commit is here' },
     scenes: [
       { layers: ['proc'], hl: ['client', 'mysqld', 'conn'], t: 'A client connects, and gets a thread',
         s: 'mysqld is one process. Each connection gets its own thread inside it, taken from the thread cache when one is free.',
@@ -82,10 +93,11 @@
         s: 'The old version is copied to undo, a redo record goes into the log buffer, the row is changed in its page, and a binlog event waits in this session\'s binlog cache.',
         d: 'Readers that need the old version rebuild it from undo. That is how InnoDB keeps consistent reads without leaving dead rows in the table.',
         moves: [['q', 'client', 'conn', 0, 'UPDATE'], ['d', 'pages:2', 'undo', 0.3, 'old version'], ['w', 'conn', 'logbuf', 0.45, 'redo'], ['w', 'conn', 'bcache', 0.6, 'binlog event']], fx: function (S) { S.pages[2] = 'dirty'; S.rec = 1; S.brec = 1; S.hist = 3; } },
-      { layers: ['mem', 'disk'], hl: ['logw', 'logbuf', 'redo', 'bcache', 'binlog'], t: 'COMMIT: redo and binlog reach disk together',
-        s: 'A two-phase commit: the redo log is flushed with the transaction prepared, the binlog is written and flushed, then the commit is marked in redo. Only then does the app hear back.',
-        d: 'innodb_flush_log_at_trx_commit = 1 and sync_binlog = 1 make both flushes happen on every commit. Group commit lets many sessions share one flush.',
-        moves: [['w', 'logbuf', 'redo', 0, 'prepare'], ['w', 'bcache', 'binlog', 0.3, 'binlog'], ['w', 'logbuf', 'redo', 0.55, 'commit'], ['a', 'conn', 'client', 0.75, '✓ COMMIT']], fx: function (S) { S.rec = 0; S.brec = 0; S.seg = 3; S.bseg = 3; S.fsync = 'redo'; } },
+      { layers: ["mem", "disk"], hl: ["logw", "logbuf", "redo", "bcache", "binlog"], t: "COMMIT: redo and binlog reach disk together",
+        s: "A two-phase commit: the redo log is flushed with the transaction prepared, the binlog is written and flushed, then the commit is marked in redo. The app hears back. The replica has not received it yet.",
+        d: "innodb_flush_log_at_trx_commit = 1 and sync_binlog = 1 make both flushes happen on every commit. Group commit lets many sessions share one flush.",
+        moves: [["w", "logbuf", "redo", 0, "prepare"], ["w", "bcache", "binlog", 0.3, "binlog"], ["w", "logbuf", "redo", 0.55, "commit"], ["a", "conn", "client", 0.75, "✓ COMMIT"]], fx: function (S) { S.rec = 0; S.brec = 0; S.seg = 3; S.bseg = 3; S.fsync = 'redo'; S.lag = S.sync ? 0 : 1; },
+        alt: { t: "COMMIT with semi-sync: a replica confirms first", s: "With semi-synchronous replication (AFTER_SYNC), the source waits until at least one replica has written the transaction to its relay log before telling the app.", d: "If no replica answers within rpl_semi_sync_source_timeout (10 seconds by default), the source falls back to asynchronous and carries on. Watch Rpl_semi_sync_source_status.", moves: [["w", "logbuf", "redo", 0, "prepare"], ["w", "bcache", "binlog", 0.2, "binlog"], ["w", "dump", "rep:0", 0.4, "binlog event"], ["w", "rep:0", "rep:1", 0.55, "relay log"], ["a", "rep:0", "conn", 0.7, "✓ received"], ["a", "conn", "client", 0.85, "✓ COMMIT"]], lines: ["Redo is flushed with the transaction prepared", "The binlog is written and flushed", "The binlog dump thread sends it to the replica", "The I/O thread writes it to the relay log", "The replica confirms it has it", "Only now does the app hear back"], fx: function (S) { S.rec = 0; S.brec = 0; S.seg = 3; S.bseg = 3; S.fsync = 'redo'; S.lag = 0; } } },
       { layers: ['proc', 'disk'], hl: ['cleaner', 'pool', 'ibd'], t: 'Later, the page cleaner flushes the dirty page',
         s: 'Background page cleaner threads write dirty pages back to users.ibd, first through the doublewrite buffer, so a half-written page can be repaired after a crash.',
         d: 'The redo log is a ring. If dirty pages are not flushed fast enough, the ring fills and writes stall: checkpoint age is the number to watch.',
@@ -94,10 +106,18 @@
         s: 'When no open transaction can still see the old row version, purge threads remove it from undo. The history list gets shorter.',
         d: 'One transaction left open for hours stops purge. The history list grows into the millions and reads slow down: SHOW ENGINE INNODB STATUS shows its length.',
         moves: [['v', 'purge', 'undo', 0, 'purge']], fx: function (S) { S.hist = 1; } },
-      { layers: ['proc', 'disk'], hl: ['binlog', 'dump', 'replica'], t: 'The binlog dump thread feeds the replica',
-        s: 'Each replica connects and a binlog dump thread sends it the events. The replica stores them in its relay log and its applier threads apply them.',
-        d: 'Replication is asynchronous by default: the primary does not wait. Semi-synchronous replication waits for one replica to receive each transaction.',
-        moves: [['w', 'binlog', 'dump', 0, 'events'], ['w', 'dump', 'replica', 0.4, 'binlog']], fx: function (S) { S.rp = 4; } }
+      { layers: ["proc", "disk"], hl: ["binlog", "dump", "replica"], t: "The replica receives the binlog and applies it",
+        s: "The binlog dump thread sends the new events, the replica's I/O thread writes them to its relay log, and the applier threads apply them to its own tables. Now it is in step.",
+        d: "Replication is asynchronous by default: the source does not wait. SHOW REPLICA STATUS on the replica shows how far behind it is.",
+        moves: [["w", "binlog", "dump", 0, "events"], ["w", "dump", "rep:0", 0.2, "binlog"], ["w", "rep:0", "rep:1", 0.4, "relay log"], ["w", "rep:1", "rep:2", 0.6, "apply"], ["p", "rep:2", "rpages:2", 0.8, "row"]], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; },
+        lines: ["The binlog dump thread reads the new events", "and sends them to the replica's I/O thread", "which writes them to the relay log", "The applier threads apply them", "and the replica's row changes too"],
+        alt: { t: "The replica applies what it already received", s: "With semi-sync the event reached the relay log during the commit. The applier threads still apply it on their own schedule, so the replica can briefly show the old row.", d: "Semi-sync guarantees the replica received the transaction, not that it applied it. Lag on reads is still possible.", moves: [["w", "rep:1", "rep:2", 0, "apply"], ["p", "rep:2", "rpages:2", 0.4, "row"]], lines: ["The applier threads apply the relay log", "and the replica's row changes too"], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; } } },
+      { layers: ["proc", "mem", "disk"], hl: ["client", "replica"], t: "The source fails: a commit not yet sent is gone",
+        s: "One more commit is acknowledged, and the source crashes before the replica receives it. The failover tool promotes the replica and the app reconnects, but that commit is not there.",
+        d: "GitHub's story on this site shows the other half: a failover tool needs rules about when to promote and when to wait for a human.",
+        moves: [["q", "client", "conn", 0, "UPDATE"], ["a", "conn", "client", 0.25, "✓ COMMIT"], ["x", "mysqld", "mysqld", 0.5, "crash"], ["q", "client", "replica", 0.75, "reconnect"]], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = S.sync ? 2 : 1; S.lag = 0; },
+        lines: ["One more UPDATE commits on the source", "The app is told it committed", "The source crashes before sending it", "The replica is promoted, and that commit is not on it"],
+        alt: { t: "The source fails: nothing acknowledged is lost", s: "With semi-sync (AFTER_SYNC), the last commit was in the replica's relay log before the app heard back. The promoted replica applies it and has every acknowledged commit.", d: "The promoted replica must finish applying its relay log before it takes writes, or reads will miss the last transactions.", moves: [["q", "client", "conn", 0, "UPDATE"], ["w", "dump", "rep:0", 0.2, "binlog event"], ["a", "rep:0", "conn", 0.4, "✓ received"], ["a", "conn", "client", 0.6, "✓ COMMIT"], ["x", "mysqld", "mysqld", 0.75, "crash"], ["q", "client", "replica", 0.9, "reconnect"]], lines: ["One more UPDATE commits on the source", "Its binlog event reaches the replica first", "The replica confirms", "Then the app is told it committed", "The source crashes", "The replica is promoted, with every commit"], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = 2; S.lag = 0; } } }
     ]
   };
 
@@ -107,7 +127,8 @@
     proc: [['mongod', 'mongod', 'one process per member'], ['conn', 'connection threads', 'one per connection'], ['jflush', 'journal flusher', 'about every 100 ms'], ['ckpt', 'checkpoint', 'every 60 seconds'], ['evict', 'eviction', 'keeps the cache in bounds'], ['repl', 'replication', 'serves the oplog']],
     mem: [['cache', 'WiredTiger cache', 'uncompressed pages, ~50% of RAM', 3, { full: 1 }], ['logbuf', 'journal buffer', 'log records', 1], ['oscache', 'OS file cache', 'compressed blocks', 1]],
     disk: [['coll', 'collection-*.wt', 'documents, compressed', 1.5, { full: 1 }], ['idx', 'index-*.wt', 'one file per index', 1.2], ['journal', 'journal/', 'WiredTigerLog files', 1.2], ['oplog', 'local.oplog.rs', 'the oplog, a capped collection', 1.3]],
-    widgets: { th: ['spawn', 'conn', 3, 'c'], pages: ['slots', 'cache', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty']], rec: ['bar', 'logbuf'], jseg: ['segs', 'journal', 4, 2], op: ['segs', 'oplog', 5, 4], ck: ['mark', 'coll', '⚑ checkpoint'], sc: ['segs', 'sec', 4, 3, 'rep'] },
+    widgets: { th: ['spawn', 'conn', 3, 'c'], pages: ['slots', 'cache', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty']], rec: ['bar', 'logbuf'], jseg: ['segs', 'journal', 4, 2], op: ['segs', 'oplog', 5, 4], ck: ['mark', 'coll', '⚑ checkpoint'], sr: ['rep', 'sec', ['oplog fetcher', 'oplog (its copy)', 'applier'], ['clean', 'clean', 'clean', 'clean']] },
+    rep: { box: 'sec', name: 'Secondaries', promotedName: 'New primary', primary: 'primary', unit: 'write', label: 'Write concern', modes: ['w: 1', 'w: "majority"'], def: 1, lostText: 'the last write is rolled back', keptText: 'every acknowledged write is here' },
     scenes: [
       { layers: ['proc'], hl: ['client', 'mongod', 'conn'], t: 'The driver opens a pool of connections',
         s: 'Drivers keep a pool, 100 connections per host by default. mongod gives each connection a thread.',
@@ -125,10 +146,12 @@
         s: 'The document goes into a collection page, its keys into the index pages, and an oplog entry is written, all together. A journal record goes into the journal buffer.',
         d: 'Because the oplog entry is written in the same transaction as the change, the two can never disagree after a crash.',
         moves: [['q', 'client', 'conn', 0, 'insertOne'], ['q', 'conn', 'pages:2', 0.35, 'document'], ['w', 'conn', 'logbuf', 0.55, 'journal record']], fx: function (S) { S.pages[2] = 'dirty'; S.pages[3] = 'dirty'; S.rec = 1; } },
-      { layers: ['proc', 'disk'], hl: ['jflush', 'journal', 'oplog', 'repl', 'sec'], t: 'w: "majority": journal on disk, secondaries have it',
-        s: 'The journal is flushed to disk, and the secondaries pull the new oplog entry and apply it. With write concern majority, the app hears back only when most members have the write.',
-        d: 'A write a majority has can survive a failover. With w: 1, a primary that dies before the secondaries copy the write can lose it in a rollback.',
-        moves: [['w', 'logbuf', 'journal', 0, 'flush'], ['w', 'oplog', 'repl', 0.25, 'oplog entry'], ['w', 'repl', 'sec', 0.45, 'oplog'], ['a', 'conn', 'client', 0.78, '✓ majority']], fx: function (S) { S.rec = 0; S.jseg = 3; S.op = 5; S.sc = 4; S.fsync = 'journal'; } },
+      { layers: ["proc", "disk"], hl: ["jflush", "journal", "conn", "client"], t: "w: 1: the primary alone acknowledges",
+        s: "With write concern w: 1, the app hears back as soon as the primary has the write. The secondaries have not copied it yet: they are one write behind.",
+        d: "Since MongoDB 5.0 the default write concern is majority. w: 1 is faster and can lose acknowledged writes in a failover.",
+        moves: [["w", "logbuf", "journal", 0, "flush"], ["a", "conn", "client", 0.45, "✓ w: 1"]], fx: function (S) { S.rec = 0; S.jseg = 3; S.op = 5; S.fsync = 'journal'; S.lag = S.sync ? 0 : 1; },
+        lines: ["The journal record is flushed to disk", "The primary has it: the app hears back"],
+        alt: { t: "w: \"majority\": journal on disk, a majority has it", s: "The journal is flushed, and a secondary pulls the new oplog entry and writes it to its own oplog. With a majority of members holding the write, the app hears back.", d: "A write a majority holds survives a failover. Since 8.0 the acknowledgement comes once a majority has written the oplog entry, so a read on a secondary just after may not see it yet.", moves: [["w", "logbuf", "journal", 0, "flush"], ["w", "oplog", "repl", 0.2, "oplog entry"], ["w", "repl", "rep:0", 0.4, "oplog"], ["w", "rep:0", "rep:1", 0.55, "write"], ["a", "rep:0", "conn", 0.7, "✓ have it"], ["a", "conn", "client", 0.85, "✓ majority"]], lines: ["The journal record is flushed to disk", "The new oplog entry is ready", "A secondary's fetcher pulls it", "and writes it to its own oplog", "The secondary reports back", "A majority has it: the app hears back"], fx: function (S) { S.rec = 0; S.jseg = 3; S.op = 5; S.fsync = 'journal'; S.lag = 0; } } },
       { layers: ['proc', 'disk'], hl: ['ckpt', 'cache', 'coll', 'idx'], t: 'Every 60 seconds, a checkpoint',
         s: 'WiredTiger writes the dirty pages to the .wt files as a new, consistent checkpoint. After that, the journal written before it is no longer needed for recovery.',
         d: 'A crash restarts from the last checkpoint and replays the journal after it, so recovery replays at most about a minute of writes.',
@@ -137,10 +160,18 @@
         s: 'At about 80% full, eviction threads remove pages that have not been used lately. Clean pages are dropped; dirty ones are written first.',
         d: 'If eviction cannot keep up, application threads are made to evict pages themselves, and every request slows down. Too much dirty data in the cache is the usual cause.',
         moves: [['v', 'evict', 'pages:0', 0, 'evict'], ['v', 'evict', 'pages:1', 0.3, 'evict']], fx: function (S) { S.pages[0] = 'empty'; S.pages[1] = 'empty'; } },
-      { layers: ['disk'], hl: ['oplog', 'sec'], t: 'The oplog is a window, not a history',
-        s: 'The oplog is capped: when it is full, the oldest entries are removed. A secondary that falls further behind than the window cannot catch up and needs a full resync.',
-        d: 'Size divided by write rate is the window. rs.printReplicationInfo() shows it; plan for at least a day.',
-        moves: [['d', 'oplog', 'oplog', 0, 'oldest out']], fx: function (S) { S.op = 3; } }
+      { layers: ["proc", "disk"], hl: ["oplog", "repl", "sec"], t: "The secondaries pull the oplog and apply it",
+        s: "Each secondary's fetcher pulls new oplog entries, writes them to its own oplog, and the applier applies them to its copy of the data. Now it is in step.",
+        d: "The oplog is capped: a secondary that falls further behind than the window (size divided by write rate) cannot catch up and needs a full resync. rs.printReplicationInfo() shows the window.",
+        moves: [["w", "oplog", "repl", 0, "oplog"], ["w", "repl", "rep:0", 0.2, "oplog entry"], ["w", "rep:0", "rep:1", 0.4, "write"], ["w", "rep:1", "rep:2", 0.6, "apply"], ["p", "rep:2", "rpages:2", 0.8, "document"]], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; },
+        lines: ["The primary's oplog has a new entry", "A secondary's fetcher pulls it", "and writes it to its own oplog", "The applier applies it", "and the secondary's document changes"],
+        alt: { t: "The secondaries apply what they already have", s: "With w: \"majority\" the entry reached a secondary's oplog during the write. The applier still applies it on its own schedule.", d: "The oplog is capped: a secondary that falls further behind than the window cannot catch up and needs a full resync.", moves: [["w", "rep:1", "rep:2", 0, "apply"], ["p", "rep:2", "rpages:2", 0.4, "document"]], lines: ["The applier applies the oplog entry", "and the secondary's document changes"], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; } } },
+      { layers: ["proc", "mem", "disk"], hl: ["client", "sec"], t: "The primary fails: a w: 1 write is rolled back",
+        s: "One more insert with w: 1 is acknowledged, and the primary crashes before any secondary copies it. The secondaries elect a new primary within seconds. When the old primary rejoins, that write is rolled back and saved to a rollback file.",
+        d: "Elections are automatic in a replica set. Writes with w: \"majority\" are never rolled back.",
+        moves: [["q", "client", "conn", 0, "insertOne"], ["a", "conn", "client", 0.25, "✓ w: 1"], ["x", "mongod", "mongod", 0.5, "crash"], ["q", "client", "sec", 0.75, "reconnect"]], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = S.sync ? 2 : 1; S.lag = 0; },
+        lines: ["One more insert, with w: 1", "The app hears back", "The primary crashes before a secondary copies it", "A new primary is elected, without that write"],
+        alt: { t: "The primary fails: majority writes survive", s: "The last insert was in a majority's oplog before the app heard back. The secondaries elect a new primary that has it, so nothing acknowledged is lost.", d: "Elections usually take seconds. Drivers retry writes once by default (retryWrites), so many apps see only a short pause.", moves: [["q", "client", "conn", 0, "insertOne"], ["w", "repl", "rep:0", 0.2, "oplog"], ["a", "rep:0", "conn", 0.4, "✓ have it"], ["a", "conn", "client", 0.6, "✓ majority"], ["x", "mongod", "mongod", 0.75, "crash"], ["q", "client", "sec", 0.9, "reconnect"]], lines: ["One more insert, with w: \"majority\"", "A secondary copies it to its oplog", "and reports back", "A majority has it: the app hears back", "The primary crashes", "A new primary is elected, with the write"], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = 2; S.lag = 0; } } }
     ]
   };
 
@@ -150,7 +181,8 @@
     proc: [['main', 'main thread', 'runs every command, in order', 2], ['io', 'I/O threads', 'read and write sockets'], ['bio', 'background threads', 'fsync, lazy free'], ['child', 'forked child', 'snapshots, AOF rewrite']],
     mem: [['keys', 'keyspace', 'every key and value', 3, { full: 1 }], ['aofbuf', 'AOF buffer', 'commands to append', 1], ['backlog', 'replication backlog', 'recent writes', 1]],
     disk: [['aof', 'appendonlydir/', 'the append-only file', 1.4], ['rdb', 'dump.rdb', 'point-in-time snapshot', 1]],
-    widgets: { q: ['spawn', 'main', 3, 'cmd'], pages: ['slots', 'keys', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty']], rec: ['bar', 'aofbuf'], bl: ['bar', 'backlog'], aseg: ['segs', 'aof', 5, 3], kid: ['spawn', 'child', 1, 'pid'], snap: ['mark', 'rdb', '✓ written'], rp: ['segs', 'replica', 4, 3, 'rep'] },
+    widgets: { q: ['spawn', 'main', 3, 'cmd'], pages: ['slots', 'keys', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty']], rec: ['bar', 'aofbuf'], bl: ['bar', 'backlog'], aseg: ['segs', 'aof', 5, 3], kid: ['spawn', 'child', 1, 'pid'], snap: ['mark', 'rdb', '✓ written'], sr: ['rep', 'replica', ['replication link', 'applies commands'], ['clean', 'clean', 'clean', 'clean']] },
+    rep: { box: 'replica', name: 'Replica', promotedName: 'New primary', primary: 'primary', unit: 'write', label: 'After a write', modes: ['just SET', 'SET + WAIT'], def: 0, lostText: 'the last OK write is lost', keptText: 'every confirmed write is here' },
     scenes: [
       { layers: ['proc'], hl: ['client', 'io', 'main'], t: 'Every command takes its turn on one thread',
         s: 'Commands from all clients line up for the main thread, which runs them one at a time. No locks are needed, and every single command is atomic.',
@@ -164,18 +196,22 @@
         s: 'The value is changed in memory, and the command itself is appended to the AOF buffer and the replication backlog.',
         d: 'The AOF records commands, not pages. That is why it can be rewritten in the background into a shorter file with the same result.',
         moves: [['q', 'main', 'pages:3', 0, 'SET'], ['w', 'main', 'aofbuf', 0.35, 'SET cart:42'], ['w', 'main', 'backlog', 0.5, 'SET cart:42']], fx: function (S) { S.q = 1; S.pages[3] = 'dirty'; S.rec = 1; S.bl = 1; } },
-      { layers: ['mem', 'disk'], hl: ['aofbuf', 'aof', 'main'], t: 'Written to the AOF file, then the reply',
-        s: 'Before replying, Redis writes the AOF buffer to the file. The data is now in the operating system, so a killed process loses nothing. Then the client gets OK.',
-        d: 'Notebook 9 killed Redis with kill -9 mid-write: with the AOF on, 0 of 40,200 acknowledged writes were lost.',
-        moves: [['w', 'aofbuf', 'aof', 0, 'write()'], ['a', 'main', 'client', 0.5, 'OK']], fx: function (S) { S.rec = 0; S.aseg = 4; S.pages[3] = 'clean'; } },
+      { layers: ["mem", "disk"], hl: ["aofbuf", "aof", "main"], t: "Written to the AOF file, then the reply",
+        s: "Before replying, Redis writes the AOF buffer to the file, so a killed process loses nothing. Then the client gets OK. The replica has not received the write yet.",
+        d: "Notebook 9 killed Redis with kill -9 mid-write: with the AOF on, 0 of 40,200 acknowledged writes were lost.",
+        moves: [["w", "aofbuf", "aof", 0, "write()"], ["a", "main", "client", 0.5, "OK"]], fx: function (S) { S.rec = 0; S.aseg = 4; S.pages[3] = 'clean'; S.lag = S.sync ? 0 : 1; },
+        lines: ["The AOF buffer is written to the file", "Then the client gets OK"],
+        alt: { t: "OK, then WAIT until a replica confirms", s: "After OK the client sends WAIT 1 500: Redis returns when at least one replica has acknowledged the write, or after 500 ms. The answer is how many replicas confirmed.", d: "WAIT tells the client which writes no replica confirmed, so it can retry or report them. It does not make Redis a consensus system: a confirmed replica may not be the one promoted.", moves: [["w", "aofbuf", "aof", 0, "write()"], ["a", "main", "client", 0.2, "OK"], ["q", "client", "main", 0.4, "WAIT 1 500"], ["w", "backlog", "rep:0", 0.55, "SET cart:42"], ["a", "rep:0", "main", 0.7, "ack"], ["a", "main", "client", 0.85, "1 replica"]], lines: ["The AOF buffer is written to the file", "The client gets OK", "The client sends WAIT 1 500", "The write goes to the replica", "The replica acknowledges", "WAIT returns: 1 replica has it"], fx: function (S) { S.rec = 0; S.bl = 0; S.aseg = 4; S.pages[3] = 'clean'; S.lag = 0; } } },
       { layers: ['proc', 'disk'], hl: ['bio', 'aof'], t: 'Once a second, a background thread fsyncs',
         s: 'With appendfsync everysec, a background thread forces the file to disk about once a second. A power cut can lose that last second; a crashed process cannot.',
         d: 'appendfsync always fsyncs every write and is much slower. With the AOF off, only snapshots are kept: Notebook 9 lost all 42,269 writes made since the last one.',
         moves: [['c', 'bio', 'aof', 0.1, 'fsync']], fx: function (S) { S.fsync = 'aof'; } },
-      { layers: ['mem'], hl: ['backlog', 'replica'], t: 'The replica gets the write afterwards',
-        s: 'The primary sends the command to the replica from the backlog, after it has already replied OK. If the primary dies first, a promoted replica does not have that write.',
-        d: 'Notebook 9 killed a primary while its replica was a second behind: 2,217 acknowledged writes were missing after the promotion. WAIT tells the client which writes no replica confirmed.',
-        moves: [['w', 'backlog', 'replica', 0.1, 'SET cart:42']], fx: function (S) { S.bl = 0; S.rp = 4; } },
+      { layers: ["mem"], hl: ["backlog", "replica"], t: "The replica gets the write afterwards",
+        s: "The primary sends the command from the backlog after it has already replied OK. The replica applies it, and now it is in step. If the primary had died first, the replica would never have had it.",
+        d: "Notebook 9 killed a primary while its replica was a second behind: 2,217 acknowledged writes were missing after the promotion.",
+        moves: [["w", "backlog", "rep:0", 0, "SET cart:42"], ["w", "rep:0", "rep:1", 0.3, "apply"], ["p", "rep:1", "rpages:3", 0.6, "value"]], fx: function (S) { S.bl = 0; S.lag = 0; S.rpages[3] = 'dirty'; },
+        lines: ["The primary sends the write from its backlog", "The replica runs the same command", "and its copy of the value changes"],
+        alt: { t: "The replica already has the write", s: "With WAIT the replica received and applied the write during the wait. Nothing is left to send.", d: "WAIT costs a round trip to the replica on every write that uses it: 0.30 ms instead of 0.13 ms per write in Notebook 9.", moves: [["p", "rep:1", "rpages:3", 0, "value"]], lines: ["The replica's copy already has the new value"], fx: function (S) { S.bl = 0; S.lag = 0; S.rpages[3] = 'dirty'; } } },
       { layers: ['proc', 'mem', 'disk'], hl: ['child', 'keys', 'rdb'], t: 'A snapshot: fork, and let the child write',
         s: 'For BGSAVE, Redis forks. The child writes everything it sees to dump.rdb while the parent keeps serving. Pages the parent changes meanwhile are copied, so memory use grows.',
         d: 'On a busy 40 GB instance the fork itself can pause the server, and copy-on-write can add many GB. Leave memory headroom, or take snapshots on a replica.',
@@ -183,7 +219,13 @@
       { layers: ['proc'], hl: ['main', 'client'], t: 'One slow command makes everyone wait',
         s: 'KEYS * or deleting a huge key runs on the same single thread. Until it finishes, every other client\'s command waits in line.',
         d: 'Use SCAN instead of KEYS, UNLINK instead of DEL for big keys, and SLOWLOG GET to find what is blocking.',
-        moves: [['q', 'client', 'main', 0, 'KEYS *'], ['q', 'client', 'io', 0.3, 'GET'], ['q', 'client', 'io', 0.45, 'GET']], fx: function (S) { S.kid = 0; S.q = 3; S.slow = 1; } }
+        moves: [['q', 'client', 'main', 0, 'KEYS *'], ['q', 'client', 'io', 0.3, 'GET'], ['q', 'client', 'io', 0.45, 'GET']], fx: function (S) { S.kid = 0; S.q = 3; S.slow = 1; } },
+      { layers: ["proc", "mem", "disk"], hl: ["client", "replica"], t: "The primary fails: an OK write can be gone",
+        s: "Another SET gets OK, and the primary dies before sending it. Sentinel or the cluster promotes the replica, and the client reconnects. That write was acknowledged and is not there.",
+        d: "Notebook 9: with the replica one second behind, 2,217 of 29,981 acknowledged writes were missing after the promotion.",
+        moves: [["q", "client", "main", 0, "SET"], ["a", "main", "client", 0.25, "OK"], ["x", "main", "main", 0.5, "crash"], ["q", "client", "replica", 0.75, "reconnect"]], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = S.sync ? 2 : 1; S.lag = 0; },
+        lines: ["Another SET arrives", "The client gets OK", "The primary dies before sending it", "The replica is promoted, without that write"],
+        alt: { t: "The primary fails: the client knew what was confirmed", s: "Every write the client waited for was confirmed by the replica, and the promoted replica has it. A write WAIT reported as unconfirmed is the one to retry.", d: "In Notebook 9, with WAIT, no confirmed write was lost, and the client knew about the one write no replica had confirmed.", moves: [["q", "client", "main", 0, "SET"], ["a", "main", "client", 0.2, "OK"], ["q", "client", "main", 0.35, "WAIT 1 500"], ["w", "backlog", "rep:0", 0.5, "SET"], ["a", "main", "client", 0.65, "1 replica"], ["x", "main", "main", 0.8, "crash"], ["q", "client", "replica", 0.92, "reconnect"]], lines: ["Another SET arrives", "The client gets OK", "and waits for a replica", "The write reaches the replica", "WAIT returns: confirmed", "The primary dies", "The replica is promoted, with the write"], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = 2; S.lag = 0; } } }
     ]
   };
 
@@ -273,6 +315,224 @@
     ]
   };
 
+  /* What each moving piece is doing, in order of when it moves. */
+  var NARR = {
+ "pg": [
+  [
+   "Your app asks the postmaster for a connection",
+   "The postmaster starts a backend process for it"
+  ],
+  [
+   "The query goes to its backend",
+   "The backend finds the page in shared_buffers",
+   "Rows go straight back to the app"
+  ],
+  [
+   "This page is not in shared_buffers",
+   "8 KB is read from base/ into a free slot"
+  ],
+  [
+   "An UPDATE arrives at the backend",
+   "First, a WAL record goes into the WAL buffers",
+   "Then the page changes in memory: now dirty"
+  ],
+  [
+   "COMMIT: the WAL record is flushed to pg_wal/",
+   "The commit is recorded in pg_xact/",
+   "Only now does the app hear back"
+  ],
+  [
+   "The checkpointer writes the dirty page to base/",
+   "A checkpoint is marked in the WAL"
+  ],
+  [
+   "Autovacuum clears the dead row version"
+  ],
+  [
+   "The WAL sender reads the new WAL",
+   "and streams it to the standby, which replays it"
+  ]
+ ],
+ "my": [
+  [
+   "Your app connects to mysqld",
+   "mysqld gives the connection its own thread"
+  ],
+  [
+   "The query goes to its thread",
+   "The leaf page is already in the buffer pool",
+   "The row goes back to the app"
+  ],
+  [
+   "This page is not in the buffer pool",
+   "16 KB is read from users.ibd"
+  ],
+  [
+   "An UPDATE arrives",
+   "The old version is copied to undo",
+   "A redo record goes into the log buffer",
+   "The binlog event waits in the session's cache"
+  ],
+  [
+   "Redo is flushed with the transaction prepared",
+   "The binlog is written and flushed",
+   "Redo marks the transaction committed",
+   "Only now does the app hear back"
+  ],
+  [
+   "The page cleaner writes the dirty page to users.ibd"
+  ],
+  [
+   "Purge removes the old version from undo"
+  ],
+  [
+   "The binlog dump thread reads the new events",
+   "and sends them to the replica"
+  ]
+ ],
+ "mo": [
+  [
+   "The driver opens a connection to mongod",
+   "mongod gives it a thread"
+  ],
+  [
+   "find() goes to its connection thread",
+   "The page is in the WiredTiger cache",
+   "The document goes back to the app"
+  ],
+  [
+   "This page is not in the WiredTiger cache",
+   "A compressed block is read from the .wt file",
+   "It is decompressed into the cache"
+  ],
+  [
+   "insertOne arrives",
+   "The document goes into a collection page",
+   "A journal record goes into the journal buffer"
+  ],
+  [
+   "The journal is flushed to disk",
+   "The new oplog entry is ready for the secondaries",
+   "The secondaries copy it and apply it",
+   "A majority has it: the app hears back"
+  ],
+  [
+   "The checkpoint writes the dirty collection page",
+   "and the dirty index page"
+  ],
+  [
+   "Eviction drops a page no one has used lately",
+   "and another, to keep the cache under 80%"
+  ],
+  [
+   "The oldest oplog entries drop off the end"
+  ]
+ ],
+ "rd": [
+  [
+   "A client sends GET",
+   "Another client sends INCR",
+   "They wait in line for the main thread"
+  ],
+  [
+   "The main thread looks up the key in memory",
+   "The value goes straight back"
+  ],
+  [
+   "SET changes the value in memory",
+   "The command is added to the AOF buffer",
+   "and to the replication backlog"
+  ],
+  [
+   "The AOF buffer is written to the file",
+   "Then the client gets OK"
+  ],
+  [
+   "A background thread fsyncs the file to disk"
+  ],
+  [
+   "The replica gets the write, after the OK"
+  ],
+  [
+   "Redis forks a child process",
+   "The child writes a snapshot to dump.rdb"
+  ],
+  [
+   "KEYS * starts on the main thread",
+   "Another GET has to wait",
+   "and another"
+  ]
+ ],
+ "cs": [
+  [
+   "The app sends INSERT to any node",
+   "The coordinator hashes the key to find the replicas"
+  ],
+  [
+   "Node 1 appends the write to its commit log",
+   "The write goes to node 2",
+   "Node 1 adds the row to its memtable",
+   "and the write goes to node 3"
+  ],
+  [
+   "Node 2 acknowledges",
+   "Two of three: the app hears back"
+  ],
+  [
+   "The full memtable is written as a new SSTable"
+  ],
+  [
+   "Bloom filters say which SSTables may have the key",
+   "An older version comes from one SSTable",
+   "A newer one from another: the newest wins"
+  ],
+  [
+   "DELETE writes a tombstone"
+  ],
+  [
+   "Compaction merges one SSTable",
+   "and another, into a single new file"
+  ],
+  [
+   "Node 3 was down: the write is kept as a hint",
+   "Node 3 is back: the hint is replayed"
+  ]
+ ],
+ "vx": [
+  [
+   "The question goes to the embedding model",
+   "A vector comes back"
+  ],
+  [
+   "The query asks for the 10 nearest rows",
+   "The planner picks the HNSW index"
+  ],
+  [
+   "The search enters at the top of the graph"
+  ],
+  [
+   "It goes down the layers, keeping the best candidates"
+  ],
+  [
+   "The candidates' rows are read from the table",
+   "The 10 nearest go back to the app"
+  ],
+  [
+   "A tenant filter after the index leaves 1 row"
+  ],
+  [
+   "A new vector arrives",
+   "It is linked to its neighbours in the graph",
+   "and the change is logged in the WAL"
+  ],
+  [
+   "Each hop needs a page read from disk",
+   "and another",
+   "and another"
+  ]
+ ]
+};
+
   /* ---------- layout ---------- */
   var H = { proc: 90, mem: 108, disk: 84 };
   function layout(E, lay) {
@@ -302,7 +562,7 @@
       var yy = 12;
       G[E.left[0]] = [8, yy, 200, 72]; yy += 72 + 18;
       ['proc', 'mem', 'disk'].forEach(function (k) {
-        var cols = k === 'proc' ? 3 : 2, h = k === 'mem' ? 96 : 76, rows = [], cur = [];
+        var cols = k === 'proc' ? 3 : 2, h = k === 'mem' ? 96 : k === 'proc' ? 88 : 76, rows = [], cur = [];
         E[k].forEach(function (b) { if (b[4] && b[4].full) { if (cur.length) rows.push(cur); rows.push([b]); cur = []; } else { cur.push(b); if (cur.length === cols) { rows.push(cur); cur = []; } } });
         if (cur.length) rows.push(cur);
         var y0 = yy;
@@ -316,8 +576,10 @@
         G.bands[k] = [8, y0, 424, yy - y0 + 4];
         yy += 22;
       });
-      E.right.forEach(function (b, i) { G[b[0]] = [i % 2 ? 228 : 8, yy + Math.floor(i / 2) * 82, 204, 70]; });
-      yy += Math.ceil(E.right.length / 2) * 82;
+      var others = E.right.filter(function (b) { return !(E.rep && b[0] === E.rep.box); });
+      if (E.rep) { G[E.rep.box] = [8, yy, 424, 206]; yy += 218; }
+      others.forEach(function (b, i) { G[b[0]] = [i % 2 ? 228 : 8, yy + Math.floor(i / 2) * 82, 204, 70]; });
+      yy += Math.ceil(others.length / 2) * 82;
       G.H = yy + 4;
     }
     return G;
@@ -335,18 +597,21 @@
   function mount(root) {
     var key = root.getAttribute('data-engine') || 'pg', E = ENG[key];
     if (!E) return;
-    var st = { i: -1, playing: false, timer: null, lay: null, seen: false, raf: [] }, G, svg, N;
+    var st = { i: -1, playing: false, timer: null, lay: null, seen: false, raf: [], tt: [], speed: 1, sync: !!(E.rep && E.rep.def) }, G, svg, N;
     var ALL = [E.left].concat(E.proc, E.mem, E.disk, E.right), INFO = {};
     E.proc.forEach(function (b) { INFO[b[0]] = 'proc'; }); E.mem.forEach(function (b) { INFO[b[0]] = 'mem'; }); E.disk.forEach(function (b) { INFO[b[0]] = 'disk'; });
     root.classList.add('aa');
     root.innerHTML =
       '<div class="aa-stage"></div>' +
+      '<div class="aa-now" aria-hidden="true"><span class="aa-now-n"></span><span class="aa-now-t"></span></div>' +
       '<div class="aa-cap" aria-live="polite"><div class="aa-layers"></div><div class="aa-step"></div><div class="aa-title"></div><p class="aa-sub"></p><details class="aa-more"><summary>Why it works this way</summary><p class="aa-detail"></p></details></div>' +
-      '<div class="aa-ctl"><button type="button" class="aa-btn aa-prev" aria-label="Previous scene">‹</button><button type="button" class="aa-btn aa-play">▶ Play</button><button type="button" class="aa-btn aa-next" aria-label="Next scene">›</button><div class="aa-dots"></div></div>';
+      '<div class="aa-ctl"><button type="button" class="aa-btn aa-prev" aria-label="Previous scene">‹</button><button type="button" class="aa-btn aa-play">▶ Play</button><button type="button" class="aa-btn aa-next" aria-label="Next scene">›</button><div class="aa-dots"></div><div class="aa-opts">' +
+        (E.rep ? '<div class="aa-seg" role="group" aria-label="Replication"><span>' + E.rep.label + '</span><button type="button" data-sync="0">' + E.rep.modes[0] + '</button><button type="button" data-sync="1">' + E.rep.modes[1] + '</button></div>' : '') +
+        '<div class="aa-seg" role="group" aria-label="Speed"><span>Speed</span><button type="button" data-speed="1.45">slower</button><button type="button" data-speed="1">normal</button><button type="button" data-speed="0.7">faster</button></div></div></div>';
     var stage = root.querySelector('.aa-stage'), dots = root.querySelector('.aa-dots');
     E.scenes.forEach(function (sc, k) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'aa-dot'; b.setAttribute('aria-label', 'Scene ' + (k + 1) + ': ' + sc.t);
-      b.addEventListener('click', function () { stop(); go(k); }); dots.appendChild(b);
+      b.addEventListener('click', function () { go(k); stop(); }); dots.appendChild(b);
     });
 
     function build() {
@@ -354,7 +619,7 @@
       G = layout(E, lay);
       stage.innerHTML = '';
       svg = el('svg', { viewBox: '0 0 ' + G.W + ' ' + G.H, role: 'img', 'aria-label': E.name + ' architecture, animated: processes, memory and disk' }, stage);
-      N = { box: {}, w: {}, pos: {} };
+      N = { box: {}, w: {}, pos: {}, lab: {} };
       Object.keys(G.bands).forEach(function (k) {
         var r = G.bands[k], g = el('g', { 'class': 'aa-band aa-' + k }, svg);
         el('rect', { x: r[0], y: r[1], width: r[2], height: r[3], rx: 16 }, g);
@@ -371,9 +636,15 @@
         if (need > room) lab.setAttribute('style', 'font-size:' + Math.max(10.5, 13.5 * room / need).toFixed(1) + 'px');
         wrapText(g, b[2], r[0] + 10, r[1] + 37, r[2] - 18, r[3] >= 70 ? 2 : 1);
         el('circle', { cx: r[0] + r[2] - 11, cy: r[1] + 13, r: 4, 'class': 'aa-led' }, g);
-        N.box[b[0]] = g;
+        N.box[b[0]] = g; N.lab[b[0]] = lab;
       });
       Object.keys(E.widgets).forEach(function (id) { widget(id, E.widgets[id]); });
+      if (E.rep) {
+        var pb = G.bands.proc;
+        N.downMark = el('g', { 'class': 'aa-downmark' }, svg);
+        el('rect', { x: pb[0] + pb[2] - 172, y: pb[1] + 6, width: 160, height: 24, rx: 12 }, N.downMark);
+        el('text', { x: pb[0] + pb[2] - 92, y: pb[1] + 22, 'text-anchor': 'middle' }, N.downMark, '✕ ' + E.rep.primary + ' down');
+      }
     }
     function wrapText(g, t, x, y, w, lines) {
       var max = Math.floor(w / 5.5), words = t.split(' '), out = [], cur = '';
@@ -412,6 +683,30 @@
         N['fs_' + w[1]] = el('rect', { x: r[0] + 10, y: r[1] + r[3] - 6, width: 0, height: 3, rx: 1.5, 'class': 'aa-fsync', 'data-w': r[2] - 20 }, svg);
       } else if (type === 'mark') {
         list.push(el('text', { x: r[0] + r[2] - 24, y: r[1] + 21, 'text-anchor': 'end', 'class': 'aa-ck' }, svg, w[2]));
+      } else if (type === 'rep') {
+        var parts = w[2], np = parts.length, wide = st.lay === 'wide', rowsEl = [], rpos = [];
+        for (var q = 0; q < np; q++) {
+          var rx, ry, rw, rh;
+          if (wide) { rx = r[0] + 10; ry = r[1] + 50 + q * 34; rw = r[2] - 20; rh = 28; }
+          else { rw = (r[2] - 20 - (np - 1) * 8) / np; rx = r[0] + 10 + q * (rw + 8); ry = r[1] + 48; rh = 40; }
+          var rg = el('g', { 'class': 'aa-rpart' }, svg);
+          el('rect', { x: rx, y: ry, width: rw, height: rh, rx: 7 }, rg);
+          el('text', { x: rx + 8, y: ry + (wide ? 18 : 24), 'class': 'aa-rlab' }, rg, parts[q]);
+          rowsEl.push(rg); rpos.push([rx + rw / 2, ry + rh / 2]);
+        }
+        var rm = w[3].length, rgp = 6, rpw = Math.min(30, (r[2] - 20 - (rm - 1) * rgp) / rm), rph = 26, rpages = [], rpp = [];
+        for (var z = 0; z < rm; z++) {
+          var zx = r[0] + 10 + z * (rpw + rgp), zy = r[1] + r[3] - rph - 10, zg = el('g', { 'class': 'aa-page aa-rpage' }, svg);
+          el('rect', { x: zx, y: zy, width: rpw, height: rph, rx: 4 }, zg);
+          el('line', { x1: zx + 5, y1: zy + 9, x2: zx + rpw - 5, y2: zy + 9 }, zg);
+          el('line', { x1: zx + 5, y1: zy + 16, x2: zx + rpw - 8, y2: zy + 16 }, zg);
+          rpages.push(zg); rpp.push([zx + rpw / 2, zy + rph / 2]);
+        }
+        N.lagText = el('text', { x: r[0] + 10, y: r[1] + r[3] - rph - 20, 'class': 'aa-lag' }, svg, '');
+        N.rep = { parts: rowsEl, pages: rpages };
+        N.pos.rep = rpos; N.pos.rpages = rpp;
+        N.w[id] = { type: 'rep', el: [], box: w[1] };
+        return;
       } else if (type === 'graph') {
         // three layers of an HNSW graph: 1, 3 and 7 nodes, plus one new node
         var gx = r[0] + 14, gw = r[2] - 28, rowsY = [r[1] + 52, r[1] + 74, r[1] + r[3] - 14], L = [[0.5], [0.2, 0.5, 0.8], [0.06, 0.2, 0.34, 0.5, 0.64, 0.8, 0.94]];
@@ -435,7 +730,7 @@
     }
 
     function base() {
-      var S = { hit: {}, dead: {}, fsync: null };
+      var S = { hit: {}, dead: {}, fsync: null, lag: 0, down: 0, promoted: 0, lost: 0, sync: st.sync, rpages: E.widgets.sr ? E.widgets.sr[3].slice() : [] };
       Object.keys(E.widgets).forEach(function (id) {
         var w = E.widgets[id];
         S[id] = w[0] === 'slots' ? w[3].slice() : w[0] === 'segs' ? w[3] : 0;
@@ -443,13 +738,17 @@
       });
       return S;
     }
+    function SC(i) {
+      var sc = E.scenes[i]; if (!sc) return sc;
+      if (!(st.sync && sc.alt)) return sc;
+      var o = {}; Object.keys(sc).forEach(function (k) { o[k] = sc[k]; }); Object.keys(sc.alt).forEach(function (k) { o[k] = sc.alt[k]; }); return o;
+    }
     function stateAt(i) {
       var S = base();
-      for (var k = 0; k <= i; k++) { S.hit = {}; S.fsync = null; S.slow = 0; E.scenes[k].fx(S); }
+      for (var k = 0; k <= i; k++) { S.hit = {}; S.fsync = null; S.slow = 0; SC(k).fx(S); }
       return S;
     }
-    function paint(i, animate) {
-      var S = stateAt(i), sc = E.scenes[i];
+    function render(S) {
       Object.keys(N.w).forEach(function (id) {
         var w = N.w[id], v = S[id];
         if (w.type === 'spawn') w.el.forEach(function (g, k) { g.setAttribute('class', 'aa-bk' + (k < v ? ' on' : '') + (S.dead[id] >= 0 && k > S.dead[id] - 1 && k < v ? ' aa-drop' : '') + (S.slow && id === 'q' && k > 0 ? ' aa-wait' : '')); });
@@ -463,8 +762,23 @@
         }
       });
       Object.keys(N).forEach(function (k) { if (k.indexOf('fs_') === 0) N[k].setAttribute('width', 0); });
-      if (S.fsync && N['fs_' + S.fsync]) { var f = N['fs_' + S.fsync]; setTimeout(function () { f.setAttribute('width', f.getAttribute('data-w')); }, animate ? 450 : 0); }
-      Object.keys(N.box).forEach(function (k) { N.box[k].classList.toggle('hl', !!(sc && sc.hl.indexOf(k) >= 0)); N.box[k].classList.toggle('aa-busy', !!(S.slow && k === 'main')); });
+      if (S.fsync && N['fs_' + S.fsync]) { var f = N['fs_' + S.fsync]; later(function () { f.setAttribute('width', f.getAttribute('data-w')); }, 60); }
+      Object.keys(N.box).forEach(function (k) { N.box[k].classList.toggle('aa-busy', !!(S.slow && k === 'main')); });
+      if (E.rep && N.rep) {
+        N.rep.pages.forEach(function (g, k) { g.setAttribute('class', 'aa-page aa-rpage aa-' + S.rpages[k]); });
+        var R = E.rep;
+        N.lagText.textContent = S.lost === 1 ? '✕ ' + R.lostText : S.lost === 2 ? '✓ ' + R.keptText : S.lag > 0 ? 'Behind by ' + S.lag + ' ' + R.unit + (S.lag > 1 ? 's' : '') : 'In step with the ' + R.primary;
+        N.lagText.setAttribute('class', 'aa-lag' + (S.lost === 1 ? ' bad' : S.lost === 2 ? ' good' : S.lag > 0 ? ' warn' : ''));
+        ['proc', 'mem', 'disk'].forEach(function (k) { N['band_' + k].classList.toggle('aa-down', !!S.down); });
+        N.downMark.classList.toggle('on', !!S.down);
+        N.lab[R.box].textContent = S.promoted ? R.promotedName : R.name;
+        N.box[R.box].classList.toggle('aa-promoted', !!S.promoted);
+      }
+    }
+    function settled(i) { var S = stateAt(i); if (i >= 0) { S.hit = {}; S.fsync = null; } return S; }
+    function frame(i) {
+      var sc = SC(i);
+      Object.keys(N.box).forEach(function (k) { N.box[k].classList.toggle('hl', !!(sc && sc.hl.indexOf(k) >= 0)); });
       ['proc', 'mem', 'disk'].forEach(function (k) { N['band_' + k].classList.toggle('hl', !!(sc && sc.layers.indexOf(k) >= 0)); });
       var cap = root.querySelector('.aa-cap');
       if (!sc) {
@@ -482,15 +796,40 @@
         cap.querySelector('.aa-more').hidden = false;
       }
       Array.prototype.forEach.call(dots.children, function (d, k) { d.classList.toggle('on', k === i); d.classList.toggle('done', k < i); });
-      if (animate && sc && !reduce) sc.moves.forEach(fly);
     }
+    var now = root.querySelector('.aa-now'), nowN = root.querySelector('.aa-now-n'), nowT = root.querySelector('.aa-now-t');
+    function say(text, n, total) {
+      nowN.textContent = total > 1 ? n + '/' + total : '';
+      nowT.innerHTML = colorize(text);
+      now.classList.remove('pop'); void now.offsetWidth; now.classList.add('pop');
+    }
+    function lines(i) { var sc = SC(i); return (sc && sc.lines) || (NARR[key] && NARR[key][i]) || []; }
+    function ordered(i) { return SC(i).moves.map(function (m, k) { return [m, k]; }).sort(function (a, b) { return a[0][3] - b[0][3] || a[1] - b[1]; }).map(function (x) { return x[0]; }); }
+    function sceneLength(i) { return (SC(i).moves.length * STEP + HOLD) * st.speed; }
+    // Show scene i: the moves play one after another, each with its line,
+    // and the lasting changes appear when the last one lands.
+    function show(i, animate) {
+      frame(i);
+      if (i < 0) { render(settled(-1)); now.classList.add('idle'); nowN.textContent = ''; nowT.textContent = 'Press play to watch it move.'; return; }
+      now.classList.remove('idle');
+      var ms = ordered(i), ls = lines(i);
+      if (!animate || reduce) { render(stateAt(i)); nowN.textContent = ''; nowT.innerHTML = colorize(ls.join(' · ')); return; }
+      render(settled(i - 1));
+      ms.forEach(function (m, k) {
+        later(function () { say(ls[k] || m[4], k + 1, ms.length); fly(m); }, k * STEP * st.speed);
+      });
+      later(function () { render(stateAt(i)); }, ((ms.length - 1) * STEP + FLIGHT) * st.speed);
+    }
+    function later(f, t) { st.tt.push(setTimeout(f, t)); }
     function fly(m) {
-      var a = anchor(m[1]), b = anchor(m[2]), delay = m[3] * DUR, label = m[4], same = m[1] === m[2];
+      var a = anchor(m[1]), b = anchor(m[2]), delay = 0, label = m[4], same = m[1] === m[2];
+      var trail = same ? null : el('path', { d: 'M' + a[0] + ',' + a[1] + ' Q' + ((a[0] + b[0]) / 2) + ',' + (Math.min(a[1], b[1]) - 26) + ' ' + b[0] + ',' + b[1], 'class': 'aa-trail aa-trail-' + m[0] }, svg);
+      if (trail) later(function () { trail.remove(); }, (FLIGHT * st.speed) + 900);
       var g = el('g', { 'class': 'aa-pill aa-pill-' + m[0], opacity: 0 }, svg);
       var w = Math.max(56, label.length * 7.2 + 22);
       el('rect', { x: -w / 2, y: -13, width: w, height: 26, rx: 13 }, g);
       el('text', { x: 0, y: 5, 'text-anchor': 'middle' }, g, label);
-      var t0 = null, len = 900;
+      var t0 = null, len = FLIGHT * st.speed;
       function step(ts) {
         if (!t0) t0 = ts;
         var t = (ts - t0 - delay) / len;
@@ -504,21 +843,40 @@
       }
       st.raf.push(requestAnimationFrame(step));
     }
-    function clearFlights() { st.raf.forEach(cancelAnimationFrame); st.raf = []; Array.prototype.forEach.call(svg.querySelectorAll('.aa-pill'), function (p) { p.remove(); }); }
-    function go(i) { clearFlights(); st.i = i; paint(i, true); if (i === E.scenes.length - 1 && window.HDW_GOALS) {} }
+    function clearFlights() { st.raf.forEach(cancelAnimationFrame); st.raf = []; st.tt.forEach(clearTimeout); st.tt = []; Array.prototype.forEach.call(svg.querySelectorAll('.aa-pill,.aa-trail'), function (p) { p.remove(); }); }
+    function go(i, animate) { clearFlights(); st.i = i; show(i, animate !== false); }
     function next() { go(st.i + 1 >= E.scenes.length ? 0 : st.i + 1); }
+    function tick() {
+      clearTimeout(st.timer);
+      st.timer = setTimeout(function () {
+        if (!st.playing) return;
+        if (st.i >= E.scenes.length - 1) { stop(); return; }
+        next(); tick();
+      }, sceneLength(st.i));
+    }
     function play() {
       st.playing = true; root.querySelector('.aa-play').textContent = '❚❚ Pause';
       if (st.i >= E.scenes.length - 1 || st.i < 0) go(0); else next();
-      st.timer = setInterval(function () { if (st.i >= E.scenes.length - 1) { stop(); return; } next(); }, DUR);
+      tick();
     }
-    function stop() { st.playing = false; clearInterval(st.timer); root.querySelector('.aa-play').textContent = st.i >= E.scenes.length - 1 ? '↻ Replay' : '▶ Play'; }
+    function stop() { st.playing = false; clearTimeout(st.timer); root.querySelector('.aa-play').textContent = st.i >= E.scenes.length - 1 ? '↻ Replay' : '▶ Play'; }
     root.querySelector('.aa-play').addEventListener('click', function () { if (st.playing) stop(); else play(); });
-    root.querySelector('.aa-next').addEventListener('click', function () { stop(); next(); });
-    root.querySelector('.aa-prev').addEventListener('click', function () { stop(); go(Math.max(0, st.i - 1)); });
-    build(); paint(-1, false);
+    root.querySelector('.aa-next').addEventListener('click', function () { next(); stop(); });
+    root.querySelector('.aa-prev').addEventListener('click', function () { go(Math.max(0, st.i - 1)); stop(); });
+    function marks() {
+      Array.prototype.forEach.call(root.querySelectorAll('[data-sync]'), function (b) { b.setAttribute('aria-pressed', String((b.getAttribute('data-sync') === '1') === st.sync)); });
+      Array.prototype.forEach.call(root.querySelectorAll('[data-speed]'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-speed') === st.speed)); });
+    }
+    Array.prototype.forEach.call(root.querySelectorAll('[data-sync]'), function (b) {
+      b.addEventListener('click', function () { st.sync = b.getAttribute('data-sync') === '1'; marks(); var target = st.i < 0 ? 0 : st.i; go(target); stop(); });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('[data-speed]'), function (b) {
+      b.addEventListener('click', function () { st.speed = +b.getAttribute('data-speed'); marks(); });
+    });
+    marks();
+    build(); show(-1, false);
     var lastW = root.clientWidth;
-    addEventListener('resize', function () { var w = root.clientWidth; if ((w < 640) !== (lastW < 640)) { clearFlights(); build(); paint(st.i, false); } lastW = w; });
+    addEventListener('resize', function () { var w = root.clientWidth; if ((w < 640) !== (lastW < 640)) { clearFlights(); build(); show(st.i, false); } lastW = w; });
     if ('IntersectionObserver' in window && !reduce) {
       new IntersectionObserver(function (es) { es.forEach(function (en) { if (en.isIntersecting && !st.seen) { st.seen = true; setTimeout(play, 500); } else if (!en.isIntersecting && st.playing) stop(); }); }, { threshold: 0.45 }).observe(root);
     }
