@@ -17,9 +17,30 @@
     return f1(s / 86400) + ' days';
   }
   var DAY = 86400;
-  var NB2 = '../../notebooks/index.html#commit-cost', NB3 = '../../notebooks/index.html#scan-vs-index', NB7 = '../../notebooks/index.html#other-engines';
+  var NB8 = '../../notebooks/index.html#agent-memory', NB2 = '../../notebooks/index.html#commit-cost', NB3 = '../../notebooks/index.html#scan-vs-index', NB7 = '../../notebooks/index.html#other-engines';
 
   var S = {
+    'agent-memory': {
+      inputs: [['users', 'Active users per day, thousands', 1, 5000, 1, 50, 'k'], ['runs', 'Agent runs per user per day', 1, 50, 1, 5, ''],
+        ['steps', 'Steps per run (model calls with a tool)', 1, 60, 1, 12, ''], ['mems', 'Memories kept per user', 10, 5000, 10, 300, ''],
+        ['dims', 'Embedding dimensions', 256, 3072, 128, 1024, ''], ['peak', 'Peak hour, times the daily average', 1, 10, 0.5, 3, '×']],
+      calc: function (v) {
+        var steps = v.users * 1e3 * v.runs * v.steps / DAY * v.peak, per = v.dims * 8 + 512 + 400, store = v.users * 1e3 * v.mems * per;
+        var logm = v.users * 1e3 * v.runs * v.steps * 30 * 2000;
+        return { r: [[fmt(steps) + '/s', 'agent steps at peak, each one memory search', steps > 5000],
+          [fmt(steps * 2) + '/s', 'rows written at peak: a tool call and a checkpoint per step', steps * 2 > 10000],
+          [size(store), 'long-term memories with their HNSW index', store > 256e9],
+          [size(logm), 'run log per month, at about 2 KB a step', logm > 2e12]],
+          note: 'Bytes per memory: the vector twice (table and index), about 512 bytes of HNSW links, and some text, from the sizes measured in <a href="' + NB8 + '">Notebook 8</a>. Memory search took about a millisecond there; the model call it feeds takes seconds, so search is rarely the slow part. Connections and the run log are.' };
+      },
+      q: 'An enterprise customer asks you to delete everything the agent knows about one of their users, within 30 days. Where does that data live in this design, and how do you show it is gone?',
+      a: function (v) {
+        var tc = v.runs * v.steps * 90;
+        return '<p><b>Where it lives:</b> about <b>' + fmt(v.mems) + ' memory rows</b> with their embeddings, around <b>' + fmt(tc) + ' tool-call rows</b> if that user ran agents every day for three months, the checkpoints of those runs, anything still in Redis, the run log exported to object storage, and every backup taken since. An embedding made from the user\'s words counts as their data too.</p>' +
+          '<p><b>What makes it possible:</b> tenant_id and the user\'s id on every table, so each delete is one indexed statement, not a search through JSON. Exported months stored per tenant, so you can rewrite one file instead of all of them. Backups that expire within the 30 days, so you can say when the last copy disappears.</p>' +
+          '<p><b>How you show it:</b> run the deletes as one recorded job, keep a log that says what was deleted and when (without the data itself), and answer the customer with that log and the date the last backup expires.</p>';
+      }
+    },
     'store-orders': {
       inputs: [['orders', 'Orders per day, thousands', 10, 5000, 10, 200, 'k'], ['items', 'Line items per order', 1, 10, 1, 3, ''],
         ['peak', 'Peak hour, times the daily average', 1, 20, 0.5, 4, '×'], ['txms', 'How long a checkout transaction holds the stock row, ms', 1, 50, 1, 5, ' ms']],
@@ -158,16 +179,16 @@
       inputs: [['docs', 'Documents, millions', 0.1, 100, 0.1, 2, 'M'], ['chunks', 'Chunks per document', 1, 50, 1, 8, ''],
         ['dims', 'Embedding dimensions', 256, 3072, 256, 768, ''], ['qps', 'Searches per second at peak', 1, 5000, 1, 200, '']],
       calc: function (v) {
-        var n = v.docs * 1e6 * v.chunks, raw = n * v.dims * 4, graph = n * 16 * 2 * 8, total = raw + graph;
+        var n = v.docs * 1e6 * v.chunks, raw = n * v.dims * 4, graph = n * 512, total = raw + graph;
         return { r: [[fmt(n / 1e6 >= 1 ? n / 1e6 : n / 1e3) + (n / 1e6 >= 1 ? ' million' : 'k'), 'vectors to index', false],
           [size(raw), 'raw vectors at 4 bytes a dimension', false],
-          [size(total), 'with an HNSW graph (about 16 links a node each way)', total > 256e9],
+          [size(total), 'the HNSW index: its own copy of each vector, plus about 512 bytes of links', total > 256e9],
           [size(n * v.dims), 'if you quantize to one byte a dimension', false]],
-          note: 'HNSW search is fast only while the index is in memory. The graph overhead here is a rough rule, not a measurement. The number that decides the design is the third one.' };
+          note: 'HNSW search is fast only while the index is in memory. In <a href="' + NB8 + '">Notebook 8</a>, a pgvector HNSW index (m = 16) took 2,048 bytes per 384-dimension vector: the 1,536 bytes of the vector itself plus about 512 bytes of links. The number that decides the design is the third one.' };
       },
       q: 'Product wants to move from ' + '{dims}' + ' to 3,072 dimensions for better answers. What happens to memory, and does it change where the vectors live?',
       a: function (v) {
-        var n = v.docs * 1e6 * v.chunks, now = n * v.dims * 4 + n * 256, then = n * 3072 * 4 + n * 256;
+        var n = v.docs * 1e6 * v.chunks, now = n * v.dims * 4 + n * 512, then = n * 3072 * 4 + n * 512;
         return '<p><b>The arithmetic:</b> the index goes from about <b>' + size(now) + '</b> to about <b>' + size(then) + '</b>, ' + f1(then / now) + ' times as much, for the same ' + fmt(n) + ' vectors.</p>' +
           '<p><b>What happens:</b> ' + (then > 256e9 ? 'that no longer fits in the memory of one ordinary database server, so a pgvector HNSW index starts reading from disk and search latency jumps.' : 'it still fits on one server, but rebuilding the index takes longer and every insert costs more.') + '</p>' +
           '<p><b>What I would check first:</b> measure whether the answers actually get better on your own questions. If they do, try quantized vectors or a model that lets you cut dimensions before moving to a separate vector store. Keep the documents and permissions in the relational database either way.</p>';
@@ -326,5 +347,6 @@
     draw(false);
     if (from) { var sec = document.getElementById('estimate'); if (sec && sec.scrollIntoView) setTimeout(function () { sec.scrollIntoView(); }, 50); }
   }
+  if (typeof window !== 'undefined') window.HDW_ESTIMATES = S;
   Array.prototype.forEach.call(document.querySelectorAll('.estimate'), mount);
 })();

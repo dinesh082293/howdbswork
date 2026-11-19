@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Where an AI agent's conversations, checkpoints, tool calls and long-term memories go: PostgreSQL with pgvector for most of it, Redis for working memory, with measured recall and filter results."/>
+<link rel="icon" href="data:,"/>
+<title>Agent memory and state · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../../index.html">Home</a><details class="navgrp"><summary>Learn</summary><div class="navmenu"><p class="navblurb">Start from zero: what happens when you write a row, the words you need, and a path to staff level.</p><a href="../../start-here/index.html">Start here</a><a href="../../concepts/index.html">Ten concepts</a><a href="../../staff-path/index.html">Staff path, zero to architect</a><a href="../../paths/index.html">Reading paths by goal</a></div></details><details class="navgrp"><summary>Engines</summary><div class="navmenu"><p class="navblurb">PostgreSQL, MySQL and MongoDB from the files on disk up, then side by side, then the wider landscape.</p><a href="../../postgresql/index.html">PostgreSQL</a><a href="../../mysql/index.html">MySQL · InnoDB</a><a href="../../mongodb/index.html">MongoDB · WiredTiger</a><a href="../../compare/index.html">Same task, three engines</a><a href="../../families/index.html">Database families</a></div></details><details class="navgrp"><summary>Practice</summary><div class="navmenu"><p class="navblurb">See it happen: simulations, a real PostgreSQL in your browser, and experiments run on real servers.</p><a href="../../labs/index.html">Labs</a><a href="../../tutorials/index.html">Guided tutorials</a><a href="../../notebooks/index.html">Lab notebooks</a></div></details><details class="navgrp here"><summary>Design</summary><div class="navmenu cols2"><p class="navblurb">What kind of application data goes in which database, and why, as design docs.</p><a href="../../designs/index.html">Application designs</a><a href="../../designs/store-orders/index.html">Store orders and inventory</a><a href="../../designs/payments-ledger/index.html">Payments and ledgers</a><a href="../../designs/booking-reservations/index.html">Bookings and reservations</a><a href="../../designs/accounts-sessions/index.html">Accounts and sessions</a><a href="../../designs/multi-tenant-saas/index.html">Multi-tenant SaaS</a><a href="../../designs/product-catalog/index.html">Product catalog</a><a href="../../designs/social-feed/index.html">Social feed</a><a href="../../designs/search-ai-retrieval/index.html">Search and AI retrieval</a><a href="../../designs/chat-messaging/index.html">Chat and messaging</a><a href="../../designs/iot-telemetry/index.html">IoT and telemetry</a><a href="../../designs/audit-event-log/index.html">Audit and event logs</a><a href="../../designs/leaderboards-counters/index.html">Leaderboards and counters</a><a href="../../designs/analytics-reporting/index.html">Analytics and reporting</a><a href="../../designs/agent-memory/index.html" aria-current="page">Agent memory and state</a><a href="../../designs/template/index.html">Design doc template</a><a href="../../designs/review/index.html">Submit a design for review</a></div></details><details class="navgrp"><summary>Get it right</summary><div class="navmenu"><p class="navblurb">The decisions and habits that decide whether the design holds up: queries, concurrency, durability and cost.</p><a href="../../queries/index.html">Queries that look fine and are not</a><a href="../../isolation/index.html">Lost updates and write skew</a><a href="../../designs/anti-patterns/index.html">Anti-patterns</a><a href="../../decisions/index.html">Decisions</a><a href="../../decisions/sync-replication-failover/index.html">What a commit waits for</a><a href="../../decisions/cost-model/index.html">Why the bill is huge</a></div></details><details class="navgrp"><summary>Run it</summary><div class="navmenu"><p class="navblurb">Where it runs, how big it must be, how to change it, and what to do when it breaks.</p><a href="../../designs/hosting/index.html">Where to run the database</a><a href="../../cloud/index.html">On-prem vs cloud, by engine</a><a href="../../designs/capacity/index.html">Capacity calculator</a><a href="../../designs/migrations/index.html">Migration playbooks</a><a href="../../cheat-sheet/index.html">Cheat sheet</a><a href="../../reference/index.html">Reference: plans, logs, checklist</a><a href="../../stories/index.html">Real failures</a><a href="../../oncall/index.html">On call tonight</a></div></details><details class="navgrp"><summary>About</summary><div class="navmenu"><p class="navblurb">Who writes this, what was corrected, what to read next, and how to reach me.</p><a href="../../about/index.html">About</a><a href="../../corrections/index.html">Corrections</a><a href="../../references/index.html">Reading list</a><a href="../../work-with-me/index.html">Work with me</a><a href="../../assistant/index.html">Use it from your AI assistant</a><a href="../../sitemap/index.html">All pages</a></div></details></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<!-- CRUMBS:BEGIN --><div class="crumbs"><div class="wrap"><a href="../../index.html">Home</a><span>›</span><a href="../../sitemap/index.html#design">Design</a><span>›</span><b aria-current="page">Agent memory and state</b><em>Lesson 27 of 43</em></div></div><!-- CRUMBS:END -->
+<header class="hero"><div class="wrap">
+  <div class="kicker">Design doc · Agent memory and state</div>
+  <h1>Agent memory and state</h1>
+  <p class="qline">Where should an AI agent keep its conversations, its progress and what it remembers?</p>
+  <p class="lede">Applications like this: a support agent, a coding agent, an assistant inside a SaaS product, any program that calls a model in a loop and uses tools. This page is written the way I write a database design doc: the workload first, then where each kind of data goes and why, then how it grows, what breaks, and what I rejected. The vector numbers on it were measured, in <a href="../../notebooks/index.html#agent-memory">Notebook 8</a>.</p>
+  <div class="verdict"><b class="dt">The short answer</b>One PostgreSQL with pgvector holds the run log, the checkpoints and the long-term memories, with tenant_id in every key. Redis holds the working memory of runs in progress. Turn on iterative scan for filtered memory search, and give every memory an expiry.</div>
+  <div class="scnnav"><a href="#workload">Workload</a><a href="#placement">What goes where</a><a href="#model">Data model</a><a href="#growth">How it grows</a><a href="#breaks">What breaks</a><a href="#alternatives">Alternatives</a><a href="#where">Where to run it</a><a href="#estimate">Estimate it</a></div>
+</div></header>
+<section id="workload"><div class="wrap">
+  <div class="kicker">1 · The workload</div>
+  <h2>What the application asks of the database</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Dimension</th><th>This application</th></tr></thead><tbody><tr><td><b>Writes</b></td><td>Many small writes per run: each step adds messages, a tool call and a checkpoint.</td></tr><tr><td><b>Reads</b></td><td>Each step reads the recent conversation, the latest checkpoint, and searches long-term memory.</td></tr><tr><td><b>Read to write</b></td><td>Close to one to one for run state. Memories are read more than written.</td></tr><tr><td><b>Consistency</b></td><td>Strict for checkpoints: resume from exactly the last step. Loose for memory search: a memory saved a second ago can be missed.</td></tr><tr><td><b>Latency</b></td><td>Memory search well under 50 ms, because it runs before every model call, and the model call itself takes seconds.</td></tr><tr><td><b>Growth</b></td><td>Fast. Every run leaves a log, and memories grow per user for as long as nobody forgets them.</td></tr></tbody></table></div>
+</div></section>
+<section id="placement"><div class="wrap">
+  <div class="kicker">2 · What goes where</div>
+  <h2>Each kind of data, its store, and why</h2>
+  <div class="flowwrap"><svg class="flow" viewBox="0 0 820 349" role="img" aria-label="Where each kind of data goes" xmlns="http://www.w3.org/2000/svg"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--muted)"/></marker></defs><rect x="20" y="148.5" width="170" height="52" rx="10" style="fill:var(--ink)"/><text x="105" y="179.5" text-anchor="middle" style="fill:var(--bg);font:700 15px IBM Plex Sans,sans-serif">Application</text><rect x="300" y="20" width="420" height="49" rx="10" style="fill:var(--surface);stroke:var(--teal);stroke-width:2"/><text x="314" y="40" style="fill:var(--ink);font:700 13.5px IBM Plex Sans,sans-serif">Runs, messages and tool calls (the run log)</text><text x="314" y="56" style="fill:var(--muted);font:500 12.5px IBM Plex Sans,sans-serif">PostgreSQL, partitioned by month</text><text x="708" y="38" text-anchor="end" style="fill:var(--teal);font:600 10.5px IBM Plex Mono,monospace;letter-spacing:.06em">SOURCE OF TRUTH</text><path d="M190,174.5 C245,174.5 245,44.5 298,44.5" style="fill:none;stroke:var(--muted);stroke-width:1.5" marker-end="url(#ah)"/><rect x="300" y="85" width="420" height="49" rx="10" style="fill:var(--surface);stroke:var(--teal);stroke-width:2"/><text x="314" y="105" style="fill:var(--ink);font:700 13.5px IBM Plex Sans,sans-serif">Checkpoints of a running agent</text><text x="314" y="121" style="fill:var(--muted);font:500 12.5px IBM Plex Sans,sans-serif">PostgreSQL, keyed by (thread_id, checkpoint_id)</text><text x="708" y="103" text-anchor="end" style="fill:var(--teal);font:600 10.5px IBM Plex Mono,monospace;letter-spacing:.06em">SOURCE OF TRUTH</text><path d="M190,174.5 C245,174.5 245,109.5 298,109.5" style="fill:none;stroke:var(--muted);stroke-width:1.5" marker-end="url(#ah)"/><rect x="300" y="150" width="420" height="49" rx="10" style="fill:var(--surface);stroke:var(--teal);stroke-width:2"/><text x="314" y="170" style="fill:var(--ink);font:700 13.5px IBM Plex Sans,sans-serif">Long-term memories with embeddings</text><text x="314" y="186" style="fill:var(--muted);font:500 12.5px IBM Plex Sans,sans-serif">pgvector in the same PostgreSQL, filtered by tenant</text><text x="708" y="168" text-anchor="end" style="fill:var(--teal);font:600 10.5px IBM Plex Mono,monospace;letter-spacing:.06em">SOURCE OF TRUTH</text><path d="M190,174.5 C245,174.5 245,174.5 298,174.5" style="fill:none;stroke:var(--muted);stroke-width:1.5" marker-end="url(#ah)"/><rect x="300" y="215" width="420" height="49" rx="10" style="fill:var(--surface);stroke:var(--line);stroke-width:1.5"/><text x="314" y="235" style="fill:var(--ink);font:700 13.5px IBM Plex Sans,sans-serif">Working memory of an active run</text><text x="314" y="251" style="fill:var(--muted);font:500 12.5px IBM Plex Sans,sans-serif">Redis or Valkey, with an expiry</text><text x="708" y="233" text-anchor="end" style="fill:var(--muted);font:600 10.5px IBM Plex Mono,monospace;letter-spacing:.06em">CAN BE LOST</text><path d="M190,174.5 C245,174.5 245,239.5 298,239.5" style="fill:none;stroke:var(--muted);stroke-width:1.5" marker-end="url(#ah)"/><rect x="300" y="280" width="420" height="49" rx="10" style="fill:var(--surface);stroke:var(--line);stroke-width:1.5" stroke-dasharray="6 5"/><text x="314" y="300" style="fill:var(--ink);font:700 13.5px IBM Plex Sans,sans-serif">Old run logs</text><text x="314" y="316" style="fill:var(--muted);font:500 12.5px IBM Plex Sans,sans-serif">Object storage, exported by month</text><text x="708" y="298" text-anchor="end" style="fill:var(--muted);font:600 10.5px IBM Plex Mono,monospace;letter-spacing:.06em">ARCHIVE</text><path d="M720,44.5 C780,44.5 780,304.5 722,304.5" style="fill:none;stroke:var(--muted);stroke-width:1.5" stroke-dasharray="6 5" marker-end="url(#ah)"/></svg></div><p class="labnote" style="margin-top:6px">Solid arrows: the application writes there. Dashed arrows: a copy fed from the source of truth (change data capture, an outbox, or a cache fill), which can be rebuilt from it.</p>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Data</th><th>Where it goes</th><th>Why</th></tr></thead><tbody><tr><td><b>Runs, messages and tool calls (the run log)</b></td><td>PostgreSQL, partitioned by month</td><td>Every step of every run, in order. You need it to debug a bad answer, to bill, and to audit what the agent did. Append-only and large, so it is partitioned from day one.</td></tr><tr><td><b>Checkpoints of a running agent</b></td><td>PostgreSQL, keyed by (thread_id, checkpoint_id)</td><td>After a crash or a deploy, the run resumes from its last step instead of starting again. Small, written every step, read back by primary key.</td></tr><tr><td><b>Long-term memories with embeddings</b></td><td>pgvector in the same PostgreSQL, filtered by tenant</td><td>Facts and summaries the agent should recall later. In the same database, a memory, its tenant and its permissions are one row and one query.</td></tr><tr><td><b>Working memory of an active run</b></td><td>Redis or Valkey, with an expiry</td><td>Scratch state, rate limits and locks for runs in progress. Fast, short-lived, and safe to lose because the checkpoint has the durable state.</td></tr><tr><td><b>Old run logs</b></td><td>Object storage, exported by month</td><td>Kept for audit and evaluation, rarely read, far cheaper than database storage.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">How each family of store behaves under traffic: <a href="../../families/index.html">Database families</a>. Retrieval over documents rather than memories: <a href="../search-ai-retrieval/index.html">Search and AI retrieval</a>.</p>
+</div></section>
+<section id="model"><div class="wrap">
+  <div class="kicker">3 · Data model</div>
+  <h2>The core tables and the queries they serve</h2>
+  <pre class="cmdshow">CREATE EXTENSION IF NOT EXISTS vector;
+
+CREATE TABLE checkpoints (
+  thread_id     text   NOT NULL,
+  checkpoint_id bigint NOT NULL,
+  state         jsonb  NOT NULL,
+  created_at    timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (thread_id, checkpoint_id)
+);
+
+CREATE TABLE tool_calls (
+  run_id     uuid   NOT NULL,
+  step       int    NOT NULL,
+  tenant_id  bigint NOT NULL,
+  tool       text   NOT NULL,
+  args       jsonb,
+  result     jsonb,
+  ms         int,
+  created_at timestamptz NOT NULL DEFAULT now()
+) PARTITION BY RANGE (created_at);
+
+CREATE TABLE memories (
+  id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  tenant_id    bigint NOT NULL,
+  subject_id   bigint NOT NULL,          -- the user the memory is about
+  body         text   NOT NULL,
+  embedding    vector(1024) NOT NULL,
+  model        text   NOT NULL,          -- which embedding model made it
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  last_used_at timestamptz,
+  expires_at   timestamptz
+);
+CREATE INDEX ON memories USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX ON memories (tenant_id, subject_id);
+
+-- resume a run
+SELECT state FROM checkpoints
+WHERE thread_id = $1 ORDER BY checkpoint_id DESC LIMIT 1;
+
+-- recall: this tenant's nearest memories
+SET hnsw.iterative_scan = relaxed_order;
+SELECT id, body FROM memories
+WHERE tenant_id = $1 AND (expires_at IS NULL OR expires_at &gt; now())
+ORDER BY embedding &lt;=&gt; $2
+LIMIT 8;</pre>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px">
+  <li>Agent frameworks such as LangGraph ship a PostgreSQL checkpointer that creates its own tables. The shape is the same as above: a thread, a checkpoint id, and the state. Use it, and know what it writes.</li>
+  <li>Without iterative scan, the filtered recall query can return fewer rows than the LIMIT. In Notebook 8, one tenant's search returned 1.3 rows out of 10 at the default settings, and 10 out of 10 with iterative scan.</li>
+  <li>tool_calls.args and result hold whatever the user and the tools said, which is often personal data. Treat the run log as sensitive as the application database.</li>
+  </ul>
+</div></section>
+<section id="growth"><div class="wrap">
+  <div class="kicker">4 · How it grows</div>
+  <h2>Start simple, change one thing at a time</h2>
+  <ol class="steplist"><li><b>One PostgreSQL for everything</b><span>Run log, checkpoints and memories in one database with pgvector. No sync problem.</span></li><li><b>Many runs at once</b><span>Working memory moves to Redis and a pooler goes in front of PostgreSQL, so parallel runs do not exhaust connections.</span></li><li><b>The memory index outgrows memory</b><span>Partition memories by tenant, or move the vectors to a dedicated store fed from PostgreSQL, which stays the source of truth.</span></li></ol>
+
+  <h3 id="scale-it" style="margin-top:28px">Scale it: watch this design grow</h3>
+  <p class="sub">Pick a stage, then throw something at it. The numbers are a model to show the shape of each change, not a measurement; the measured numbers are in the <a href="../../notebooks/index.html">lab notebooks</a>.</p>
+  <div class="scaleit" data-slug="agent-memory"></div>
+</div></section>
+<section id="breaks"><div class="wrap">
+  <div class="kicker">5 · What breaks first</div>
+  <h2>The failures to plan for</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>What happens</th><th>What you see</th><th>What I do</th></tr></thead><tbody><tr><td><b>Filtered memory search returns too few rows</b></td><td>The agent "forgets" things it was told yesterday</td><td>Turn on hnsw.iterative_scan (pgvector 0.8 and later), or for small tenants search exactly within the tenant. In Notebook 8 the plain filtered search returned 1.3 rows out of 10.</td></tr><tr><td><b>Parallel runs open hundreds of connections</b></td><td>Connection errors and memory pressure on the database when traffic peaks</td><td>A pooler (PgBouncer) in front, and a cap on concurrent runs per tenant.</td></tr><tr><td><b>The run log dominates storage and backups</b></td><td>Backups and restores get slow, and the bill grows every month</td><td>Monthly partitions, export old months to object storage, drop the partition.</td></tr><tr><td><b>Memories are never forgotten</b></td><td>Old, wrong facts outrank new ones; the store grows forever</td><td>An expiry and a last-used time on every memory, recency in the ranking, and merging duplicates when a memory is saved.</td></tr><tr><td><b>Embeddings from two models in one index</b></td><td>Search quality drops quietly</td><td>Store the model name on every row and re-embed in one pass when you change models.</td></tr><tr><td><b>A memory saved or found under the wrong tenant</b></td><td>One customer's data in another customer's answer</td><td>tenant_id in every key and every query, and row-level security as a backstop.</td></tr></tbody></table></div>
+</div></section>
+<section id="alternatives"><div class="wrap">
+  <div class="kicker">6 · Alternatives</div>
+  <h2>What I considered and did not pick</h2>
+  <ul style="font-size:15px;line-height:1.7;max-width:860px"><li><b>Memory kept only inside the agent process.</b> Lost on every restart and deploy, and invisible when you need to debug an answer.</li><li><b>One JSON document per user holding all their memories.</b> Rewritten on every save, no similarity search, and two runs saving at once lose one of the saves.</li><li><b>A dedicated vector database from day one.</b> A second system to keep in sync with the tenant, the permissions and deletions, before the size needs it.</li></ul>
+  <p class="takeaway"><b>Cost.</b> In Notebook 8 a 384-dimension memory took 3,689 bytes with its HNSW index, 2.4 times the raw floats. At 1,024 dimensions, plan for about 9 KB per memory plus its text, and keep the index in memory.</p>
+  <div class="derive"><b class="dt">How this page was written</b>From the engines' documentation, pgvector's documentation, and common practice in agent frameworks. Measured on real servers: storage, recall and filtered search in <a href="../../notebooks/index.html#agent-memory">Notebook 8</a>. Before you build: check the <a href="../anti-patterns/index.html">anti-patterns</a>, size it with the <a href="../capacity/index.html">capacity calculator</a>, and write your own version from the <a href="../template/index.html">design doc template</a>. Want a second opinion? <a href="../../work-with-me/index.html#agents-review">The agents review</a>.</div>
+</div></section>
+<section id="where"><div class="wrap">
+  <div class="kicker">7 · Where to run it</div>
+  <h2>On-prem, managed, EC2 or Kubernetes</h2>
+  <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Stage</th><th>Where it runs</th></tr></thead><tbody><tr><td><b>Where I would start</b></td><td>Managed PostgreSQL with pgvector, plus managed Redis or Valkey</td></tr><tr><td><b>When it grows</b></td><td>The same, with a pooler in front. A dedicated vector service only once the memory index outgrows one machine's memory</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">For a team without a dedicated database team. Who does which job in each option, and the full-cost comparison: <a href="../hosting/index.html">Where to run the database</a>.</p>
+</div></section>
+<section id="estimate"><div class="wrap">
+  <div class="kicker">8 · Estimate it</div>
+  <h2>The numbers, worked live</h2>
+  <p class="sub">The back-of-the-envelope numbers I would want before choosing anything. Move the assumptions to match your application. The link keeps your numbers, so a colleague sees the same ones.</p>
+  <div class="estimate" data-slug="agent-memory"></div>
+</div></section>
+<!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Design · page 15 of 17</span><a href="../../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px">What kind of application data goes in which database, and why, as design docs.</p><div class="secnav-list"><a href="../../designs/index.html">Application designs</a><a href="../../designs/store-orders/index.html">Store orders and inventory</a><a href="../../designs/payments-ledger/index.html">Payments and ledgers</a><a href="../../designs/booking-reservations/index.html">Bookings and reservations</a><a href="../../designs/accounts-sessions/index.html">Accounts and sessions</a><a href="../../designs/multi-tenant-saas/index.html">Multi-tenant SaaS</a><a href="../../designs/product-catalog/index.html">Product catalog</a><a href="../../designs/social-feed/index.html">Social feed</a><a href="../../designs/search-ai-retrieval/index.html">Search and AI retrieval</a><a href="../../designs/chat-messaging/index.html">Chat and messaging</a><a href="../../designs/iot-telemetry/index.html">IoT and telemetry</a><a href="../../designs/audit-event-log/index.html">Audit and event logs</a><a href="../../designs/leaderboards-counters/index.html">Leaderboards and counters</a><a href="../../designs/analytics-reporting/index.html">Analytics and reporting</a><a href="../../designs/agent-memory/index.html" aria-current="page" class="on">Agent memory and state</a><a href="../../designs/template/index.html">Design doc template</a><a href="../../designs/review/index.html">Submit a design for review</a></div><div class="secnav-pn"><a class="pn prev" href="../../designs/analytics-reporting/index.html"><span>← Previous</span>Analytics and reporting</a><a class="pn next" href="../../designs/template/index.html"><span>Next →</span>Design doc template</a></div></div></section><!-- SECTION:END -->
+<footer><div class="wrap">
+  <p style="margin-bottom:16px"><a href="../../index.html">← Back to home</a></p>
+  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
+  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
+  <p>Written by Dinesh. I run production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 19, 2026 · <a href="../../corrections/index.html">Corrections</a> · <a href="../../feed.xml">RSS feed</a> · <a href="../../work-with-me/index.html">Work with me</a></p>
+  <p><a href="../../sitemap/index.html">All pages</a> · <a href="../../references/index.html">Reading list</a> · <a href="../../about/index.html">About</a></p>
+</div></footer><script src="../../assets/js/main.js"></script>
+<script src="../../assets/js/copy-buttons.js"></script>
+<script src="../../assets/js/search.js"></script>
+<script src="../../assets/js/polish.js"></script>
+<script src="../../assets/js/reader.js"></script>
+<script src="../../assets/js/estimate.js"></script>
+<script src="../../assets/js/scaleit.js"></script>
+</body>
+</html>

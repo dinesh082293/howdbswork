@@ -132,6 +132,10 @@
      "Analytics and reporting"
     ],
     [
+     "designs/agent-memory/index.html",
+     "Agent memory and state"
+    ],
+    [
      "designs/template/index.html",
      "Design doc template"
     ],
@@ -231,6 +235,10 @@
     [
      "work-with-me/index.html",
      "Work with me"
+    ],
+    [
+     "assistant/index.html",
+     "Use it from your AI assistant"
     ],
     [
      "sitemap/index.html",

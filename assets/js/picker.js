@@ -10,7 +10,7 @@
     'social-feed': 'Social feed and timelines', 'search-ai-retrieval': 'Search and AI retrieval',
     'chat-messaging': 'Chat and messaging', 'iot-telemetry': 'IoT, metrics and telemetry',
     'audit-event-log': 'Audit logs and event history', 'leaderboards-counters': 'Leaderboards, counters and rate limits',
-    'analytics-reporting': 'Analytics, dashboards and reporting'
+    'analytics-reporting': 'Analytics, dashboards and reporting', 'agent-memory': 'Agent memory and state'
   };
   function val(n) { var e = document.querySelector('input[name="' + n + '"]:checked'); return e ? e.value : null; }
   function esc(s) { return s.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
@@ -51,7 +51,7 @@
     } else if (job === 'find') {
       store = 'PostgreSQL full-text search and pgvector to start, then a search engine or vector database';
       why = 'Keeping search next to the data avoids a second system to sync until size or ranking needs force it.';
-      read = ['search-ai-retrieval', 'product-catalog'];
+      read = ['search-ai-retrieval', 'agent-memory', 'product-catalog'];
     } else {
       store = 'Redis or Valkey';
       why = 'Atomic increments, sorted sets and expiry, in memory, at very high operation rates.';
