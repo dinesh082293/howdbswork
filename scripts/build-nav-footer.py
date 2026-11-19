@@ -270,7 +270,7 @@ def main():
         )
         # Old hand-made "next page" blocks give way to the generated section index.
         new_text = re.sub(r'<section class="nextpage">.*?</section>\s*', '', new_text, flags=re.S)
-        if rel != "index.html" and rel not in where:
+        if rel not in ("index.html", "404.html") and rel not in where:
             print(f"{page}: not in assets/data/sitemap.json", file=sys.stderr)
             return 1
         new_text = put(new_text, "CRUMBS", build_crumbs(sm, where, prefix, rel), anchor_after="</nav>")

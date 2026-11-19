@@ -1322,7 +1322,7 @@
    ]
   },
   {
-   "title": "Same task, three engines",
+   "title": "Engines side by side",
    "section": "Learn",
    "url": "https://howdbswork.com/compare/",
    "description": "Four everyday events, a write, a crash, a lagging replica and a long transaction, shown side by side for PostgreSQL, MySQL and MongoDB.",
