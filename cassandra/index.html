@@ -43,6 +43,8 @@
 <section id="architecture"><div class="wrap">
 <h2 style="margin:6px 0 4px">The architecture: a ring of equal nodes</h2>
   <p class="sub">There is no primary and no failover. Any node can take a request and pass it to the nodes that own the data.</p>
+  <div class="archanim" data-engine="cs"></div>
+  <p class="sub" style="margin:4px 0 12px">The same layers as a still diagram, with every part named:</p>
   <div class="filegrid" style="margin-bottom:10px"><div class="filecard cs"><header>Cassandra: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">Write path on each replica</p><div class="dflow"><div class="dbox"><b>Process</b>one Java process per node · any node can coordinate a request · the partition key's hash picks the replicas</div><span class="darrow">→</span><div class="dbox"><b>Memory</b>a memtable per table, holding recent writes in sorted order · key cache · a bloom filter per SSTable</div><span class="darrow">→</span><div class="dbox good"><b>Disk</b>commitlog/ segments · data/&lt;keyspace&gt;/&lt;table&gt;/ SSTables (Data.db, an index, Filter.db, Statistics.db) · hints/</div></div></div></div>
       <div class="fnote"><b>Who does what:</b> The coordinator hashes the partition key to a token and sends the request to the replicas that own that token. Each replica appends to the commit log, adds the write to its memtable and acknowledges. Memtables flush to immutable SSTables, and compaction merges SSTables and finally drops deleted data.</div>
@@ -102,6 +104,7 @@ cqlsh&gt; TRACING ON;                      # then run a query: where it spent it
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/archanim.js"></script>
 <script src="../assets/js/followit.js"></script>
 </body>
 </html>

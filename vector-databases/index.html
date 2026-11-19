@@ -43,6 +43,8 @@
 <section id="architecture"><div class="wrap">
 <h2 style="margin:6px 0 4px">The architecture: a model, an index, and the data behind it</h2>
   <p class="sub">The vectors come from an embedding model. The index decides how fast and how accurately you can search them. The source data and its rules live somewhere you already trust.</p>
+  <div class="archanim" data-engine="vx"></div>
+  <p class="sub" style="margin:4px 0 12px">The same layers as a still diagram, with every part named:</p>
   <div class="filegrid" style="margin-bottom:10px"><div class="filecard vx"><header>Vector search: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">From question to answer</p><div class="dflow"><div class="dbox"><b>Embedding model</b>turns text or images into a vector of, say, 384, 768 or 1,536 numbers · the same model must embed both the stored data and the questions</div><span class="darrow">→</span><div class="dbox"><b>Index, in memory</b>HNSW: a layered graph of neighbours, fast and accurate, hungry for memory · IVF: clusters of vectors, cheaper to build, needs tuning · quantized copies to save space</div><span class="darrow">→</span><div class="dbox good"><b>Storage</b>the vectors and their metadata, plus the source documents · in pgvector, an ordinary table and an index</div></div></div></div>
       <div class="fnote"><b>Who does what:</b> An exact search compares the question with every vector: always right, slow at scale. An approximate index checks a small part of the data and is usually right; how often is called recall, and you trade it against speed with settings like ef_search.</div>
@@ -113,6 +115,7 @@ SET enable_indexscan = off;</pre>
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/archanim.js"></script>
 <script src="../assets/js/followit.js"></script>
 <script src="../assets/js/vectorlab.js"></script>
 </body>

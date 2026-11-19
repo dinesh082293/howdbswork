@@ -43,6 +43,8 @@
 <section id="architecture"><div class="wrap">
 <h2 style="margin:6px 0 4px">The architecture: one thread, memory, and a disk on the side</h2>
   <p class="sub">Every command runs on one main thread, in memory. Disk is only for getting the data back after a restart; nothing is read from disk while serving.</p>
+  <div class="archanim" data-engine="rd"></div>
+  <p class="sub" style="margin:4px 0 12px">The same layers as a still diagram, with every part named:</p>
   <div class="filegrid" style="margin-bottom:10px"><div class="filecard rd"><header>Redis: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">Request path</p><div class="dflow"><div class="dbox"><b>Process</b>redis-server · one main thread runs every command in order · I/O threads can help with the network (6.0 and later) · a forked child writes snapshots</div><span class="darrow">→</span><div class="dbox"><b>Memory</b>every key and value, in a hash table · small values in compact encodings (listpack) · large sorted sets as a skiplist plus a hash</div><span class="darrow">→</span><div class="dbox good"><b>Disk, on the side</b>dump.rdb snapshots · appendonlydir/ AOF files (7.0 and later) · read only at startup</div></div></div></div>
       <div class="fnote"><b>Who does what:</b> The main thread runs commands one at a time, so every single command is atomic, and one slow command delays all the others. Saving happens beside it: a forked child writes RDB snapshots and rewrites the AOF, and a background thread flushes the AOF to disk.</div>
@@ -109,6 +111,7 @@ redis-cli LATENCY DOCTOR        # what caused recent latency spikes</pre>
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/archanim.js"></script>
 <script src="../assets/js/followit.js"></script>
 <script src="../assets/js/redissim.js"></script>
 </body>

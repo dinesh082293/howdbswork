@@ -45,6 +45,8 @@
 <section><div class="wrap">
 <h3 style="margin:6px 0 4px;font-size:19px">The architecture: processes, memory, disk</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 14px;max-width:820px">Process, memory, disk: a request enters at the process layer, memory serves it when it can, and disk makes it permanent. Name the layer first, then diagnose inside it. The full rule is on the <a href="../postgresql/index.html#architecture">PostgreSQL page</a>: name the layer first, then diagnose inside it.</p>
+  <div class="archanim" data-engine="my"></div>
+  <p class="sub" style="margin:4px 0 12px">The same layers as a still diagram, with every part named:</p>
   <div class="filegrid" style="margin-bottom:22px"><div class="filecard my"><header>MySQL · InnoDB: architecture</header>
       <div style="padding:14px 16px 4px"><div class="diagram" style="margin:0"><p class="dcap">Request path</p><div class="dflow">
         <div class="dbox"><b>Processes</b>one mysqld · a thread per connection · page cleaner threads · purge thread · log writer threads</div><span class="darrow">→</span>
@@ -217,6 +219,7 @@ WHERE TABLE_SCHEMA = 'shop' AND TABLE_NAME = 'users';</div>
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/archanim.js"></script>
 <script src="../assets/js/followit.js"></script>
 </body>
 </html>
