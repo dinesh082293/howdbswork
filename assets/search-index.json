@@ -1972,5 +1972,17 @@
   "u": "decisions/major-upgrades/index.html",
   "s": "Decisions",
   "k": "upgrade major version pg_upgrade logical replication blue green featurecompatibilityversion checkforserverupgrade"
+ },
+ {
+  "t": "Cheat sheet PDFs to download",
+  "u": "cheat-sheet/index.html",
+  "s": "Cheat sheet",
+  "k": "pdf download print cheat sheet postgresql mysql mongodb"
+ },
+ {
+  "t": "System design interview: the database part",
+  "u": "paths/index.html#system-design",
+  "s": "Reading paths",
+  "k": "system design interview practice prompts timer design docs estimate scale"
  }
 ]
