@@ -76,7 +76,7 @@ def main():
     L = ["# Real Databases, Simply (howdbswork.com)", "",
          "> How PostgreSQL, MySQL and MongoDB work in real systems: internals, side-by-side comparisons, measured lab",
          "> notebooks, and design docs that say which database each kind of application data belongs in, and why.", "",
-         "Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistants: " + SITE + "assistant/", ""]
+         "Written by a database engineer. An MCP server for AI assistants: " + SITE + "assistant/", ""]
     sec = None
     for l in lessons:
         if l["section"] != sec:
