@@ -69,8 +69,10 @@
   });
   fig.querySelector('.ca-step').addEventListener('click', function () { stop(); if (step === 5) step = 0; else step++; render(); });
   fig.querySelector('.ca-reset').addEventListener('click', function () { stop(); step = 0; render(); });
+  var pref = window.HDW_ENGINE && HDW_ENGINE.get();
   Array.prototype.forEach.call(fig.querySelectorAll('input[name="caEng"]'), function (r) {
-    r.addEventListener('change', function () { eng = r.value; render(); });
+    if (pref && r.value === pref) { r.checked = true; eng = pref; }
+    r.addEventListener('change', function () { eng = r.value; if (window.HDW_ENGINE) HDW_ENGINE.set(eng); render(); });
   });
   render();
 })();

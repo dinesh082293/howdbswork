@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="Insert rows into a B-tree and watch pages fill and split: sequential ids, random UUIDs and time-ordered UUIDs, in PostgreSQL, InnoDB and MongoDB."/>
+<link rel="icon" href="data:,"/>
+<title>Watch an index grow · Real Databases, Simply</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><details class="navgrp"><summary>Learn</summary><div class="navmenu cols2"><p class="navblurb">From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then side by side, and the query and concurrency traps.</p><a href="../start-here/index.html">Start here</a><a href="../concepts/index.html">Ten concepts</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL · InnoDB</a><a href="../mongodb/index.html">MongoDB · WiredTiger</a><a href="../compare/index.html">Same task, three engines</a><a href="../families/index.html">Database families</a><a href="../queries/index.html">Queries that look fine and are not</a><a href="../isolation/index.html">Lost updates and write skew</a><a href="../staff-path/index.html">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div></details><details class="navgrp here"><summary>Practice</summary><div class="navmenu"><p class="navblurb">Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and a coach for your own queries.</p><a href="../labs/index.html">Labs</a><a href="../index-playground/index.html" aria-current="page">Watch an index grow</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a><a href="../coach/index.html">Query coach</a></div></details><details class="navgrp"><summary>Design</summary><div class="navmenu cols2"><p class="navblurb">What kind of application data goes in which database, and why, as design docs, plus the anti-patterns and the decisions behind them.</p><a href="../designs/index.html">Application designs</a><a href="../designs/store-orders/index.html">Store orders and inventory</a><a href="../designs/payments-ledger/index.html">Payments and ledgers</a><a href="../designs/booking-reservations/index.html">Bookings and reservations</a><a href="../designs/accounts-sessions/index.html">Accounts and sessions</a><a href="../designs/multi-tenant-saas/index.html">Multi-tenant SaaS</a><a href="../designs/product-catalog/index.html">Product catalog</a><a href="../designs/social-feed/index.html">Social feed</a><a href="../designs/search-ai-retrieval/index.html">Search and AI retrieval</a><a href="../designs/chat-messaging/index.html">Chat and messaging</a><a href="../designs/iot-telemetry/index.html">IoT and telemetry</a><a href="../designs/audit-event-log/index.html">Audit and event logs</a><a href="../designs/leaderboards-counters/index.html">Leaderboards and counters</a><a href="../designs/analytics-reporting/index.html">Analytics and reporting</a><a href="../designs/agent-memory/index.html">Agent memory and state</a><a href="../designs/anti-patterns/index.html">Anti-patterns</a><a href="../decisions/index.html">Decisions</a><a href="../decisions/sync-replication-failover/index.html">What a commit waits for</a><a href="../designs/template/index.html">Design doc template</a><a href="../designs/review/index.html">Submit a design for review</a></div></details><details class="navgrp"><summary>Operate</summary><div class="navmenu cols2"><p class="navblurb">Where it runs and what it costs, how big it must be, how to change it safely, and what to do when it breaks.</p><a href="../designs/hosting/index.html">Where to run the database</a><a href="../cloud/index.html">On-prem vs cloud, by engine</a><a href="../designs/capacity/index.html">Capacity calculator</a><a href="../decisions/cost-model/index.html">Why the bill is huge</a><a href="../designs/migrations/index.html">Migration playbooks</a><a href="../oncall/index.html">On call tonight</a><a href="../stories/index.html">Real failures</a><a href="../cheat-sheet/index.html">Cheat sheet</a><a href="../reference/index.html">Reference: plans, logs, checklist</a></div></details><details class="navgrp"><summary>About</summary><div class="navmenu"><p class="navblurb">Who writes this, what was corrected, what to read next, and how to reach me.</p><a href="../about/index.html">About</a><a href="../corrections/index.html">Corrections</a><a href="../references/index.html">Reading list</a><a href="../work-with-me/index.html">Work with me</a><a href="../assistant/index.html">Use it from your AI assistant</a><a href="../sitemap/index.html">All pages</a></div></details></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<!-- CRUMBS:BEGIN --><div class="crumbs"><div class="wrap"><a href="../index.html">Home</a><span>›</span><a href="../labs/index.html">Practice</a><span>›</span><b aria-current="page">Watch an index grow</b><em>Lesson 13 of 45</em></div></div><!-- CRUMBS:END -->
+<header class="hero"><div class="wrap">
+  <div class="kicker">Practice · Watch an index grow</div>
+  <h1>Watch an index grow</h1>
+  <p class="qline">Why do random UUID keys make inserts slower?</p>
+  <p class="lede">An index is a tree of pages, kept in key order. Insert rows below and watch where each key lands, when a page fills up and splits, and how full the pages stay. Then switch from sequential ids to random UUIDs and do it again.</p>
+</div></header>
+<section id="playground"><div class="wrap">
+  <details class="predict"><summary>Predict first: you insert 300 rows with sequential ids, and 300 with random UUIDs. Which needs more pages, and roughly how many more?</summary><p>Random UUIDs need about a third more pages, and split far more often in the middle of the tree. Sequential ids only ever split the last page, so every page they leave behind is full. Random keys split pages in the middle, and both halves stay part-empty. Press "Compare all three key types" below to see it.</p></details>
+  <div class="btlab" id="btreeLab"></div>
+</div></section>
+<section id="notice"><div class="wrap">
+  <div class="kicker">What to notice</div>
+  <h2>Four things the picture shows</h2>
+  <ul style="font-size:15.5px;line-height:1.7;max-width:860px">
+  <li><b>Where new keys land.</b> Sequential ids always go into the last page, so one page is busy and stays in memory. Random UUIDs land anywhere, so the last 20 inserts touch up to 20 different pages. On a real table those pages are often not in memory, and each one is a read from disk before the insert can happen.</li>
+  <li><b>How full the pages stay.</b> When the last page fills, the engine starts a new one and leaves the old one full. When a page in the middle fills, it is split in half and both halves are left part-empty. Random keys end up around 70% full, so the same rows need more pages, more memory and more disk.</li>
+  <li><b>Time-ordered UUIDs behave almost like sequential ids.</b> UUID v7 starts with a timestamp, and MySQL's <code>UUID_TO_BIN(uuid, 1)</code> moves the time part of a version 1 UUID to the front. Keys arrive roughly in order, so you keep globally unique ids without the random inserts.</li>
+  <li><b>What the tree is depends on the engine.</b> In InnoDB the tree is the table: the rows live in the leaves, so random keys scatter the rows themselves. In PostgreSQL and MongoDB the rows are stored in arrival order and only the index is scattered, which is why a random primary key hurts InnoDB more.</li>
+  </ul>
+  <p class="takeaway"><b>Real pages are much bigger.</b> Here a page holds 3 to 8 keys so you can see splits happen. A real 8 KB or 16 KB page holds hundreds of keys, so a table of millions of rows is only three or four levels deep. Real engines also leave a little room when they fill the last page: PostgreSQL leaves 10% free by default (fillfactor 90), and InnoDB tries to leave 1/16 of the page free.</p>
+  <p class="sub" style="margin-top:12px">Where this matters next: <a href="../mysql/index.html">MySQL · InnoDB</a> for the clustered index, <a href="../queries/index.html#column-order">why column order matters</a> in an index, and the <a href="../coach/index.html">Query coach</a>, which flags a UUID string primary key in InnoDB.</p>
+</div></section>
+<!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Part 2 of 4 · Practice · lessons 12 to 16</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px"><b>Can I see it happen?</b> Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and a coach for your own queries.</p><div class="secnav-list"><a href="../labs/index.html">Labs</a><a href="../index-playground/index.html" aria-current="page" class="on">Watch an index grow</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a><a href="../coach/index.html">Query coach</a></div><div class="secnav-pn"><a class="pn prev" href="../labs/index.html"><span>← Previous</span>Labs<em>Four small simulations: crash recovery, replica lag, a lock pile-up, and page counts for a scan against an index lookup.</em></a><a class="pn next" href="../tutorials/index.html"><span>Next →</span>Guided tutorials<em>Three guided tutorials on a real PostgreSQL running in your browser: row versions, scan against index, and column order…</em></a></div></div></section><!-- SECTION:END -->
+<footer><div class="wrap">
+  <p><b style="color:var(--ink)">Real databases, simply.</b> How PostgreSQL, MySQL and MongoDB work in real systems, and which database each kind of application data belongs in. Written by Dinesh, who runs production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 19, 2026</p>
+  <p class="footlinks"><a href="../sitemap/index.html">All pages</a> · <a href="../corrections/index.html">Corrections</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a> · <a href="../work-with-me/index.html">Work with me</a> · <a href="../assistant/index.html">Use it from your AI assistant</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script src="../assets/js/reader.js"></script>
+<script src="../assets/js/btree.js"></script>
+</body>
+</html>

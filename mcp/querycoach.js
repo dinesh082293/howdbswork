@@ -497,6 +497,9 @@
     }).join('');
     out.innerHTML = h;
   }
+  var pref = window.HDW_ENGINE && HDW_ENGINE.get();
+  if (pref === 'pg' || pref === 'my') { var r0 = document.querySelector('input[name="coachEng"][value="' + pref + '"]'); if (r0) r0.checked = true; }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="coachEng"]'), function (r) { r.addEventListener('change', function () { if (r.checked && window.HDW_ENGINE) HDW_ENGINE.set(r.value); }); });
   $('coachGo').addEventListener('click', run);
   Array.prototype.forEach.call(document.querySelectorAll('[data-coach-ex]'), function (b) {
     b.addEventListener('click', function () {

@@ -1022,3 +1022,31 @@ h2:hover .hlink,h3:hover .hlink,.hlink:focus{opacity:1}
 @media(max-width:620px){.ia-title{font-size:19px}.ia-safe{margin-left:0}.ia-dot{width:16px;height:16px}}
 @media (prefers-reduced-motion: reduce){.ia-pill,.ia-row.ia-new,.ia-dirty{transition:none}.ia-fsync.ia-run{animation:none;transform:scaleX(1)}}
 .ia-dots .ia-dot{min-height:0;min-width:0;flex:0 0 auto;box-sizing:border-box;line-height:0}
+.ia-opts{display:flex;flex-direction:column;gap:8px;margin:10px 0 8px;max-width:620px}
+.ia-opt{text-align:left;min-height:44px;padding:8px 14px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-size:15px;cursor:pointer}
+.ia-opt:hover,.ia-opt:focus-visible{border-color:var(--teal)}
+.ia-skip{border:0;background:none;color:var(--muted);text-decoration:underline;cursor:pointer;font-size:14px;min-height:36px;padding:0}
+.ia-verdict{margin:8px 0 0;padding:8px 12px;border-radius:10px;font-size:14.5px;max-width:760px}
+.ia-verdict.ok{background:var(--teal-bg)}.ia-verdict.no{background:var(--my-bg)}
+.ia-cap{min-height:150px}
+/* ===== Watch an index grow ===== */
+.btlab{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;margin-top:12px}
+.bt-ctl{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-bottom:10px}
+.bt-ctl .seg{margin:0}
+.bt-go{min-height:44px;padding:0 22px;border-radius:999px;border:0;background:var(--ink);color:var(--bg);font-weight:700;font-size:15px;cursor:pointer}
+.bt-cap{display:flex;align-items:center;gap:8px;font-size:14px;margin-left:auto}
+.bt-cap input{accent-color:var(--teal);width:120px}
+.bt-what{font-size:14.5px;color:var(--muted);margin:0 0 10px;max-width:860px}
+.bt-stage{background:var(--surface2);border-radius:12px;padding:8px;overflow-x:auto}
+.bt-stage svg{width:100%;height:auto;display:block;max-height:460px}
+.bt-n rect{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.bt-n.leaf>rect:first-child{stroke:var(--muted)}
+.bt-n.path>rect:first-child{stroke:var(--teal);stroke-width:3}
+.bt-n.split>rect:first-child{stroke:var(--my);stroke-width:3;fill:var(--my-bg)}
+.bt-fill{fill:var(--teal);stroke:none !important}.bt-fill.low{fill:var(--my)}
+.bt-k{font-family:"IBM Plex Mono",monospace;font-size:14px;fill:var(--ink);white-space:pre}
+.bt-e{stroke:var(--line);stroke-width:1.5}.bt-e.on{stroke:var(--teal);stroke-width:2.5}
+.bt-stats{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:10px}
+.bt-cmp table{margin-top:10px}
+@media(max-width:700px){.bt-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.bt-cap{margin-left:0}}
+@media(max-width:700px){.bt-stage svg{min-width:760px;max-height:none}.bt-stage::after{content:"Scroll sideways to see the whole tree";display:block;font-size:12.5px;color:var(--muted);padding:4px 2px 0;position:sticky;left:0}}

@@ -68,6 +68,14 @@
   };
 
   var st = { eng: 'pg', i: -1, playing: false, timer: null, layout: null, seen: false };
+  var PRED = { q: 'Before you watch: when is row 42 safe from a crash?', right: 'commit', opts: [
+    ['page', 'When the row is written into the page in memory'],
+    ['commit', 'When the log record reaches disk, at COMMIT'],
+    ['ckpt', 'When a checkpoint writes it to the data file']] };
+  function getPred() { try { return localStorage.getItem('hdw-pred-insert'); } catch (e) { return null; } }
+  function setPred(v) { try { localStorage.setItem('hdw-pred-insert', v); } catch (e) {} st.pred = v; }
+  st.pred = getPred();
+  var pref = window.HDW_ENGINE && HDW_ENGINE.get(); if (pref && ENG[pref]) st.eng = pref;
   var DUR = 2600;
 
   function el(name, attrs, parent, text) {
@@ -218,8 +226,16 @@
     if (S.fsync) { N.fsync.getBoundingClientRect(); N.fsync.classList.add('ia-run'); }
     var cap = i < 0 ? CAP.start : CAP[order[i]];
     if (cap[st.eng]) cap = cap[st.eng];
-    root.querySelector('.ia-step').textContent = i < 0 ? 'Ready' : 'Step ' + (i + 1) + ' of ' + order.length;
-    root.querySelector('.ia-title').textContent = cap.t;
+    var pq = root.querySelector('.ia-pred'), asking = i < 0 && !st.pred;
+    pq.hidden = !asking; root.querySelector('.ia-capbody').hidden = asking;
+    var verdict = root.querySelector('.ia-verdict');
+    if (st.pred && st.pred !== 'skip' && i >= 0 && order[i] === 'commit') {
+      var ok = st.pred === PRED.right;
+      verdict.hidden = false; verdict.className = 'ia-verdict ' + (ok ? 'ok' : 'no');
+      verdict.textContent = ok ? 'You said at COMMIT. That is it: the data file has not changed yet, and it does not need to.' : 'You said ' + (st.pred === 'page' ? 'when the page changes in memory' : 'at the checkpoint') + '. Not quite: it is safe here, when the log reaches disk. ' + (st.pred === 'page' ? 'A page in memory is lost in a crash.' : 'The checkpoint comes later and is only housekeeping.');
+    } else verdict.hidden = true;
+    root.querySelector('.ia-capbody .ia-step').textContent = i < 0 ? 'Ready' : 'Step ' + (i + 1) + ' of ' + order.length;
+    root.querySelector('.ia-capbody .ia-title').textContent = cap.t;
     root.querySelector('.ia-text').textContent = cap.s;
     var det = root.querySelector('.ia-more');
     det.hidden = i < 0; if (i >= 0) det.querySelector('p').textContent = DETAIL[order[i]];
@@ -256,20 +272,27 @@
     Object.keys(ENG).map(function (k) { return '<button type="button" data-e="' + k + '" aria-pressed="' + (k === st.eng) + '">' + ENG[k].name + '</button>'; }).join('') +
     '</div><code class="ia-sql"></code></div>' +
     '<div class="ia-stage"></div>' +
-    '<div class="ia-cap" aria-live="polite"><div class="ia-step"></div><div class="ia-title"></div><p class="ia-text"></p>' +
-    '<details class="ia-more" hidden><summary>More on this step</summary><p></p></details></div>' +
+    '<div class="ia-cap" aria-live="polite"><div class="ia-pred" hidden><div class="ia-step">Predict first</div><div class="ia-title">' + PRED.q + '</div><div class="ia-opts">' +
+    PRED.opts.map(function (o) { return '<button type="button" class="ia-opt" data-p="' + o[0] + '">' + o[1] + '</button>'; }).join('') +
+    '</div><button type="button" class="ia-skip">Skip, just play it</button></div>' +
+    '<div class="ia-capbody"><div class="ia-step"></div><div class="ia-title"></div><p class="ia-text"></p><p class="ia-verdict" hidden></p>' +
+    '<details class="ia-more" hidden><summary>More on this step</summary><p></p></details></div></div>' +
     '<div class="ia-ctl"><button type="button" class="labbtn ia-prev" aria-label="Previous step">←</button><button type="button" class="ia-play"></button><button type="button" class="labbtn ia-next" aria-label="Next step">→</button>' +
     '<div class="ia-dots">' + dotsHtml() + '</div><span class="ia-safe">Row 42 is safe</span></div>';
 
   build(); render(false);
 
-  root.querySelector('.ia-play').addEventListener('click', function () { if (st.playing) { stop(); render(false); } else play(); });
+  root.querySelector('.ia-play').addEventListener('click', function () { if (st.playing) { stop(); render(false); } else { if (!st.pred) setPred('skip'); play(); } });
+  root.querySelector('.ia-pred').addEventListener('click', function (e) {
+    var b = e.target.closest('.ia-opt, .ia-skip'); if (!b) return;
+    setPred(b.classList.contains('ia-skip') ? 'skip' : b.getAttribute('data-p')); play();
+  });
   root.querySelector('.ia-prev').addEventListener('click', function () { go(st.i - 1, false); });
-  root.querySelector('.ia-next').addEventListener('click', function () { go(st.i + 1, true); });
-  root.querySelector('.ia-dots').addEventListener('click', function (e) { var b = e.target.closest('.ia-dot'); if (b) go(+b.getAttribute('data-i'), false); });
+  root.querySelector('.ia-next').addEventListener('click', function () { if (!st.pred) setPred('skip'); go(st.i + 1, true); });
+  root.querySelector('.ia-dots').addEventListener('click', function (e) { var b = e.target.closest('.ia-dot'); if (b) { if (!st.pred) setPred('skip'); go(+b.getAttribute('data-i'), false); } });
   root.querySelector('.ia-eng').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
-    stop(); st.eng = b.getAttribute('data-e'); st.i = -1;
+    stop(); st.eng = b.getAttribute('data-e'); st.i = -1; if (window.HDW_ENGINE) HDW_ENGINE.set(st.eng);
     Array.prototype.forEach.call(root.querySelectorAll('.ia-eng button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
     root.querySelector('.ia-dots').innerHTML = dotsHtml();
     build(); render(false);
@@ -277,7 +300,7 @@
   var rt; window.addEventListener('resize', function () { clearTimeout(rt); rt = setTimeout(function () { var lay = root.clientWidth < 620 ? 'narrow' : 'wide'; if (lay !== st.layout) { build(); render(false); } }, 150); });
   // Start playing the first time it scrolls into view.
   if ('IntersectionObserver' in window && !reduce) {
-    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting && !st.seen) { st.seen = true; play(); io.disconnect(); } }); }, { threshold: 0.45 });
+    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting && !st.seen) { st.seen = true; if (st.pred) play(); io.disconnect(); } }); }, { threshold: 0.45 });
     io.observe(root.querySelector('.ia-stage'));
   }
 })();

@@ -1,3 +1,9 @@
+/* The reader's database, remembered across the site: widgets with a
+   PostgreSQL / MySQL / MongoDB switch start on the last one picked. */
+window.HDW_ENGINE = window.HDW_ENGINE || {
+  get: function () { try { var e = localStorage.getItem('hdw-engine'); return /^(pg|my|mo)$/.test(e || '') ? e : null; } catch (x) { return null; } },
+  set: function (e) { try { localStorage.setItem('hdw-engine', e); } catch (x) {} }
+};
 /* Reading aids, on every page:
    1. a thin progress bar at the top;
    2. a Contents button that lists the page's headings and marks where you are;

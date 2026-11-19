@@ -63,7 +63,8 @@
     var mode = el.getAttribute('data-mode') || 'read';
     var TBL = mode === 'read' ? READ : (mode === 'lock' ? LOCK : REP);
     var engines = mode === 'replicate' ? ['pg', 'my', 'mo'] : ['pg', 'my'];
-    var st = { eng: el.getAttribute('data-engine') || engines[0], flag: false, i: 0 };
+    var pref = window.HDW_ENGINE && HDW_ENGINE.get();
+    var st = { eng: (pref && engines.indexOf(pref) >= 0) ? pref : (el.getAttribute('data-engine') || engines[0]), flag: false, i: 0 };
     function draw() {
       var D = TBL[st.eng], nodes = D.nodes;
       if (mode === 'lock' && st.flag) { nodes = nodes.slice(); nodes[3] = D.flagLast; if (D.flagStep3) nodes[2] = D.flagStep3; }
@@ -95,7 +96,7 @@
       } else cap = st.flag ? D.busy + ' Watch: ' + D.metric + '.' : 'The change is on the replica. The time from step 1 to here is the replication lag. Watch: ' + D.metric + '.';
       h += '<p class="fi-cap" aria-live="polite">' + esc(cap) + '</p>';
       el.innerHTML = h;
-      Array.prototype.forEach.call(el.querySelectorAll('.fi-eng'), function (b) { b.addEventListener('click', function () { st.eng = b.getAttribute('data-e'); st.i = 0; if (mode === 'lock') st.flag = false; draw(); }); });
+      Array.prototype.forEach.call(el.querySelectorAll('.fi-eng'), function (b) { b.addEventListener('click', function () { st.eng = b.getAttribute('data-e'); st.i = 0; if (mode === 'lock') st.flag = false; if (window.HDW_ENGINE) HDW_ENGINE.set(st.eng); draw(); }); });
       el.querySelector('.fi-flag input').addEventListener('change', function (e) { st.flag = e.target.checked; st.i = 0; draw(); });
       el.querySelector('.fi-step').addEventListener('click', function () { st.i = st.i >= n ? 1 : st.i + 1; draw(); el.querySelector('.fi-step').focus(); });
       el.querySelector('.fi-reset').addEventListener('click', function () { st.i = 0; draw(); });
