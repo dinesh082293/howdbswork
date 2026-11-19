@@ -1278,7 +1278,7 @@
     "Not for",
     "A Redis console in your browser",
     "The commands I run first",
-    "Notebook 7, Redis 7.4.12, one client on the same machine",
+    "Notebooks 7 and 9, Redis 7.4.12, one client on the same machine",
     "Check yourself"
    ]
   },
@@ -1298,7 +1298,7 @@
     "Use it for",
     "Not for",
     "The commands I run first",
-    "Notebook 7, Cassandra 5.0.9, a single node in CI",
+    "Notebooks 7 and 9, Cassandra 5.0.9 in CI",
     "Check yourself"
    ]
   },
@@ -1510,6 +1510,8 @@
     "Redis, ClickHouse and Cassandra",
     "What I take from it",
     "pgvector for agent memory",
+    "What I take from it",
+    "Redis and Cassandra when something fails",
     "What I take from it"
    ]
   },
