@@ -2,6 +2,29 @@
    The numbers are a model, not a measurement. Markup: <div class="scaleit" data-slug="store-orders"></div> */
 (function () {
   var D = {
+    'agent-memory': {
+      m: { lat: 'state and memory lookups before each model call, p95', write: 'can runs make progress?', dbname: 'PostgreSQL with pgvector', slow: 150 },
+      stages: [
+        { name: 'One PostgreSQL for everything', lat: 40, cpu: 35, share: 100, fail: 'paused',
+          story: 'The run log, checkpoints and long-term memories all live in one PostgreSQL with pgvector. Each step writes a tool call and a checkpoint and runs one memory search. Nothing to keep in sync.',
+          lesson: 'One database is enough for a long time. The model is the slow part, not the database.',
+          x10: [null, 100], x10s: ['A batch job starts an agent run for every customer at once, ten times the usual load. Each run holds a connection while it waits for the model, so PostgreSQL runs out of connections long before it runs out of CPU.', 'Agents hit the connection limit first. Cap concurrent runs and put a pooler in front.'],
+          failS: ['The primary fails. Every run stops at its current step. Because each step was checkpointed, the runs resume from that step after the promotion instead of starting over.', 'Checkpoints turn a failover into a pause, not lost work.'] },
+        { name: 'Redis working memory and a pooler', lat: 25, cpu: 18, share: 60, hit: 90, front: 'PgBouncer: pools connections', cache: 'Redis: working memory of active runs', cacheWord: 'Working memory', cold: [45, 30], fail: 'paused',
+          x10: [60, 70], x10s: ['Ten times the runs. The pooler queues them for a connection, so the primary stays busy but healthy. Memory search is now the largest cost per step.', 'Pooling turns a connection storm into a short queue.'],
+          coldS: ['Redis restarts empty. The working memory of every active run is gone, so each run reloads from its last checkpoint and repeats a few seconds of work. Nothing is lost.', 'Keep anything you cannot lose in the checkpoint, not in Redis.'],
+          failS: ['The PostgreSQL primary fails. Runs pause at their checkpoints. Their working memory is still in Redis, so they continue where they were once the standby is promoted.', 'The pause is the promotion time. Rehearse it.'],
+          story: 'Working memory of active runs moves to Redis with an expiry, and PgBouncer sits in front of PostgreSQL. Hundreds of parallel runs now share a few dozen database connections.',
+          lesson: 'Parallel agents look like a connection storm. Pool from the start.' },
+        { name: 'Memories in their own store', lat: 20, cpu: 9, x10s: ['Ten times the runs. The pooler queues them, the memory index takes the searches, and the primary is left with small writes: tool calls and checkpoints.', 'Each part now grows on its own, and PostgreSQL is still the one place to delete from.'], share: 40, hit: 90, front: 'PgBouncer: pools connections', cache: 'Redis: working memory of active runs', cacheWord: 'Working memory', cold: [40, 18], fail: 'paused', extra: ['Memory index: partitions by tenant or a vector store, fed from PostgreSQL'],
+          coldS: ['Redis restarts empty. Active runs reload from their checkpoints, and the memory index is untouched.', 'Each store can fail on its own without losing anything durable.'],
+          failS: ['The PostgreSQL primary fails. Runs pause at their checkpoints. Memory search keeps answering from the memory index; new memories wait until the primary is back.', 'PostgreSQL stays the source of truth; the memory index can always be rebuilt from it.'],
+          story: 'The memory index outgrew one machine\'s memory, so memories are partitioned by tenant, or their vectors move to a dedicated store fed from PostgreSQL. Deletes and permissions still start in PostgreSQL.',
+          lesson: 'Move the index, not the source of truth.' }
+      ],
+      x10sat: '', x10ok: '', x10lessonSat: '', x10lessonOk: '',
+      cold: '', coldLesson: ''
+    },
     'store-orders': {
       m: { lat: 'checkout latency, 95th percentile', write: 'can customers check out?', dbname: 'PostgreSQL or MySQL' },
       stages: [

@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>Databases for AI agents. A new design doc, Agent memory and state, says where an agent&#x27;s...</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-921c7fe61f1b</guid>
+    <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
+    <description>databases for AI agents. A new design doc, Agent memory and state, says where an agent&#x27;s run log, checkpoints, long-term memories and working memory go. Notebook 8 measures pgvector on 100,000 memories: what they cost to store, recall against speed, and how a tenant filter returned 1.3 rows out of 10 until iterative scan was on. The site can now be used from Claude, Cursor or any MCP client: Use it from your AI assistant. And an agents review on Work with me.</description>
+  </item>
+  <item>
     <title>A Your turn question at the end of twelve more lessons</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-2bc9192adf5d</guid>

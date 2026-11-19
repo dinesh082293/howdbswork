@@ -1,0 +1,2018 @@
+{
+ "site": "https://howdbswork.com/",
+ "designs": [
+  {
+   "slug": "store-orders",
+   "title": "Store orders and inventory",
+   "url": "https://howdbswork.com/designs/store-orders/",
+   "question": "Where should an online store keep its orders, carts and stock counts?",
+   "short_answer": "Orders, order lines, payments references and stock live in one relational database, PostgreSQL or MySQL. Carts can live in Redis. Product search goes to a search engine, and reporting goes to a column store.",
+   "workload": [
+    [
+     "Writes",
+     "Bursty. Quiet most of the day, then 10 to 50 times normal during a sale."
+    ],
+    [
+     "Reads",
+     "Mostly by key: an order, a customer's orders, a product's stock."
+    ],
+    [
+     "Read to write",
+     "Around 10 to 1 on the order tables, much higher on the catalog."
+    ],
+    [
+     "Consistency",
+     "Strict for stock and orders. Two customers must not buy the last item."
+    ],
+    [
+     "Latency",
+     "Checkout under a few hundred milliseconds end to end."
+    ],
+    [
+     "Growth",
+     "Steady. Orders are rarely deleted, so the tables only grow."
+    ]
+   ],
+   "placement": [
+    [
+     "Orders, order lines, customers, stock",
+     "PostgreSQL or MySQL",
+     "Transactions across several tables, foreign keys, and a check that stock never goes below zero. This is what a relational database is built for."
+    ],
+    [
+     "Carts and sessions",
+     "Redis or Valkey, or the same database",
+     "A cart is read and rewritten on every click and can be rebuilt if lost. Keeping it out of the order tables keeps them small and hot."
+    ],
+    [
+     "Product search",
+     "Elasticsearch or OpenSearch",
+     "Full-text search with filters. The database stays the source of truth; the index is a copy."
+    ],
+    [
+     "Sales reports",
+     "A column store, fed by change data capture",
+     "Reports scan millions of order lines. Running them on the primary competes with checkout."
+    ]
+   ],
+   "breaks": [
+    [
+     "The hot SKU during a sale",
+     "Lock waits on one stock row, connection pool exhausted",
+     "Keep the stock transaction short, and reserve stock before payment, with a timeout to release it. See the lock pile-up lab ."
+    ],
+    [
+     "Reports on the primary",
+     "CPU spikes at the top of the hour, checkout latency follows",
+     "Move reports to a replica or a column store."
+    ],
+    [
+     "OFFSET paging in the admin order list",
+     "Page 1 is fast, page 500 times out",
+     "Page by key. See paging ."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational with a standby in another zone"
+    ],
+    [
+     "When it grows",
+     "Cloud-native managed (Aurora, AlloyDB) for read replicas, or self-managed on VMs if the steady bill justifies a team"
+    ]
+   ],
+   "keywords": "shop store ecommerce e-commerce orders cart checkout inventory stock sku oversell flash sale"
+  },
+  {
+   "slug": "payments-ledger",
+   "title": "Payments and ledgers",
+   "url": "https://howdbswork.com/designs/payments-ledger/",
+   "question": "Where should money movements live, and how do I make sure no cent appears or disappears?",
+   "short_answer": "A relational database with a double-entry ledger that is append-only, with idempotency keys and synchronous replication. Correctness first, speed second.",
+   "workload": [
+    [
+     "Writes",
+     "Steady. Every movement is a write, never an update in place."
+    ],
+    [
+     "Reads",
+     "Balances, statements, reconciliation jobs."
+    ],
+    [
+     "Read to write",
+     "Close to 1 to 1 on the ledger."
+    ],
+    [
+     "Consistency",
+     "Strict. A committed movement must survive any single failure, and the books must always balance."
+    ],
+    [
+     "Latency",
+     "Tens to hundreds of milliseconds is fine. Correctness matters more."
+    ],
+    [
+     "Growth",
+     "Forever. Ledgers are kept for years, often by law."
+    ]
+   ],
+   "placement": [
+    [
+     "Accounts and ledger entries",
+     "PostgreSQL or MySQL, with synchronous replication",
+     "Transactions, constraints, and a commit that waits for a standby, so a failover cannot lose an acknowledged payment. See what a commit waits for ."
+    ],
+    [
+     "Idempotency keys",
+     "The same database, in the same transaction",
+     "A retried request must find the key that the first attempt wrote, or the money moves twice."
+    ],
+    [
+     "Statements and reconciliation",
+     "A replica or a column store",
+     "Long scans that must not slow down new payments."
+    ],
+    [
+     "Raw provider callbacks",
+     "Object storage, plus a table that points to them",
+     "Large, rarely read, kept for audit."
+    ]
+   ],
+   "breaks": [
+    [
+     "A retry without an idempotency key",
+     "Duplicate charges in reconciliation",
+     "Make the key mandatory in the API, and unique in the database."
+    ],
+    [
+     "Async replication and a failover",
+     "Payments acknowledged, then missing on the new primary",
+     "Use synchronous replication for this database, and accept the latency."
+    ],
+    [
+     "A hot account, such as the platform fee account",
+     "Lock waits on one balance row",
+     "Spread it over several sub-accounts and sum them, or derive the balance from entries."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational with synchronous standby (RDS Multi-AZ or equivalent)"
+    ],
+    [
+     "When it grows",
+     "The same, plus cross-region copies. Self-managed only with a team that rehearses failover"
+    ]
+   ],
+   "keywords": "payments ledger money balance wallet transfer accounting double entry fintech billing invoice refund"
+  },
+  {
+   "slug": "booking-reservations",
+   "title": "Bookings and reservations",
+   "url": "https://howdbswork.com/designs/booking-reservations/",
+   "question": "How do I stop two people from booking the same seat, room or time slot?",
+   "short_answer": "A relational database with the rule enforced by the database itself: a unique constraint on (resource, slot), or an exclusion constraint on time ranges in PostgreSQL. Short holds with an expiry for the checkout window.",
+   "workload": [
+    [
+     "Writes",
+     "Spiky. A ticket sale opens and everyone tries at once."
+    ],
+    [
+     "Reads",
+     "Availability searches, much more often than bookings."
+    ],
+    [
+     "Read to write",
+     "High, and very high during an on-sale."
+    ],
+    [
+     "Consistency",
+     "Strict on the booking itself. Availability displays can be a few seconds stale."
+    ],
+    [
+     "Latency",
+     "Booking under a second, even under a spike."
+    ],
+    [
+     "Growth",
+     "Moderate."
+    ]
+   ],
+   "placement": [
+    [
+     "Bookings and holds",
+     "PostgreSQL or MySQL",
+     "The database rejects a double booking, whatever the application code does."
+    ],
+    [
+     "Availability search",
+     "A cache or a read replica",
+     "Many readers, slightly stale is fine, final check happens at booking."
+    ],
+    [
+     "Waiting room during on-sales",
+     "A queue in front of the booking service",
+     "Turns a spike into a steady stream the database can take."
+    ]
+   ],
+   "breaks": [
+    [
+     "Check-then-insert in application code",
+     "Double bookings under load",
+     "Use the constraint. A SELECT then INSERT is exactly the write skew pattern."
+    ],
+    [
+     "Locks held during payment",
+     "Pool exhausted during an on-sale",
+     "Use a hold row with an expiry instead of an open transaction."
+    ],
+    [
+     "Availability computed from scratch on each search",
+     "CPU spikes on the primary during an on-sale",
+     "Cache availability and recheck at booking."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational, plus a managed queue for on-sales"
+    ],
+    [
+     "When it grows",
+     "The same. The spike is handled by the queue, not by a bigger database"
+    ]
+   ],
+   "keywords": "booking reservation seats tickets hotel appointment calendar slots double booking on-sale availability"
+  },
+  {
+   "slug": "accounts-sessions",
+   "title": "Accounts and sessions",
+   "url": "https://howdbswork.com/designs/accounts-sessions/",
+   "question": "Where should user accounts live, and where should sessions and tokens go?",
+   "short_answer": "Accounts in the main relational database. Sessions in Redis or Valkey with an expiry, or no server-side session at all if you use short-lived signed tokens.",
+   "workload": [
+    [
+     "Writes",
+     "Low for accounts. High for sessions: every login, and often every request touches a session."
+    ],
+    [
+     "Reads",
+     "Every authenticated request reads a session or validates a token."
+    ],
+    [
+     "Read to write",
+     "Very high on sessions."
+    ],
+    [
+     "Consistency",
+     "Strict for accounts (a unique email). Loose for sessions: losing one means one more login."
+    ],
+    [
+     "Latency",
+     "Session lookups must take about a millisecond, since every request pays it."
+    ],
+    [
+     "Growth",
+     "Accounts grow slowly. Sessions churn and expire."
+    ]
+   ],
+   "placement": [
+    [
+     "Accounts, credentials, roles",
+     "PostgreSQL or MySQL",
+     "A unique constraint on email, and transactions for sign-up and role changes."
+    ],
+    [
+     "Sessions and refresh tokens",
+     "Redis or Valkey with a TTL on each key",
+     "Lookups by key in memory, and expiry is built in. Losing them costs a login, not data."
+    ],
+    [
+     "Login attempts and rate limits",
+     "Redis counters with a TTL",
+     "A counter per user or per IP that expires on its own."
+    ],
+    [
+     "Audit of logins",
+     "An append-only table or log, partitioned by time",
+     "Kept for security reviews, rarely read."
+    ]
+   ],
+   "breaks": [
+    [
+     "Sessions in the main database",
+     "A delete job for expired sessions causes bloat and I/O spikes",
+     "Move sessions to a store with built-in expiry."
+    ],
+    [
+     "Redis without a memory limit",
+     "Redis runs out of memory, or swaps",
+     "Set maxmemory and an eviction policy that removes keys with a TTL first (volatile-lru)."
+    ],
+    [
+     "Case-sensitive email lookups",
+     "Duplicate accounts for one person",
+     "Unique index on lower(email)."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational, plus managed Redis or Valkey"
+    ],
+    [
+     "When it grows",
+     "The same"
+    ]
+   ],
+   "keywords": "users accounts login auth authentication sessions tokens identity passwords sso"
+  },
+  {
+   "slug": "multi-tenant-saas",
+   "title": "Multi-tenant SaaS",
+   "url": "https://howdbswork.com/designs/multi-tenant-saas/",
+   "question": "One database for all customers, one schema each, or one database each?",
+   "short_answer": "Start with a shared schema and a tenant_id on every row, enforced by row-level security in PostgreSQL or by a mandatory filter in the data layer. Move very large tenants to their own database when they need it.",
+   "workload": [
+    [
+     "Writes",
+     "Varies by tenant. A few tenants usually produce most of the load."
+    ],
+    [
+     "Reads",
+     "Always inside one tenant."
+    ],
+    [
+     "Read to write",
+     "Typical application mix."
+    ],
+    [
+     "Consistency",
+     "Strict inside a tenant. Tenants never see each other's data."
+    ],
+    [
+     "Latency",
+     "Interactive."
+    ],
+    [
+     "Growth",
+     "By number of tenants, plus a few that grow very large."
+    ]
+   ],
+   "placement": [
+    [
+     "All tenants, shared tables",
+     "PostgreSQL or MySQL",
+     "One schema to migrate, one pool of connections, cheap to add a tenant."
+    ],
+    [
+     "Very large or regulated tenants",
+     "Their own database, same schema",
+     "Isolation of load and data, at the cost of more databases to operate."
+    ],
+    [
+     "Per-tenant settings and routing",
+     "A small catalog table",
+     "Says which database each tenant lives in."
+    ]
+   ],
+   "breaks": [
+    [
+     "A missing tenant filter",
+     "Data leak between customers",
+     "Row-level security, or a data layer that cannot build a query without tenant_id."
+    ],
+    [
+     "One tenant's heavy job",
+     "Every other tenant slows down",
+     "Rate-limit per tenant and move heavy tenants out."
+    ],
+    [
+     "Schema per tenant at thousands of tenants",
+     "Migrations take hours, catalog bloat",
+     "Prefer shared schema with tenant_id."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational, shared schema"
+    ],
+    [
+     "When it grows",
+     "Managed for the shared tier. Kubernetes with an operator, or many managed instances, for tenants that get their own database"
+    ]
+   ],
+   "keywords": "saas multi-tenant tenants customers b2b organizations workspace isolation noisy neighbour"
+  },
+  {
+   "slug": "product-catalog",
+   "title": "Product catalog",
+   "url": "https://howdbswork.com/designs/product-catalog/",
+   "question": "Where should a catalog go when every product type has different attributes?",
+   "short_answer": "PostgreSQL with common columns plus a JSONB column for the varied attributes, or MongoDB with one document per product. A search engine on top for browsing and filtering.",
+   "workload": [
+    [
+     "Writes",
+     "Low. Merchants edit products a few times a day."
+    ],
+    [
+     "Reads",
+     "Very high. Every page view, every search, every filter."
+    ],
+    [
+     "Read to write",
+     "Hundreds to one, or more."
+    ],
+    [
+     "Consistency",
+     "Loose. A price change can take a second to appear in search."
+    ],
+    [
+     "Latency",
+     "Product pages from cache in milliseconds. Search under 200 ms."
+    ],
+    [
+     "Growth",
+     "Moderate. Thousands to millions of products."
+    ]
+   ],
+   "placement": [
+    [
+     "The product of record",
+     "PostgreSQL with JSONB, or MongoDB",
+     "Shared fields (price, title, stock link) as columns or fields. Type-specific fields in JSONB or the document."
+    ],
+    [
+     "Browsing, filters, facets, full-text",
+     "Elasticsearch or OpenSearch",
+     "Counting matches per color, size and brand across millions of products is what an inverted index is for."
+    ],
+    [
+     "Product pages",
+     "A cache or a CDN",
+     "Pages change rarely and are read constantly."
+    ]
+   ],
+   "breaks": [
+    [
+     "LIKE %term% on titles",
+     "Sequential scans in the slow log",
+     "Move text search to a search engine, or use full-text search in PostgreSQL for small catalogs."
+    ],
+    [
+     "The search index out of sync",
+     "A product shows a price it no longer has",
+     "Write changes to an outbox table in the same transaction, and have one process ship them to the index."
+    ],
+    [
+     "Every attribute in JSONB",
+     "Joins and sorts on JSON fields are slow and hard to index",
+     "Promote frequently used attributes to columns."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational, plus a managed search service"
+    ],
+    [
+     "When it grows",
+     "The same, with a CDN in front"
+    ]
+   ],
+   "keywords": "catalog products attributes facets filters prices variants pim"
+  },
+  {
+   "slug": "social-feed",
+   "title": "Social feed",
+   "url": "https://howdbswork.com/designs/social-feed/",
+   "question": "How do I build a home timeline that shows posts from everyone I follow?",
+   "short_answer": "Posts and the follow graph in a relational database. Timelines precomputed per user in Redis or a wide-column store (fan-out on write), except for accounts with huge followings, whose posts are merged in at read time.",
+   "workload": [
+    [
+     "Writes",
+     "Posts are moderate. Fan-out multiplies each post by the number of followers."
+    ],
+    [
+     "Reads",
+     "Very high. Opening the app reads a timeline."
+    ],
+    [
+     "Read to write",
+     "High, often more than 100 to 1."
+    ],
+    [
+     "Consistency",
+     "Loose. A post can appear a few seconds late."
+    ],
+    [
+     "Latency",
+     "The first screen of the timeline in well under a second."
+    ],
+    [
+     "Growth",
+     "Fast, driven by user count times follows."
+    ]
+   ],
+   "placement": [
+    [
+     "Users, posts, follows",
+     "PostgreSQL or MySQL",
+     "The record of who posted what and who follows whom."
+    ],
+    [
+     "Precomputed timelines",
+     "Redis lists or sorted sets, or Cassandra and ScyllaDB at large scale",
+     "A timeline is a list of post IDs per user, read as one key. Writes are many and small, which suits memory or an LSM store."
+    ],
+    [
+     "Post content and media",
+     "The database for text, object storage and a CDN for media",
+     "Media is large and read often, which is a CDN job."
+    ]
+   ],
+   "breaks": [
+    [
+     "A celebrity posts",
+     "The fan-out queue backs up for minutes",
+     "Do not fan out for accounts above a follower threshold. Merge at read time."
+    ],
+    [
+     "Pull queries at scale",
+     "A big IN list of followees sorted by time",
+     "Precompute."
+    ],
+    [
+     "Timelines that never expire",
+     "Memory grows with inactive users",
+     "Cap each timeline, and drop timelines of users who have not opened the app in weeks."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational, plus managed Redis"
+    ],
+    [
+     "When it grows",
+     "Managed or self-managed wide-column store on VMs with local NVMe and replicas"
+    ]
+   ],
+   "keywords": "feed timeline followers posts social fan-out likes news feed"
+  },
+  {
+   "slug": "search-ai-retrieval",
+   "title": "Search and AI retrieval",
+   "url": "https://howdbswork.com/designs/search-ai-retrieval/",
+   "question": "Where should full-text search and vector search for AI features go?",
+   "short_answer": "Start in PostgreSQL: full-text search and pgvector, next to the data. Move to a dedicated search engine or vector database when the size, the query rate, or the ranking needs outgrow it.",
+   "workload": [
+    [
+     "Writes",
+     "Documents added and updated, each needing an embedding."
+    ],
+    [
+     "Reads",
+     "Queries by text and by similarity, often combined with filters."
+    ],
+    [
+     "Read to write",
+     "High."
+    ],
+    [
+     "Consistency",
+     "Loose. A new document can take seconds to become searchable."
+    ],
+    [
+     "Latency",
+     "Under a few hundred milliseconds, including the embedding of the query."
+    ],
+    [
+     "Growth",
+     "Moderate to large. Embeddings are big: hundreds to thousands of numbers per item."
+    ]
+   ],
+   "placement": [
+    [
+     "Documents and metadata",
+     "PostgreSQL",
+     "The record, permissions, and filters."
+    ],
+    [
+     "Embeddings, small to medium scale",
+     "pgvector in the same database",
+     "No second system, and filters and permissions are just SQL."
+    ],
+    [
+     "Large scale or advanced ranking",
+     "Elasticsearch or OpenSearch, or a vector database",
+     "Distributed indexes, hybrid text and vector ranking, more tuning knobs."
+    ]
+   ],
+   "breaks": [
+    [
+     "HNSW index larger than memory",
+     "Latency jumps as the index pages come from disk",
+     "Size memory to the index, or reduce dimensions, or quantize."
+    ],
+    [
+     "Embeddings from mixed model versions",
+     "Results that quietly get worse",
+     "Record the model per row and re-embed in one pass."
+    ],
+    [
+     "Permission filters applied after search",
+     "Users see snippets of documents they cannot open",
+     "Filter inside the query."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed PostgreSQL with pgvector"
+    ],
+    [
+     "When it grows",
+     "A managed search or vector service once the index outgrows memory"
+    ]
+   ],
+   "keywords": "search full-text rag retrieval embeddings vector semantic pgvector documents chunks similarity"
+  },
+  {
+   "slug": "chat-messaging",
+   "title": "Chat and messaging",
+   "url": "https://howdbswork.com/designs/chat-messaging/",
+   "question": "Where should chat messages go, when there are billions of them and every conversation is read newest first?",
+   "short_answer": "At small and medium scale, PostgreSQL with messages partitioned by time and indexed by (conversation_id, sent_at). At large scale, a wide-column store such as Cassandra or ScyllaDB, partitioned by conversation and bucketed by time.",
+   "workload": [
+    [
+     "Writes",
+     "High and steady. Every message is an insert."
+    ],
+    [
+     "Reads",
+     "The latest page of one conversation, very often."
+    ],
+    [
+     "Read to write",
+     "Roughly balanced."
+    ],
+    [
+     "Consistency",
+     "Per conversation, in order. Across conversations, loose."
+    ],
+    [
+     "Latency",
+     "Delivery feels instant: tens of milliseconds to store."
+    ],
+    [
+     "Growth",
+     "Fast and forever, unless you set retention."
+    ]
+   ],
+   "placement": [
+    [
+     "Messages",
+     "PostgreSQL with time partitions, then Cassandra or ScyllaDB",
+     "One conversation, newest first, is a range read on one partition. LSM stores take heavy insert rates well."
+    ],
+    [
+     "Conversations and members",
+     "The relational database",
+     "Few rows, many relationships, permissions."
+    ],
+    [
+     "Online status and typing",
+     "Redis with a short TTL",
+     "Changes every few seconds and does not need to survive a restart."
+    ],
+    [
+     "Attachments",
+     "Object storage",
+     "Large and immutable."
+    ]
+   ],
+   "breaks": [
+    [
+     "One huge group chat",
+     "A hot partition and slow reads",
+     "Bucket by time inside the conversation."
+    ],
+    [
+     "Deleting old messages with DELETE",
+     "Bloat and long-running deletes",
+     "Drop whole partitions, or use TTLs in the wide-column store."
+    ],
+    [
+     "Unread counts computed on every read",
+     "COUNT(*) over a conversation on every app open",
+     "Keep a per-member last-read marker and a counter."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed relational with time partitions"
+    ],
+    [
+     "When it grows",
+     "Managed Cassandra-compatible service, or self-managed Cassandra or ScyllaDB on VMs"
+    ]
+   ],
+   "keywords": "chat messages messaging conversations channels inbox websocket presence"
+  },
+  {
+   "slug": "iot-telemetry",
+   "title": "IoT and telemetry",
+   "url": "https://howdbswork.com/designs/iot-telemetry/",
+   "question": "Where should millions of sensor readings per minute go?",
+   "short_answer": "A time-series database (TimescaleDB, InfluxDB) or a column store (ClickHouse), with time partitioning, compression, downsampling and retention. Device metadata stays relational.",
+   "workload": [
+    [
+     "Writes",
+     "Very high, steady, in time order. Mostly appends."
+    ],
+    [
+     "Reads",
+     "Ranges of time for one device or a group, and aggregates per minute or hour."
+    ],
+    [
+     "Read to write",
+     "Low. Most data is written and rarely read."
+    ],
+    [
+     "Consistency",
+     "Loose. A late reading is fine."
+    ],
+    [
+     "Latency",
+     "Dashboards in a second or two."
+    ],
+    [
+     "Growth",
+     "Huge. Retention is the main design decision."
+    ]
+   ],
+   "placement": [
+    [
+     "Readings",
+     "TimescaleDB, InfluxDB or ClickHouse",
+     "Time partitions, compression of similar values, and dropping old partitions whole."
+    ],
+    [
+     "Devices, owners, locations",
+     "PostgreSQL",
+     "Few rows, many relationships."
+    ],
+    [
+     "Latest value per device",
+     "Redis, or a small table updated in place",
+     "\"What is the temperature now\" should not scan the history."
+    ],
+    [
+     "Raw archive",
+     "Object storage in Parquet",
+     "Cheap, and readable later by analytics tools."
+    ]
+   ],
+   "breaks": [
+    [
+     "Row-by-row inserts",
+     "Commit rate caps throughput long before disks do",
+     "Batch. See what one commit costs in Notebook 2 ."
+    ],
+    [
+     "High cardinality labels",
+     "Index size explodes in metric stores",
+     "Do not use user IDs or request IDs as tags."
+    ],
+    [
+     "No retention",
+     "Storage bill grows every month without end",
+     "Decide retention per resolution on day one."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "A managed time-series or ClickHouse service"
+    ],
+    [
+     "When it grows",
+     "Self-managed on VMs when volume is high and steady, and storage cost dominates"
+    ]
+   ],
+   "keywords": "iot telemetry sensors devices metrics time series readings timeseries monitoring"
+  },
+  {
+   "slug": "audit-event-log",
+   "title": "Audit and event logs",
+   "url": "https://howdbswork.com/designs/audit-event-log/",
+   "question": "Where should an append-only history of everything that happened go?",
+   "short_answer": "An append-only table partitioned by time in the relational database, or a stream (Kafka) with a long retention plus a copy in object storage. Never updated, rarely read, kept for years.",
+   "workload": [
+    [
+     "Writes",
+     "Steady. One row per action."
+    ],
+    [
+     "Reads",
+     "Rare: investigations, compliance exports, a user's activity page."
+    ],
+    [
+     "Read to write",
+     "Very low."
+    ],
+    [
+     "Consistency",
+     "The entry must be committed with the action it records."
+    ],
+    [
+     "Latency",
+     "Writes must be cheap. Reads can be slow."
+    ],
+    [
+     "Growth",
+     "Forever, often by law."
+    ]
+   ],
+   "placement": [
+    [
+     "Recent history",
+     "A partitioned table in the same database as the action",
+     "Written in the same transaction, so an action never happens without its record."
+    ],
+    [
+     "Old history",
+     "Object storage in Parquet, or a column store",
+     "Cheap, and still queryable by analytics tools."
+    ],
+    [
+     "Event streams for other services",
+     "Kafka or a similar log",
+     "Other systems consume the events without querying your database."
+    ]
+   ],
+   "breaks": [
+    [
+     "Audit written after the transaction commits",
+     "Actions with no record when the process crashes in between",
+     "Write it in the same transaction, or use the outbox pattern."
+    ],
+    [
+     "One giant unpartitioned table",
+     "Backups and vacuum take hours",
+     "Partition by time."
+    ],
+    [
+     "Personal data in the log",
+     "A deletion request you cannot honor",
+     "Store references, not personal data, or plan how to redact."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "In the same managed database as the action"
+    ],
+    [
+     "When it grows",
+     "Old partitions exported to object storage"
+    ]
+   ],
+   "keywords": "audit log events history compliance append-only trail gdpr who changed"
+  },
+  {
+   "slug": "leaderboards-counters",
+   "title": "Leaderboards and counters",
+   "url": "https://howdbswork.com/designs/leaderboards-counters/",
+   "question": "Where should fast-changing counts go: views, likes, scores, rate limits?",
+   "short_answer": "Redis or Valkey: sorted sets for leaderboards, INCR with a TTL for counters and rate limits. Flush totals to the database in batches if they must be kept.",
+   "workload": [
+    [
+     "Writes",
+     "Very high, on a few hot keys."
+    ],
+    [
+     "Reads",
+     "Top N, my rank, the current count."
+    ],
+    [
+     "Read to write",
+     "Balanced or write-heavy."
+    ],
+    [
+     "Consistency",
+     "Approximate is usually fine. A like count can be a second behind."
+    ],
+    [
+     "Latency",
+     "Sub-millisecond per operation."
+    ],
+    [
+     "Growth",
+     "Small. One entry per player or per object."
+    ]
+   ],
+   "placement": [
+    [
+     "Leaderboards",
+     "Redis sorted sets",
+     "Rank queries are built in, and each update is O(log n) in memory."
+    ],
+    [
+     "Counters and rate limits",
+     "Redis INCR with EXPIRE",
+     "Atomic increments with no lock, and expiry built in."
+    ],
+    [
+     "Totals you must keep",
+     "The database, updated in batches",
+     "One write per minute per object instead of one per event."
+    ]
+   ],
+   "breaks": [
+    [
+     "UPDATE counters SET n = n + 1 on one hot row",
+     "Lock waits, lock pile-up",
+     "Move the counter to Redis, or spread it across several rows and sum them."
+    ],
+    [
+     "KEYS * in production",
+     "Redis stalls for everyone",
+     "Use SCAN."
+    ],
+    [
+     "Counters with no TTL",
+     "Memory grows forever",
+     "Expire window keys."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed Redis or Valkey"
+    ],
+    [
+     "When it grows",
+     "The same. MemoryDB-style durable options if the totals must survive a failover"
+    ]
+   ],
+   "keywords": "leaderboard counters scores ranking likes views rate limit top n"
+  },
+  {
+   "slug": "analytics-reporting",
+   "title": "Analytics and reporting",
+   "url": "https://howdbswork.com/designs/analytics-reporting/",
+   "question": "Where should reports and dashboards run, so they do not slow down the application?",
+   "short_answer": "Not on the production primary. Copy data to a column store (ClickHouse, BigQuery, Redshift, Snowflake, DuckDB for small cases) through change data capture or batch loads, and run reports there.",
+   "workload": [
+    [
+     "Writes",
+     "Batch loads or a stream of changes from production."
+    ],
+    [
+     "Reads",
+     "Big scans with aggregates over a few columns."
+    ],
+    [
+     "Read to write",
+     "Reads are few but each one reads a lot."
+    ],
+    [
+     "Consistency",
+     "Minutes behind production is usually fine."
+    ],
+    [
+     "Latency",
+     "Seconds for a dashboard, minutes for a heavy report."
+    ],
+    [
+     "Growth",
+     "Large. All history, often from several systems."
+    ]
+   ],
+   "placement": [
+    [
+     "Fact tables (orders, events)",
+     "A column store",
+     "Reads only the columns a query names, compressed, in parallel."
+    ],
+    [
+     "The application data",
+     "Stays in the OLTP database",
+     "The copy must never be able to slow the source down."
+    ],
+    [
+     "The pipeline",
+     "Change data capture (Debezium, or the managed equivalent) or scheduled batch exports",
+     "Ships changes without running scans on the primary."
+    ]
+   ],
+   "breaks": [
+    [
+     "Reports on the primary",
+     "The application slows down at report time",
+     "Move them. This is the most common cause of mystery slowdowns on a schedule."
+    ],
+    [
+     "Single-row inserts into a column store",
+     "Too many small parts, merges fall behind",
+     "Batch the inserts."
+    ],
+    [
+     "Replica used for both failover and heavy reports",
+     "A long query delays replay, and the failover target is behind",
+     "Separate the two roles."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "A managed warehouse or ClickHouse Cloud, fed by CDC"
+    ],
+    [
+     "When it grows",
+     "The same. Self-managed ClickHouse on VMs if scan costs are high and the team exists"
+    ]
+   ],
+   "keywords": "analytics reporting dashboards bi warehouse olap aggregates reports metrics"
+  },
+  {
+   "slug": "agent-memory",
+   "title": "Agent memory and state",
+   "url": "https://howdbswork.com/designs/agent-memory/",
+   "question": "Where should an AI agent keep its conversations, its progress and what it remembers?",
+   "short_answer": "One PostgreSQL with pgvector holds the run log, the checkpoints and the long-term memories, with tenant_id in every key. Redis holds the working memory of runs in progress. Turn on iterative scan for filtered memory search, and give every memory an expiry.",
+   "workload": [
+    [
+     "Writes",
+     "Many small writes per run: each step adds messages, a tool call and a checkpoint."
+    ],
+    [
+     "Reads",
+     "Each step reads the recent conversation, the latest checkpoint, and searches long-term memory."
+    ],
+    [
+     "Read to write",
+     "Close to one to one for run state. Memories are read more than written."
+    ],
+    [
+     "Consistency",
+     "Strict for checkpoints: resume from exactly the last step. Loose for memory search: a memory saved a second ago can be missed."
+    ],
+    [
+     "Latency",
+     "Memory search well under 50 ms, because it runs before every model call, and the model call itself takes seconds."
+    ],
+    [
+     "Growth",
+     "Fast. Every run leaves a log, and memories grow per user for as long as nobody forgets them."
+    ]
+   ],
+   "placement": [
+    [
+     "Runs, messages and tool calls (the run log)",
+     "PostgreSQL, partitioned by month",
+     "Every step of every run, in order. You need it to debug a bad answer, to bill, and to audit what the agent did. Append-only and large, so it is partitioned from day one."
+    ],
+    [
+     "Checkpoints of a running agent",
+     "PostgreSQL, keyed by (thread_id, checkpoint_id)",
+     "After a crash or a deploy, the run resumes from its last step instead of starting again. Small, written every step, read back by primary key."
+    ],
+    [
+     "Long-term memories with embeddings",
+     "pgvector in the same PostgreSQL, filtered by tenant",
+     "Facts and summaries the agent should recall later. In the same database, a memory, its tenant and its permissions are one row and one query."
+    ],
+    [
+     "Working memory of an active run",
+     "Redis or Valkey, with an expiry",
+     "Scratch state, rate limits and locks for runs in progress. Fast, short-lived, and safe to lose because the checkpoint has the durable state."
+    ],
+    [
+     "Old run logs",
+     "Object storage, exported by month",
+     "Kept for audit and evaluation, rarely read, far cheaper than database storage."
+    ]
+   ],
+   "breaks": [
+    [
+     "Filtered memory search returns too few rows",
+     "The agent \"forgets\" things it was told yesterday",
+     "Turn on hnsw.iterative_scan (pgvector 0.8 and later), or for small tenants search exactly within the tenant. In Notebook 8 the plain filtered search returned 1.3 rows out of 10."
+    ],
+    [
+     "Parallel runs open hundreds of connections",
+     "Connection errors and memory pressure on the database when traffic peaks",
+     "A pooler (PgBouncer) in front, and a cap on concurrent runs per tenant."
+    ],
+    [
+     "The run log dominates storage and backups",
+     "Backups and restores get slow, and the bill grows every month",
+     "Monthly partitions, export old months to object storage, drop the partition."
+    ],
+    [
+     "Memories are never forgotten",
+     "Old, wrong facts outrank new ones; the store grows forever",
+     "An expiry and a last-used time on every memory, recency in the ranking, and merging duplicates when a memory is saved."
+    ],
+    [
+     "Embeddings from two models in one index",
+     "Search quality drops quietly",
+     "Store the model name on every row and re-embed in one pass when you change models."
+    ],
+    [
+     "A memory saved or found under the wrong tenant",
+     "One customer's data in another customer's answer",
+     "tenant_id in every key and every query, and row-level security as a backstop."
+    ]
+   ],
+   "where_to_run": [
+    [
+     "Where I would start",
+     "Managed PostgreSQL with pgvector, plus managed Redis or Valkey"
+    ],
+    [
+     "When it grows",
+     "The same, with a pooler in front. A dedicated vector service only once the memory index outgrows one machine's memory"
+    ]
+   ],
+   "keywords": "agent agents ai llm memory long-term memory conversation history checkpoints state tool calls langgraph assistant copilot"
+  }
+ ],
+ "lessons": [
+  {
+   "title": "Start here",
+   "section": "Learn",
+   "url": "https://howdbswork.com/start-here/",
+   "description": "The full beginner course: vocabulary, teams, runbook, one insert end to end, read, update, delete, crash, three scenarios, a quiz, and eight incident cards.",
+   "headings": [
+    "Three rules that run every database on this site",
+    "Durability is an ordering rule, not a feature",
+    "Lookup cost is page count, nothing else",
+    "MVCC trades disk for non-blocking reads",
+    "Six terms. Every one of them is a file, a size, or a number.",
+    "What each database actually is",
+    "Who manages what, on-prem",
+    "The standard outage runbook: same steps, every engine",
+    "Follow one row: INSERT INTO users, end to end",
+    "Try it live: a real Postgres, in your browser",
+    "The other three journeys: read, update, delete, and a crash",
+    "SELECT: reading one row",
+    "UPDATE: changing row 42's name",
+    "DELETE: removing row 42",
+    "CRASH + RESTART: the log files earn their keep",
+    "3 real problems, 3 different answers",
+    "Quick check: did it click?",
+    "When the app starts hurting",
+    "1 · Pages that were fast are now slow. No deploy, no traffic spike",
+    "2 · “Connection pool exhausted”: app queues, DB looks idle",
+    "3 · Random failures: deadlocks and lock waits",
+    "4 · Stale reads: “I saved it, refreshed, and it's old”",
+    "5 · Everything slows down over days. Disk grows, rows do not.",
+    "6 · Disk full: writes fail, database goes read-only",
+    "7 · One page, 500 queries: the N+1 problem",
+    "8 · One tenant / one product / one shard is hot, the rest is fine",
+    "Pick the database from the workload, not the fashion",
+    "Same app, three answers: an online store",
+    "When to split across two databases",
+    "These are the books and blogs this site leans on"
+   ]
+  },
+  {
+   "title": "Ten concepts",
+   "section": "Learn",
+   "url": "https://howdbswork.com/concepts/",
+   "description": "Ten database concepts, one picture and one line each, told with books and shelves: index, normalization, join, transaction, ACID, deadlock, partitioning, sharding, replication, read replica.",
+   "headings": [
+    "1. Index",
+    "2. Normalization",
+    "3. JOIN",
+    "4. Transaction",
+    "5. ACID",
+    "6. Deadlock",
+    "7. Partitioning",
+    "8. Sharding",
+    "9. Replication",
+    "10. Read Replica"
+   ]
+  },
+  {
+   "title": "Staff path, zero to architect",
+   "section": "Learn",
+   "url": "https://howdbswork.com/staff-path/",
+   "description": "Zero to staff level in 6 levels: every concept as one problem plus one diagram, with labs on data pages, B+ trees and MVCC, and every idea on one card.",
+   "headings": [
+    "Zero to staff-level, in order. Every concept is a problem and a diagram.",
+    "Level 0, Durability: the log is written before the data",
+    "Level 1, Pages, buffers, and eviction",
+    "Level 2, Indexes: pay on write, win on read",
+    "Level 3, MVCC: versions, and the cleanup that must keep up",
+    "Level 4, Replication and failover: copies that must not lie",
+    "Level 5, Scale: size the log, split the data, bound the window",
+    "Three structures worth seeing with your own eyes. Each one has its one problem.",
+    "1. Inside a data page",
+    "2. B+ tree lookup: finding one key among millions",
+    "3. MVCC: two transactions, one row, no waiting",
+    "Every idea on one card. One problem, one diagram, staff depth."
+   ]
+  },
+  {
+   "title": "Reading paths by goal",
+   "section": "Learn",
+   "url": "https://howdbswork.com/paths/",
+   "description": "Three reading paths: prepare for a database interview, handle an incident on call, or choose a database. Each is an ordered list of pages.",
+   "headings": [
+    "I have an interview",
+    "I am on call and something is on fire",
+    "I am choosing a database",
+    "I have an interview",
+    "I am on call and something is on fire",
+    "I am choosing a database"
+   ]
+  },
+  {
+   "title": "PostgreSQL",
+   "section": "Engines",
+   "url": "https://howdbswork.com/postgresql/",
+   "description": "PostgreSQL internals: WAL, 8 KB pages, shared_buffers, MVCC and VACUUM. Files on disk, log files, outage parameters and commands.",
+   "headings": [
+    "PostgreSQL: in one line",
+    "The architecture: processes, memory, disk",
+    "Every log file a DBA needs to know",
+    "The parameters DBAs actually touch during outages",
+    "Write-Ahead Log (WAL)",
+    "Open a real database and check every claim on this page",
+    "Try it live: a real Postgres, in your browser",
+    "See the plan as a tree: which step is the villain",
+    "One incident I keep coming back to",
+    "Before you leave, check this",
+    "Follow one read",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "MySQL · InnoDB",
+   "section": "Engines",
+   "url": "https://howdbswork.com/mysql/",
+   "description": "MySQL and InnoDB internals: .ibd files, redo log, binlog, buffer pool, undo and purge. Files on disk, log files, outage parameters and commands.",
+   "headings": [
+    "MySQL · InnoDB: in one line",
+    "The architecture: processes, memory, disk",
+    "Every log file a DBA needs to know",
+    "The parameters DBAs actually touch during outages",
+    "Redo log",
+    "Binary log (binlog)",
+    "Open a real database and check every claim on this page",
+    "The optimizer's selectivity decision",
+    "One incident I keep coming back to",
+    "Before you leave, check this",
+    "Follow one read",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "MongoDB · WiredTiger",
+   "section": "Engines",
+   "url": "https://howdbswork.com/mongodb/",
+   "description": "MongoDB and WiredTiger internals: .wt files, journal, oplog, cache and sharding. Files on disk, log files, outage parameters and commands.",
+   "headings": [
+    "MongoDB · WiredTiger: in one line",
+    "The architecture: processes, memory, disk",
+    "Every log file a DBA needs to know",
+    "The parameters DBAs actually touch during outages",
+    "Journal",
+    "Oplog: the replica set log",
+    "Open a real database and check every claim on this page",
+    "ESR: the index order that avoids a sort",
+    "One incident I keep coming back to",
+    "Before you leave, check this",
+    "Follow one change to a secondary",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Same task, three engines",
+   "section": "Engines",
+   "url": "https://howdbswork.com/compare/",
+   "description": "Four everyday events, a write, a crash, a lagging replica and a long transaction, shown side by side for PostgreSQL, MySQL and MongoDB.",
+   "headings": [
+    "I commit one row. What touches disk, and when?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "The server is killed in the middle of traffic. What does the restart do?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "A replica falls behind. Why, and how do I see it?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "One transaction stays open for an hour. What does it cost?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Database families",
+   "section": "Engines",
+   "url": "https://howdbswork.com/families/",
+   "description": "Ten families of databases, from B-tree row stores to LSM, column, in-memory, distributed SQL and vector search, and the traffic each one handles well.",
+   "headings": [
+    "The layout decides the traffic it can take",
+    "How each one stores data, and what hurts it",
+    "B-tree row stores",
+    "LSM-tree stores",
+    "Column stores",
+    "In-memory key-value",
+    "Document stores",
+    "Distributed SQL",
+    "Shared-storage cloud databases",
+    "Search engines",
+    "Vector search",
+    "Time-series databases",
+    "Start boring, add a family when the traffic asks for it",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Labs",
+   "section": "Practice",
+   "url": "https://howdbswork.com/labs/",
+   "description": "Four small simulations: crash recovery, replica lag, a lock pile-up, and page counts for a scan against an index lookup.",
+   "headings": [
+    "Pull the plug, then watch the restart",
+    "Writes arrive faster than the replica applies them",
+    "One transaction holds one hot row",
+    "Scan every page, or walk the index"
+   ]
+  },
+  {
+   "title": "Guided tutorials",
+   "section": "Practice",
+   "url": "https://howdbswork.com/tutorials/",
+   "description": "Three guided tutorials on a real PostgreSQL running in your browser: row versions, scan against index, and column order in an index.",
+   "headings": [
+    "1. An UPDATE writes a new row version",
+    "2. Count the pages: a scan against an index",
+    "3. Column order in a two-column index"
+   ]
+  },
+  {
+   "title": "Lab notebooks",
+   "section": "Practice",
+   "url": "https://howdbswork.com/notebooks/",
+   "description": "Eight experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines and agent memory.",
+   "headings": [
+    "What one open transaction costs",
+    "What I take from it",
+    "What waiting for the log costs per commit",
+    "What I take from it",
+    "One lookup in a million rows, without and with an index",
+    "What I take from it",
+    "Two sessions, interleaved step by step",
+    "What I take from it",
+    "Five query shapes on a million orders",
+    "What I take from it",
+    "The rules the design docs rely on",
+    "What I take from it",
+    "Redis, ClickHouse and Cassandra",
+    "What I take from it",
+    "pgvector for agent memory",
+    "What I take from it"
+   ]
+  },
+  {
+   "title": "Application designs",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/",
+   "description": "Thirteen design docs for common applications, with a picker: what kind of data goes in which database, and why.",
+   "headings": [
+    "Where should this data go?",
+    "Five rules I apply before naming a product",
+    "Pick the one closest to your application",
+    "Record transactions",
+    "Online store: orders and inventory",
+    "Payments and ledgers",
+    "Bookings and reservations",
+    "User accounts, logins and sessions",
+    "Multi-tenant SaaS",
+    "Serve content to many readers",
+    "Product catalog with varied attributes",
+    "Social feed and timelines",
+    "Search and AI retrieval",
+    "Take in a stream",
+    "Chat and messaging",
+    "IoT, metrics and telemetry",
+    "Audit logs and event history",
+    "Keep fast state",
+    "Leaderboards, counters and rate limits",
+    "Answer questions over history",
+    "Analytics, dashboards and reporting",
+    "Run AI agents",
+    "Agent memory and state",
+    "Write it, size it, place it, check it, change it",
+    "Design doc template",
+    "Where to run it",
+    "Capacity calculator",
+    "Anti-patterns",
+    "Migration playbooks",
+    "Submit a design for review"
+   ]
+  },
+  {
+   "title": "Store orders and inventory",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/store-orders/",
+   "description": "Orders, order lines, payments references and stock live in one relational database, PostgreSQL or MySQL. Carts can live in Redis. Product search goes to a.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Payments and ledgers",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/payments-ledger/",
+   "description": "A relational database with a double-entry ledger that is append-only, with idempotency keys and synchronous replication. Correctness first, speed.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Bookings and reservations",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/booking-reservations/",
+   "description": "A relational database with the rule enforced by the database itself: a unique constraint on (resource, slot), or an exclusion constraint on time ranges in.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Accounts and sessions",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/accounts-sessions/",
+   "description": "Accounts in the main relational database. Sessions in Redis or Valkey with an expiry, or no server-side session at all if you use short-lived signed.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Multi-tenant SaaS",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/multi-tenant-saas/",
+   "description": "Start with a shared schema and a tenant_id on every row, enforced by row-level security in PostgreSQL or by a mandatory filter in the data layer. Move.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Product catalog",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/product-catalog/",
+   "description": "PostgreSQL with common columns plus a JSONB column for the varied attributes, or MongoDB with one document per product. A search engine on top for.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Social feed",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/social-feed/",
+   "description": "Posts and the follow graph in a relational database. Timelines precomputed per user in Redis or a wide-column store (fan-out on write), except for.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Search and AI retrieval",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/search-ai-retrieval/",
+   "description": "Start in PostgreSQL: full-text search and pgvector, next to the data. Move to a dedicated search engine or vector database when the size, the query rate,.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Chat and messaging",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/chat-messaging/",
+   "description": "At small and medium scale, PostgreSQL with messages partitioned by time and indexed by (conversation_id, sent_at). At large scale, a wide-column store.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "IoT and telemetry",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/iot-telemetry/",
+   "description": "A time-series database (TimescaleDB, InfluxDB) or a column store (ClickHouse), with time partitioning, compression, downsampling and retention. Device.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Audit and event logs",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/audit-event-log/",
+   "description": "An append-only table partitioned by time in the relational database, or a stream (Kafka) with a long retention plus a copy in object storage. Never.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Leaderboards and counters",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/leaderboards-counters/",
+   "description": "Redis or Valkey: sorted sets for leaderboards, INCR with a TTL for counters and rate limits. Flush totals to the database in batches if they must be.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Analytics and reporting",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/analytics-reporting/",
+   "description": "Not on the production primary. Copy data to a column store (ClickHouse, BigQuery, Redshift, Snowflake, DuckDB for small cases) through change data capture.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Agent memory and state",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/agent-memory/",
+   "description": "Where an AI agent's conversations, checkpoints, tool calls and long-term memories go: PostgreSQL with pgvector for most of it, Redis for working memory, with measured recall and filter results.",
+   "headings": [
+    "What the application asks of the database",
+    "Each kind of data, its store, and why",
+    "The core tables and the queries they serve",
+    "Start simple, change one thing at a time",
+    "Scale it: watch this design grow",
+    "The failures to plan for",
+    "What I considered and did not pick",
+    "On-prem, managed, EC2 or Kubernetes",
+    "The numbers, worked live"
+   ]
+  },
+  {
+   "title": "Design doc template",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/template/",
+   "description": "A copyable outline for a database design doc: workload, cost of a lost write, placement, model, durability, growth, failures, alternatives and cost.",
+   "headings": []
+  },
+  {
+   "title": "Submit a design for review",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/review/",
+   "description": "Send a database design for review, in public as a GitHub issue or in private, and the questions every review asks.",
+   "headings": [
+    "In public, or in private",
+    "In public, on GitHub",
+    "In private",
+    "The questions every review asks"
+   ]
+  },
+  {
+   "title": "Queries that look fine and are not",
+   "section": "Get it right",
+   "url": "https://howdbswork.com/queries/",
+   "description": "Column order in an index, covering queries, OFFSET against keyset paging, and N+1, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.",
+   "headings": [
+    "Why is my query slow when the index exists?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Can a query skip the table entirely?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Why does page 25,000 take a hundred times longer than page 1?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Why is a fast query making the page slow?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Lost updates and write skew",
+   "section": "Get it right",
+   "url": "https://howdbswork.com/isolation/",
+   "description": "Two concurrency bugs, lost update and write skew, run as real interleaved sessions on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, with the fixes.",
+   "headings": [
+    "Lost update: two deposits, one survives",
+    "PostgreSQL, READ COMMITTED",
+    "PostgreSQL, REPEATABLE READ",
+    "MySQL, REPEATABLE READ",
+    "MySQL, with SELECT ... FOR UPDATE",
+    "MongoDB, two transactions",
+    "Two sessions, one row",
+    "Write skew: two doctors go off call",
+    "PostgreSQL, REPEATABLE READ",
+    "PostgreSQL, SERIALIZABLE",
+    "MySQL, REPEATABLE READ",
+    "MongoDB, two transactions",
+    "What I reach for, in order",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Anti-patterns",
+   "section": "Get it right",
+   "url": "https://howdbswork.com/designs/anti-patterns/",
+   "description": "Fifteen database anti-patterns: what you see, why it happens inside the engine, and what to do instead.",
+   "headings": [
+    "Read the value, then write the new value",
+    "A counter on one hot row",
+    "A queue table polled by several workers",
+    "Random UUIDs as the InnoDB primary key",
+    "OFFSET paging deep into a list",
+    "A transaction open across a network call or a user's think time",
+    "Files and images stored in the database",
+    "Reports and exports on the primary",
+    "A cache that is the only copy",
+    "An array that grows forever inside one MongoDB document",
+    "Entity-attribute-value tables",
+    "Money stored as a floating-point number",
+    "Timestamps without a time zone",
+    "DELETE to enforce retention on a huge table",
+    "A new database connection per request, at scale"
+   ]
+  },
+  {
+   "title": "Decisions",
+   "section": "Get it right",
+   "url": "https://howdbswork.com/decisions/",
+   "description": "Ten decisions a database engineer has to make, each with the price stated up front. PostgreSQL, MySQL and MongoDB, compared on the same decision.",
+   "headings": [
+    "All ten decisions"
+   ]
+  },
+  {
+   "title": "What a commit waits for",
+   "section": "Get it right",
+   "url": "https://howdbswork.com/decisions/sync-replication-failover/",
+   "description": "Synchronous replication and failover: what a commit waits for before it returns, and what that choice costs when a server dies. PostgreSQL, MySQL and MongoDB, compared.",
+   "headings": [
+    "The same decision, three engines",
+    "1. What",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "2. Why",
+    "3. How",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "4. When",
+    "5. What breaks",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "Watch a failover happen",
+    "6. Alternatives rejected",
+    "7. Operating it",
+    "PostgreSQL",
+    "MySQL",
+    "MongoDB",
+    "Runbook, PostgreSQL sync standby down",
+    "Runbook, MySQL semi-sync OFF",
+    "Runbook, MongoDB election storm",
+    "Topology: sync inside the region, async to a remote region",
+    "8. Version notes",
+    "Postmortem: the binlog that filled the disk",
+    "Anti-patterns and the migration path out",
+    "Where I am less sure",
+    "Tested on"
+   ]
+  },
+  {
+   "title": "Why the bill is huge",
+   "section": "Get it right",
+   "url": "https://howdbswork.com/decisions/cost-model/",
+   "description": "Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it.",
+   "headings": [
+    "Pay for the load you have, plus a reserve you chose on purpose",
+    "Six lines on the invoice",
+    "Find each one with a query",
+    "1. An instance sized for the fear",
+    "2. IOPS and throughput nobody uses",
+    "3. Replicas nobody reads",
+    "4. Indexes that nothing uses",
+    "5. Data that should have left",
+    "6. Connections forcing a bigger box",
+    "Cheapest and safest first, commitments last",
+    "Six ways to save money and cause an outage",
+    "A monthly review that takes an hour"
+   ]
+  },
+  {
+   "title": "Where to run the database",
+   "section": "Run it",
+   "url": "https://howdbswork.com/designs/hosting/",
+   "description": "On-prem, self-managed on VMs or EC2, managed cloud, serverless, vendor services or Kubernetes: who does what, the full cost, and where to run each kind of application.",
+   "headings": [
+    "Where should it run?",
+    "What each one is, and when it fits",
+    "On-prem or bare metal",
+    "Self-managed on VMs: EC2, Compute Engine, Azure VMs",
+    "Managed relational: RDS, Cloud SQL, Azure Database",
+    "Cloud-native managed: Aurora, AlloyDB",
+    "Serverless: Aurora Serverless v2, Neon and similar",
+    "Vendor database services: Atlas, ElastiCache and MemoryDB, ClickHouse Cloud, Keyspaces and Astra",
+    "Kubernetes with an operator",
+    "The jobs do not disappear. They move.",
+    "The bill plus the people",
+    "When databases on Kubernetes work, and when they hurt",
+    "Storage choices that decide performance",
+    "Where I would run each design",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "On-prem vs cloud, by engine",
+   "section": "Run it",
+   "url": "https://howdbswork.com/cloud/",
+   "description": "On-prem vs cloud for PostgreSQL, MySQL and MongoDB: what RDS, Aurora, Cloud SQL and Atlas take over, what the DBA still owns, and the tradeoffs.",
+   "headings": [
+    "On-prem vs cloud: the physics stays, the 3 AM work moves",
+    "PostgreSQL RDS for PostgreSQL · Aurora PostgreSQL · Cloud SQL · Azure Database",
+    "MySQL · InnoDB RDS for MySQL · Aurora MySQL · Cloud SQL for MySQL",
+    "MongoDB · WiredTiger MongoDB Atlas (and compatible managed offerings)"
+   ]
+  },
+  {
+   "title": "Capacity calculator",
+   "section": "Run it",
+   "url": "https://howdbswork.com/designs/capacity/",
+   "description": "Estimate data size, working set, memory, disk and log volume for a table, with every assumption stated.",
+   "headings": []
+  },
+  {
+   "title": "Migration playbooks",
+   "section": "Run it",
+   "url": "https://howdbswork.com/designs/migrations/",
+   "description": "Four migration playbooks: add change data capture, split a database, move from MySQL to PostgreSQL, and add a cache, each with checks and a way back.",
+   "headings": [
+    "Add change data capture",
+    "How I check it worked",
+    "Split one database into two",
+    "How I check it worked",
+    "Move from MySQL to PostgreSQL",
+    "How I check it worked",
+    "Add a cache in front of the database",
+    "How I check it worked"
+   ]
+  },
+  {
+   "title": "Cheat sheet",
+   "section": "Run it",
+   "url": "https://howdbswork.com/cheat-sheet/",
+   "description": "Each engine in 8 rules: PostgreSQL, MySQL/InnoDB and MongoDB/WiredTiger: one rule, one plain line, one diagram, with deep-dive links.",
+   "headings": [
+    "Each engine, in 8 rules. Scan it in a minute, then go deep.",
+    "Best Practices in PostgreSQL",
+    "Best Practices in MySQL · InnoDB",
+    "Best Practices in MongoDB"
+   ]
+  },
+  {
+   "title": "Reference: plans, logs, checklist",
+   "section": "Run it",
+   "url": "https://howdbswork.com/reference/",
+   "description": "Quick lookup: side-by-side engine comparison, annotated EXPLAIN output, the log-file pattern and failure modes, and the DBA checklist.",
+   "headings": [
+    "Explain output, annotated line by line. Red flags named.",
+    "PostgreSQL: EXPLAIN (ANALYZE, BUFFERS) on a lookup by email",
+    "MongoDB: explain(\"executionStats\") on an orders query",
+    "Paste your own plan: EXPLAIN, annotated",
+    "The same work, done by three different file layouts",
+    "Five logs run everything. Know these five.",
+    "The pattern behind all five",
+    "Where the logs break: the five failure modes that page people",
+    "What to check before go-live, and in the first 5 minutes of an incident",
+    "Before go-live",
+    "When something breaks, first 5 minutes, in order"
+   ]
+  },
+  {
+   "title": "Real failures",
+   "section": "Run it",
+   "url": "https://howdbswork.com/stories/",
+   "description": "Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.",
+   "headings": [
+    "PostgreSQL: the layout is the cost",
+    "Uber: one update became four writes, and the WAL crossed an ocean",
+    "Notion: VACUUM stalled, and the database nearly stopped writing",
+    "Notion: the re-shard, 32 databases to 96, with zero downtime",
+    "Notion again: the index existed, and the planner ignored it",
+    "Adyen: one partition hit 30 TB, and the index rebuild took days",
+    "Notion again: the DMS copy came back three times the size",
+    "Figma: they stayed on Postgres and built the sharding layer themselves",
+    "Notion: sharding fixed the live database, and the warehouse broke next",
+    "GitLab: five backups, none of them worked",
+    "Instacart: they split the database by domain, not by shard key",
+    "MySQL: failover, upgrades, and the shard key",
+    "Dropbox: one shard outgrew one machine, so they built a new store",
+    "GitHub: the master died, and nobody woke up",
+    "GitHub: upgrading 1,200 MySQL hosts without dropping a query",
+    "Slack: the shard key was the hot spot",
+    "Shopify: the verifiers were the project",
+    "MongoDB: the cache is the database",
+    "Fortnite: a release changed the call pattern, and the cache ran out"
+   ]
+  },
+  {
+   "title": "On call tonight",
+   "section": "Run it",
+   "url": "https://howdbswork.com/oncall/",
+   "description": "Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call.",
+   "headings": []
+  },
+  {
+   "title": "About",
+   "section": "About",
+   "url": "https://howdbswork.com/about/",
+   "description": "Who wrote this site and why: a production database engineer on PostgreSQL, MySQL, MongoDB and Aurora, and how to use the site from zero to staff level.",
+   "headings": [
+    "Most of what I know, I learned the expensive way",
+    "Three ways in, depending on where you are"
+   ]
+  },
+  {
+   "title": "Corrections",
+   "section": "About",
+   "url": "https://howdbswork.com/corrections/",
+   "description": "Every correction that changed what a page on this site teaches, with the date, what it said and what it says now.",
+   "headings": []
+  },
+  {
+   "title": "Reading list",
+   "section": "About",
+   "url": "https://howdbswork.com/references/",
+   "description": "Books, tools and posts this site leans on, with one line each on what each is best for and which pages it backs.",
+   "headings": [
+    "The books behind the trade-offs",
+    "The tools and posts behind the checks"
+   ]
+  },
+  {
+   "title": "Work with me",
+   "section": "About",
+   "url": "https://howdbswork.com/work-with-me/",
+   "description": "A database health check for PostgreSQL and MySQL, and a review of the database side of AI agent systems: durability, performance, cost, safe access and memory, written up and ranked by risk.",
+   "headings": [
+    "A written review of one database, ranked by risk and by cost",
+    "Durability and recovery",
+    "Performance",
+    "Cost",
+    "Is your database ready for AI agents?",
+    "Safe access",
+    "Memory and retrieval",
+    "Load",
+    "Send me a short note"
+   ]
+  },
+  {
+   "title": "Use it from your AI assistant",
+   "section": "About",
+   "url": "https://howdbswork.com/assistant/",
+   "description": "Use this site from Claude, Cursor or any MCP client: which database for an application, sizing estimates, and lessons, answered from the design docs.",
+   "headings": [
+    "Four tools",
+    "Two minutes, Node 18 or newer",
+    "The same pages, read by a program"
+   ]
+  },
+  {
+   "title": "All pages",
+   "section": "About",
+   "url": "https://howdbswork.com/sitemap/",
+   "description": "Every page on the site in seven sections, in reading order: Learn, Engines, Practice, Design, Get it right, Run it, About.",
+   "headings": [
+    "Part 1 · Learn",
+    "Part 2 · Engines",
+    "Part 3 · Practice",
+    "Part 4 · Design",
+    "Part 5 · Get it right",
+    "Part 6 · Run it",
+    "About"
+   ]
+  }
+ ]
+}
