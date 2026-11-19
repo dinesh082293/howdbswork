@@ -64,6 +64,10 @@ SELECT sum(amount) FROM ledger_entries WHERE account_id = $1;</pre>
   <div class="kicker">4 · How it grows</div>
   <h2>Start simple, change one thing at a time</h2>
   <ol class="steplist"><li><b>One primary, one synchronous standby</b><span>synchronous_commit with a standby, or semi-synchronous replication in MySQL. Backups with point-in-time recovery, and a restore tested on a schedule.</span></li><li><b>Volume grows</b><span>Partition the ledger by month. Old partitions move to cheaper storage but stay queryable.</span></li><li><b>Very high volume</b><span>Shard by account. Transfers between shards need a two-step protocol with a pending state, which is the hardest part of the design and the reason to delay this step.</span></li></ol>
+
+  <h3 id="scale-it" style="margin-top:28px">Scale it: watch this design grow</h3>
+  <p class="sub">Pick a stage, then throw something at it. The numbers are a model to show the shape of each change, not a measurement; the measured numbers are in the <a href="../../notebooks/index.html">lab notebooks</a>.</p>
+  <div class="scaleit" data-slug="payments-ledger"></div>
 </div></section>
 <section id="breaks"><div class="wrap">
   <div class="kicker">5 · What breaks first</div>
@@ -104,5 +108,6 @@ SELECT sum(amount) FROM ledger_entries WHERE account_id = $1;</pre>
 <script src="../../assets/js/polish.js"></script>
 <script src="../../assets/js/reader.js"></script>
 <script src="../../assets/js/estimate.js"></script>
+<script src="../../assets/js/scaleit.js"></script>
 </body>
 </html>

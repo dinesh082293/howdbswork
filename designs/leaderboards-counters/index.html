@@ -55,6 +55,10 @@ EXPIRE rl:api:key123:202611181305 60</pre>
   <div class="kicker">4 · How it grows</div>
   <h2>Start simple, change one thing at a time</h2>
   <ol class="steplist"><li><b>Counters in the database</b><span>Fine at low rates.</span></li><li><b>Hot rows</b><span>Move counting to Redis, flush to the database every minute.</span></li><li><b>Very large leaderboards</b><span>Shard by season or region, and keep top N in one key.</span></li></ol>
+
+  <h3 id="scale-it" style="margin-top:28px">Scale it: watch this design grow</h3>
+  <p class="sub">Pick a stage, then throw something at it. The numbers are a model to show the shape of each change, not a measurement; the measured numbers are in the <a href="../../notebooks/index.html">lab notebooks</a>.</p>
+  <div class="scaleit" data-slug="leaderboards-counters"></div>
 </div></section>
 <section id="breaks"><div class="wrap">
   <div class="kicker">5 · What breaks first</div>
@@ -95,5 +99,6 @@ EXPIRE rl:api:key123:202611181305 60</pre>
 <script src="../../assets/js/polish.js"></script>
 <script src="../../assets/js/reader.js"></script>
 <script src="../../assets/js/estimate.js"></script>
+<script src="../../assets/js/scaleit.js"></script>
 </body>
 </html>

@@ -72,6 +72,7 @@
   final balance: 110  (expected 130 if both deposits count)</pre>
   <aside class="myth"><span class="mk">Common myth</span><p class="m">MySQL's REPEATABLE READ prevents lost updates because the snapshot does not change.</p><p class="t">The snapshot applies to plain reads. An UPDATE in InnoDB reads the latest committed row, not the snapshot, so the second session overwrote 110 with its stale 120 and got no error. The run above shows it.</p></aside>
 </div></section>
+<section id="follow-it"><div class="wrap"><div class="kicker">Follow it</div><h2>Two sessions, one row</h2><p class="sub">The same collision in PostgreSQL and InnoDB, one step at a time. Then tick the box: PostgreSQL shows what REPEATABLE READ changes, and MySQL shows what one forgotten transaction does to everyone behind it.</p><div class="followit" data-mode="lock" data-engine="pg"></div></div></section>
 <section id="write-skew"><div class="wrap">
   <div class="kicker">Anomaly 2</div>
   <h2>Write skew: two doctors go off call</h2>
@@ -130,12 +131,13 @@
   <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
   <p>Written by Dinesh. I run production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
-  <p class="reviewed">Last updated Nov 18, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
+  <p class="reviewed">Last updated Nov 19, 2026 · <a href="../corrections/index.html">Corrections</a> · <a href="../feed.xml">RSS feed</a> · <a href="../work-with-me/index.html">Work with me</a></p>
   <p><a href="../sitemap/index.html">All pages</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/followit.js"></script>
 </body>
 </html>
