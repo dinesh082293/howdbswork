@@ -280,7 +280,32 @@ window.HDW_GOALS = window.HDW_GOALS || (function () {
       ? '<a class="contcard" href="' + e(next[0]) + '"><span class="ck">Pick up where you left off · ' + done + ' of ' + total + ' read</span>' +
         '<b>Lesson ' + next[3] + ' · ' + e(next[1]) + '</b><span class="cs">' + e(next[2]) + '</span>' +
         '<span class="cbar"><span style="width:' + pct + '%"></span></span><i>Continue →</i></a>'
-      : '<div class="contcard"><span class="ck">All ' + total + ' lessons read</span><b>You have read the whole course.</b><span class="cs">New pages appear in What\'s new and the RSS feed.</span><span class="cbar"><span style="width:100%"></span></span></div>';
+      : '<div class="contcard"><span class="ck">All ' + total + ' lessons read</span><b>You have read the whole course.</b><span class="cs">Keep it fresh with the review on the home page.</span><span class="cbar"><span style="width:100%"></span></span></div>';
+  }
+
+  // The course as a map: four lanes, one dot per lesson, read ones filled.
+  function courseMap() {
+    var el = document.getElementById('coursemap'), src = document.getElementById('continue');
+    if (!el || !src) return;
+    var order = JSON.parse(src.getAttribute('data-order') || '[]'), r = getRead(), lanes = [], by = {}, last = -1;
+    order.forEach(function (o, i) { if (!by[o[2]]) { by[o[2]] = []; lanes.push(o[2]); } by[o[2]].push(o); if (r[pageKey(o[0])]) last = i; });
+    var next = null;
+    for (var k = last + 1; k < order.length && !next; k++) if (!r[pageKey(order[k][0])]) next = order[k][0];
+    for (var j = 0; j < order.length && !next; j++) if (!r[pageKey(order[j][0])]) next = order[j][0];
+    function e(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+    var total = 0, read = 0;
+    el.innerHTML = '<div class="cmap">' + lanes.map(function (name, li) {
+      var items = by[name], n = 0;
+      var lis = items.map(function (o) {
+        var isRead = !!r[pageKey(o[0])]; if (isRead) n++;
+        var cls = isRead ? 'read' : (o[0] === next ? 'next' : '');
+        return '<li class="' + cls + '"><a href="' + e(o[0]) + '"><span class="cm-dot" aria-hidden="true"></span><span class="cm-n">' + o[3] + '</span>' + e(o[1]) + (cls === 'next' ? ' <em>next</em>' : '') + '</a></li>';
+      }).join('');
+      total += items.length; read += n;
+      return '<div class="cm-lane"><div class="cm-h"><b>Part ' + (li + 1) + ' · ' + e(name) + '</b><span>' + n + ' of ' + items.length + '</span></div><ol>' + lis + '</ol></div>';
+    }).join('') + '</div>';
+    var head = document.getElementById('coursemapHead');
+    if (head) head.textContent = read ? read + ' of ' + total + ' lessons read' + (next ? '. The next one is marked.' : '. All done.') : 'Nothing read yet. Lessons fill in as you finish them.';
   }
 
   function run(f) { try { f(); } catch (e) {} }
@@ -293,4 +318,5 @@ window.HDW_GOALS = window.HDW_GOALS || (function () {
   run(trackRead);
   run(quizzes);
   run(courseContinue);
+  run(courseMap);
 })();
