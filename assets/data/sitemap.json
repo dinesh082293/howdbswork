@@ -57,11 +57,15 @@
    "id": "practice",
    "name": "Practice",
    "question": "Can I see it happen?",
-   "blurb": "Simulations, a real PostgreSQL in your browser, experiments run on real servers, and a coach for your own queries.",
+   "blurb": "Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and a coach for your own queries.",
    "pages": [
     [
      "labs/index.html",
      "Labs"
+    ],
+    [
+     "index-playground/index.html",
+     "Watch an index grow"
     ],
     [
      "tutorials/index.html",

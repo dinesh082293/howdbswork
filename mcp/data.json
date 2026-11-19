@@ -1403,6 +1403,15 @@
    ]
   },
   {
+   "title": "Watch an index grow",
+   "section": "Practice",
+   "url": "https://howdbswork.com/index-playground/",
+   "description": "Insert rows into a B-tree and watch pages fill and split: sequential ids, random UUIDs and time-ordered UUIDs, in PostgreSQL, InnoDB and MongoDB.",
+   "headings": [
+    "Four things the picture shows"
+   ]
+  },
+  {
    "title": "Guided tutorials",
    "section": "Practice",
    "url": "https://howdbswork.com/tutorials/",
