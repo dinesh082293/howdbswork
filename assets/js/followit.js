@@ -95,6 +95,13 @@
           (st.eng === 'pg' ? ' EXPLAIN (ANALYZE, BUFFERS) would say: Buffers: shared hit=' + hit + (rd ? ' read=' + rd : '') + '.' : '');
       } else cap = st.flag ? D.busy + ' Watch: ' + D.metric + '.' : 'The change is on the replica. The time from step 1 to here is the replication lag. Watch: ' + D.metric + '.';
       h += '<p class="fi-cap" aria-live="polite">' + esc(cap) + '</p>';
+      if (window.HDW_GOALS) {
+        var gk = 'follow-' + mode; st.doneIn = st.doneIn || {};
+        if (done) st.doneIn[st.eng] = 1;
+        if (mode === 'read') { if (done && st.flag) HDW_GOALS.done(gk, 'disk'); if (st.doneIn.pg && st.doneIn.my) HDW_GOALS.done(gk, 'both'); }
+        if (mode === 'replicate') { if (done && st.flag) HDW_GOALS.done(gk, 'lag'); if (Object.keys(st.doneIn).length >= 3) HDW_GOALS.done(gk, 'three'); }
+        if (mode === 'lock') { if (st.i >= 2) HDW_GOALS.done(gk, 'wait'); if (done && st.flag && st.eng === 'pg') HDW_GOALS.done(gk, 'rr'); if (done && st.flag && st.eng === 'my') HDW_GOALS.done(gk, 'timeout'); }
+      }
       el.innerHTML = h;
       Array.prototype.forEach.call(el.querySelectorAll('.fi-eng'), function (b) { b.addEventListener('click', function () { st.eng = b.getAttribute('data-e'); st.i = 0; if (mode === 'lock') st.flag = false; if (window.HDW_ENGINE) HDW_ENGINE.set(st.eng); draw(); }); });
       el.querySelector('.fi-flag input').addEventListener('change', function (e) { st.flag = e.target.checked; st.i = 0; draw(); });
@@ -102,6 +109,12 @@
       el.querySelector('.fi-reset').addEventListener('click', function () { st.i = 0; draw(); });
     }
     draw();
+    var GOALS = {
+      read: [['disk', 'Move the last page to disk, then step to the end'], ['both', 'Count the pages in both engines: which needs one more, and why?']],
+      replicate: [['lag', 'Make the replica fall behind, then step to the end'], ['three', 'Follow the change in all three databases']],
+      lock: [['wait', 'Find the step where session B has to wait'], ['rr', 'Make PostgreSQL give session B an error instead'], ['timeout', 'Leave a transaction open in MySQL and see what B gets']]
+    };
+    if (window.HDW_GOALS && GOALS[mode]) HDW_GOALS.attach(el, 'follow-' + mode, GOALS[mode]);
   }
   Array.prototype.forEach.call(document.querySelectorAll('.followit'), mount);
 })();

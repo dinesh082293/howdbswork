@@ -383,7 +383,14 @@
       }
       var EVS = EV.map(function (e) { return e[0] === 'fail' && S.failEv ? [e[0], S.failEv] : e; });
       var evName = EVS.filter(function (e) { return e[0] === ev; })[0][1];
-      var h = '<div class="sc-ctl"><span class="sc-lab">Stage</span>' + S.stages.map(function (s, k) {
+      var firstOk = -1;
+      S.stages.forEach(function (g2, k) { if (firstOk >= 0) return; var c2 = g2.x10 ? g2.x10[1] : g2.cpu * 10, l2 = g2.x10 ? g2.x10[0] : (c2 >= 100 ? null : 1); if (l2 !== null && c2 < 100) firstOk = k; });
+      var ph = '';
+      if (firstOk >= 0) {
+        if (st.pick === undefined) ph = '<div class="sc-pred"><b>Predict first:</b> which is the first stage that survives ten times the traffic? <span class="sc-picks">' + S.stages.map(function (g2, k) { return '<button type="button" class="labbtn sc-pick" data-k="' + k + '">' + (k + 1) + '</button>'; }).join('') + '</span></div>';
+        else ph = '<div class="sc-pred ' + (st.pick === firstOk ? 'ok' : 'no') + '">' + (st.pick === firstOk ? 'Right: ' : 'You picked stage ' + (st.pick + 1) + '. ') + 'Stage ' + (firstOk + 1) + ', ' + esc(S.stages[firstOk].name.toLowerCase()) + ', is the first that survives it. It is showing now.</div>';
+      }
+      var h = ph + '<div class="sc-ctl"><span class="sc-lab">Stage</span>' + S.stages.map(function (s, k) {
         return '<button type="button" class="labbtn sc-st' + (k === st.i ? ' on' : '') + '" data-i="' + k + '" aria-pressed="' + (k === st.i) + '">' + (k + 1) + ' · ' + esc(s.name) + '</button>';
       }).join('') + '</div><div class="sc-ctl"><span class="sc-lab">Then</span>' + EVS.map(function (e) {
         return '<button type="button" class="labbtn sc-ev' + (e[0] === ev ? ' on' : '') + '" data-e="' + e[0] + '" aria-pressed="' + (e[0] === ev) + '">' + e[1] + '</button>';
@@ -418,10 +425,17 @@
       h += '<div class="sc-met">' + mt.map(function (m) { return '<div class="es-tile' + (m[2] ? ' warn' : '') + '"><div class="es-v">' + esc(m[0]) + '</div><div class="es-k">' + esc(m[1]) + '</div></div>'; }).join('') + '</div>';
       h += '<div class="sc-story" aria-live="polite"><div class="kicker">' + (st.i + 1) + ' · ' + esc(g.name) + (ev === 'normal' ? '' : ' · ' + evName.toLowerCase()) + '</div><p>' + esc(story) + '</p><p class="sc-lesson"><b>The lesson:</b> ' + esc(lesson) + '</p></div>';
       el.innerHTML = h;
+      if (window.HDW_GOALS) {
+        var gk = 'scale-' + el.getAttribute('data-slug');
+        if (ev === 'x10') HDW_GOALS.done(gk, (sat || lat === null) ? 'break' : 'survive');
+        if (ev === 'fail' && st.i === S.stages.length - 1) HDW_GOALS.done(gk, 'fail');
+      }
+      Array.prototype.forEach.call(el.querySelectorAll('.sc-pick'), function (b) { b.addEventListener('click', function () { st.pick = +b.getAttribute('data-k'); st.i = firstOk; st.ev = 'x10'; draw(); }); });
       Array.prototype.forEach.call(el.querySelectorAll('.sc-st'), function (b) { b.addEventListener('click', function () { st.i = +b.getAttribute('data-i'); draw(); el.querySelector('.sc-st[data-i="' + st.i + '"]').focus(); }); });
       Array.prototype.forEach.call(el.querySelectorAll('.sc-ev'), function (b) { b.addEventListener('click', function () { st.ev = b.getAttribute('data-e'); draw(); el.querySelector('.sc-ev[data-e="' + st.ev + '"]').focus(); }); });
     }
     draw();
+    if (window.HDW_GOALS) HDW_GOALS.attach(el, 'scale-' + el.getAttribute('data-slug'), [['break', 'Find a stage that falls over at ten times the traffic'], ['survive', 'Find the first stage that survives it'], ['fail', 'Fail the primary at the last stage: who still works?']]);
   }
   Array.prototype.forEach.call(document.querySelectorAll('.scaleit'), mount);
 })();
