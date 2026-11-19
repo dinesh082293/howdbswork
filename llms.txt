@@ -64,7 +64,6 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 ## About
 
 - [About](https://howdbswork.com/about/): Who wrote this site and why: a production database engineer on PostgreSQL, MySQL, MongoDB and Aurora, and how to use the site from zero to staff level.
-- [What's new](https://howdbswork.com/whats-new/): Every change to the site, newest first: new pages, new experiments and new tools, with the date.
 - [Corrections](https://howdbswork.com/corrections/): Every correction that changed what a page on this site teaches, with the date, what it said and what it says now.
 - [Reading list](https://howdbswork.com/references/): Books, tools and posts this site leans on, with one line each on what each is best for and which pages it backs.
 - [Work with me](https://howdbswork.com/work-with-me/): A database health check for PostgreSQL and MySQL, and a review of the database side of AI agent systems: durability, performance, cost, safe access and memory, written up and ranked by risk.
