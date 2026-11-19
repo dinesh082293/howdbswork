@@ -187,7 +187,8 @@ db.getSiblingDB('local').oplog.rs.find().sort({$natural: -1}).limit(1)</pre></di
   <div class="kicker">Scenario 3 of 4</div>
   <h2>A replica falls behind. Why, and how do I see it?</h2>
   <p class="sub">Lag is a queue. Changes arrive faster than the replica applies them. Each engine has a different place where that queue builds up.</p>
-  <div class="followit" data-mode="replicate" data-engine="pg"></div>
+  <details class="predict fi-pred"><summary>Predict first: Where does replication lag usually come from: the network, or the replica applying the change?</summary><p>Usually the replica applying it. Shipping a log record takes milliseconds; the replica replaying it can wait behind a long query, a huge transaction or a single busy apply thread. Tick the box in the widget to see each engine's version.</p></details>
+<div class="followit" data-mode="replicate" data-engine="pg"></div>
   <div class="cmp3"><div class="cmp3-col pg"><h3><span class="dot" style="background:var(--pg)"></span>PostgreSQL</h3><ol><li>The standby receives WAL over the network and replays it with one recovery process.</li><li>A burst of writes can arrive faster than one process replays it.</li><li>A long query on the standby can conflict with replay. Replay waits, up to <span class="mono">max_standby_streaming_delay</span> (30 s by default), then cancels the query.</li><li>With synchronous replication, lag stops being a delay and becomes commit latency.</li></ol><div class="see"><b>See it</b><pre class="cmdshow">-- on the primary
 SELECT client_addr, state, write_lag, flush_lag, replay_lag
 FROM pg_stat_replication;

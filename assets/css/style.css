@@ -1050,3 +1050,20 @@ h2:hover .hlink,h3:hover .hlink,.hlink:focus{opacity:1}
 .bt-cmp table{margin-top:10px}
 @media(max-width:700px){.bt-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.bt-cap{margin-left:0}}
 @media(max-width:700px){.bt-stage svg{min-width:760px;max-height:none}.bt-stage::after{content:"Scroll sideways to see the whole tree";display:block;font-size:12.5px;color:var(--muted);padding:4px 2px 0;position:sticky;left:0}}
+/* ===== Try this goals ===== */
+.goals{margin:10px 0 0;padding:12px 16px;border:1.5px dashed var(--line);border-radius:12px;max-width:1100px}
+.goals-h{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;margin-bottom:4px}
+.goals-n{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--muted)}
+.goals ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px}
+.goals li{font-size:14.5px;line-height:1.45;padding-left:28px;position:relative;color:var(--ink)}
+.goals li::before{content:"";position:absolute;left:0;top:2px;width:16px;height:16px;border:2px solid var(--line);border-radius:5px;box-sizing:border-box}
+.goals li.done{color:var(--muted)}
+.goals li.done::before{background:var(--teal);border-color:var(--teal)}
+.goals li.done::after{content:"✓";position:absolute;left:3px;top:-1px;font-size:13px;font-weight:700;color:var(--bg)}
+.goals li.just{animation:goalPop .9s ease-out}
+@keyframes goalPop{0%{background:var(--teal-bg)}100%{background:transparent}}
+@media (prefers-reduced-motion: reduce){.goals li.just{animation:none}}
+.sc-pred{font-size:14.5px;margin:0 0 12px;padding:10px 14px;border-radius:12px;background:var(--surface2);display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sc-pred.ok{background:var(--teal-bg)}.sc-pred.no{background:var(--my-bg)}
+.sc-picks{display:inline-flex;gap:6px}.sc-pick{min-width:44px}
+.fi-pred{max-width:1100px;margin:6px 0 10px}

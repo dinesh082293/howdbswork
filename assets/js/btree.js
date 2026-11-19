@@ -133,6 +133,11 @@
     '<label class="bt-cap">Rows per page <input type="range" min="3" max="8" step="1" value="' + st.C + '" aria-label="Rows per page"> <b>' + st.C + '</b></label></div>' +
     '<div class="bt-stage"></div><p class="bt-last labnote"></p><div class="es-res bt-stats"></div>' +
     '<div class="bt-ctl" style="margin-top:14px"><button type="button" class="labbtn bt-compare">Compare all three key types, 300 rows each</button></div><div class="bt-cmp"></div>';
+  if (window.HDW_GOALS) {
+    HDW_GOALS.attach(root, 'btree', [['splits', 'Insert 30 or more random UUIDs and watch pages split in the middle'], ['v7', 'Find the key type that keeps UUIDs and full pages'], ['compare', 'Compare all three key types side by side']]);
+    root.addEventListener('bt-change', function (e) { var d = e.detail; if (d.mode === 'rand' && d.stats.rows >= 30 && d.stats.splits > 0) HDW_GOALS.done('btree', 'splits'); if (d.mode === 'v7' && d.stats.rows >= 30) HDW_GOALS.done('btree', 'v7'); });
+    root.addEventListener('bt-compare', function () { HDW_GOALS.done('btree', 'compare'); });
+  }
   reset(); draw();
 
   root.querySelectorAll('[data-n]').forEach(function (b) { b.addEventListener('click', function () { var n = +b.getAttribute('data-n'); many(n, n === 1 ? 0 : (n === 10 ? 120 : 12)); }); });

@@ -320,6 +320,7 @@
         return '<div class="es-tile' + (r[2] ? ' warn' : '') + '"><div class="es-v">' + r[0] + '</div><div class="es-k">' + r[1] + '</div></div>';
       }).join('');
       el.querySelector('.es-note').innerHTML = R.note;
+      if (window.HDW_GOALS && push && R.r.some(function (r) { return r[2]; })) HDW_GOALS.done('est-' + slug, 'warn');
       el.querySelector('.es-a').innerHTML = D.a(v);
       el.querySelector('.es-q').textContent = D.q.replace(/\{(\w+)\}/g, function (_, k) { return fmt(v[k]); });
       if (push) {
@@ -345,6 +346,11 @@
       else msg.textContent = url;
     });
     draw(false);
+    if (window.HDW_GOALS) {
+      HDW_GOALS.attach(el.querySelector('.es-grid'), 'est-' + slug, [['warn', 'Move a slider until a result turns amber: that is where this design needs a change'], ['share', 'Copy the link to your numbers'], ['answer', 'Answer the question below, then open mine']]);
+      el.querySelector('.es-copy').addEventListener('click', function () { HDW_GOALS.done('est-' + slug, 'share'); });
+      el.querySelector('.es-ans').addEventListener('toggle', function (e) { if (e.target.open) HDW_GOALS.done('est-' + slug, 'answer'); });
+    }
     if (from) { var sec = document.getElementById('estimate'); if (sec && sec.scrollIntoView) setTimeout(function () { sec.scrollIntoView(); }, 50); }
   }
   if (typeof window !== 'undefined') window.HDW_ESTIMATES = S;

@@ -246,6 +246,12 @@
     root.querySelector('.ia-next').disabled = i >= order.length - 1;
     root.querySelector('.ia-sql').textContent = E.sql;
     root.querySelector('.ia-safe').classList.toggle('on', S.logdisk);
+    if (i >= 0 && window.HDW_GOALS) {
+      st.engSeen = st.engSeen || {}; st.engSeen[st.eng] = 1;
+      if (order[i] === 'commit') HDW_GOALS.done('insert', 'safe');
+      if (Object.keys(st.engSeen).length >= 2) HDW_GOALS.done('insert', 'two');
+      if (st.eng === 'mo' && order[i] === 'ack') HDW_GOALS.done('insert', 'mongo');
+    }
   }
 
   function stop() { st.playing = false; clearTimeout(st.timer); }
@@ -281,6 +287,7 @@
     '<div class="ia-dots">' + dotsHtml() + '</div><span class="ia-safe">Row 42 is safe</span></div>';
 
   build(); render(false);
+  if (window.HDW_GOALS) HDW_GOALS.attach(root, 'insert', [['safe', 'Find the step where row 42 becomes safe from a crash'], ['two', 'Watch the same insert in a second database'], ['mongo', 'Find the step where MongoDB waits for the other members before it says done']]);
 
   root.querySelector('.ia-play').addEventListener('click', function () { if (st.playing) { stop(); render(false); } else { if (!st.pred) setPred('skip'); play(); } });
   root.querySelector('.ia-pred').addEventListener('click', function (e) {

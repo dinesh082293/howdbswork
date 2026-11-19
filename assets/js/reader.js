@@ -4,6 +4,36 @@ window.HDW_ENGINE = window.HDW_ENGINE || {
   get: function () { try { var e = localStorage.getItem('hdw-engine'); return /^(pg|my|mo)$/.test(e || '') ? e : null; } catch (x) { return null; } },
   set: function (e) { try { localStorage.setItem('hdw-engine', e); } catch (x) {} }
 };
+/* "Try this" goals under a widget: small tasks that tick off when the reader
+   does them in the widget. Progress is kept in this browser only.
+   HDW_GOALS.attach(afterEl, key, [[id, text], ...]); HDW_GOALS.done(key, id) */
+window.HDW_GOALS = window.HDW_GOALS || (function () {
+  var lists = {};
+  function load() { try { return JSON.parse(localStorage.getItem('hdw-goals') || '{}'); } catch (e) { return {}; } }
+  function save(d) { try { localStorage.setItem('hdw-goals', JSON.stringify(d)); } catch (e) {} }
+  function paint(key) {
+    var L = lists[key]; if (!L) return;
+    var d = load()[key] || {}, n = 0;
+    L.goals.forEach(function (g) { var li = L.el.querySelector('[data-g="' + g[0] + '"]'); var on = !!d[g[0]]; if (on) n++; li.classList.toggle('done', on); li.setAttribute('aria-checked', String(on)); });
+    L.el.querySelector('.goals-n').textContent = n === L.goals.length ? 'All done' : n + ' of ' + L.goals.length;
+  }
+  return {
+    attach: function (after, key, goals) {
+      if (!after || !after.parentNode) return;
+      var box = document.createElement('div'); box.className = 'goals';
+      box.innerHTML = '<div class="goals-h"><b>Try this</b><span class="goals-n"></span></div><ul>' +
+        goals.map(function (g) { return '<li role="checkbox" data-g="' + g[0] + '">' + g[1] + '</li>'; }).join('') + '</ul>';
+      after.parentNode.insertBefore(box, after.nextSibling);
+      lists[key] = { el: box, goals: goals }; paint(key);
+    },
+    done: function (key, id) {
+      var d = load(); d[key] = d[key] || {}; if (d[key][id]) return;
+      d[key][id] = 1; save(d); paint(key);
+      var li = lists[key] && lists[key].el.querySelector('[data-g="' + id + '"]');
+      if (li) { li.classList.add('just'); setTimeout(function () { li.classList.remove('just'); }, 1200); }
+    }
+  };
+})();
 /* Reading aids, on every page:
    1. a thin progress bar at the top;
    2. a Contents button that lists the page's headings and marks where you are;
