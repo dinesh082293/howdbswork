@@ -1390,6 +1390,18 @@
    ]
   },
   {
+   "title": "Query coach",
+   "section": "Practice",
+   "url": "https://howdbswork.com/coach/",
+   "description": "Paste a SQL query, and optionally the table definitions and an EXPLAIN plan. The coach lists what to look at, why, the fix, and the lesson that explains it. Runs in your browser.",
+   "headings": [
+    "The patterns behind the findings",
+    "The query",
+    "With table definitions",
+    "Migrations and plans"
+   ]
+  },
+  {
    "title": "Application designs",
    "section": "Design",
    "url": "https://howdbswork.com/designs/",
@@ -1994,7 +2006,7 @@
    "url": "https://howdbswork.com/assistant/",
    "description": "Use this site from Claude, Cursor or any MCP client: which database for an application, sizing estimates, and lessons, answered from the design docs.",
    "headings": [
-    "Four tools",
+    "Five tools",
     "Two minutes, Node 18 or newer",
     "The same pages, read by a program"
    ]

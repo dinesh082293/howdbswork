@@ -9,6 +9,7 @@ No dependencies, Node 18 or newer, runs locally over stdio, sends nothing anywhe
 - `recommend_store(workload)`: the matching design doc: what goes where and why, what breaks first, a link.
 - `get_design(design)`: one design doc in full.
 - `estimate(design, inputs)`: the Estimate it numbers for a design, with a link that opens them on the page.
+- `review_query(sql, engine, schema, plan)`: the Query coach rules: risky statements, slow shapes, missing indexes and plan red flags, each with the fix.
 - `find_lesson(topic)`: lessons that explain a database topic.
 
 ## Set up
@@ -25,7 +26,7 @@ Claude Desktop (`claude_desktop_config.json`) or Cursor (`.cursor/mcp.json`):
 
 ## Updating the data
 
-`data.json` and `estimate.js` are built from the site:
+`data.json`, `estimate.js` and `querycoach.js` are built from the site:
 
     python3 scripts/build-mcp-data.py
 

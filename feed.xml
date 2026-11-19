@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>The Query coach. Paste a PostgreSQL or MySQL query, and optionally the table definitions...</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-e69711f38441</guid>
+    <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
+    <description>the Query coach. Paste a PostgreSQL or MySQL query, and optionally the table definitions and an EXPLAIN plan, and get what I would flag in a review: risky statements, slow shapes, missing indexes, locking migrations and plan red flags, each with the fix and the lesson behind it. It runs in your browser, and the same checks are now a tool in the MCP server.</description>
+  </item>
+  <item>
     <title>Databases for AI agents. A new design doc, Agent memory and state, says where an agent&#x27;s...</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-921c7fe61f1b</guid>

@@ -67,6 +67,10 @@
     [
      "notebooks/index.html",
      "Lab notebooks"
+    ],
+    [
+     "coach/index.html",
+     "Query coach"
     ]
    ]
   },
