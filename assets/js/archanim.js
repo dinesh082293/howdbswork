@@ -606,18 +606,21 @@
   function mount(root) {
     var key = root.getAttribute('data-engine') || 'pg', E = ENG[key];
     if (!E) return;
-    var st = { i: -1, playing: false, timer: null, lay: null, seen: false, raf: [], tt: [], speed: 1, sync: !!(E.rep && E.rep.def) }, G, svg, N;
+    var st = { i: -1, playing: false, timer: null, lay: null, seen: false, raf: [], tt: [], speed: 1, sync: !!(E.rep && E.rep.def), focus: true, cam: false }, G, svg, N;
     var ALL = [E.left].concat(E.proc, E.mem, E.disk, E.right), INFO = {};
     E.proc.forEach(function (b) { INFO[b[0]] = 'proc'; }); E.mem.forEach(function (b) { INFO[b[0]] = 'mem'; }); E.disk.forEach(function (b) { INFO[b[0]] = 'disk'; });
     root.classList.add('aa');
     root.innerHTML =
       '<div class="aa-stage"></div>' +
+      '<div class="aa-legend" aria-hidden="true"><span class="lg lg-q">request</span><span class="lg lg-r">answer</span><span class="lg lg-w">log record</span><span class="lg lg-p">page or data</span><span class="lg lg-v">background work</span><span class="lg lg-x">failure</span></div>' +
       '<div class="aa-now" aria-hidden="true"><span class="aa-now-n"></span><span class="aa-now-t"></span></div>' +
+      '<div class="aa-ctl"><button type="button" class="aa-btn aa-prev" aria-label="Previous scene">‹</button><button type="button" class="aa-btn aa-play">▶ Play</button><button type="button" class="aa-btn aa-next" aria-label="Next scene">›</button><div class="aa-dots"></div></div>' +
       '<div class="aa-info" hidden><button type="button" class="aa-x" aria-label="Close">×</button><div class="aa-ik"></div><div class="aa-it"></div><p class="aa-iw"></p><dl class="aa-idl"></dl></div>' +
       '<div class="aa-cap" aria-live="polite"><div class="aa-layers"></div><div class="aa-step"></div><div class="aa-title"></div><p class="aa-sub"></p><div class="aa-see" hidden><span>See it yourself</span><code></code></div><details class="aa-more"><summary>Why it works this way</summary><p class="aa-detail"></p></details></div>' +
-      '<div class="aa-ctl"><button type="button" class="aa-btn aa-prev" aria-label="Previous scene">‹</button><button type="button" class="aa-btn aa-play">▶ Play</button><button type="button" class="aa-btn aa-next" aria-label="Next scene">›</button><div class="aa-dots"></div><div class="aa-opts">' +
+      '<div class="aa-opts">' +
         (E.rep ? '<div class="aa-seg" role="group" aria-label="Replication"><span>' + E.rep.label + '</span><button type="button" data-sync="0">' + E.rep.modes[0] + '</button><button type="button" data-sync="1">' + E.rep.modes[1] + '</button></div>' : '') +
-        '<div class="aa-seg" role="group" aria-label="Speed"><span>Speed</span><button type="button" data-speed="1.45">slower</button><button type="button" data-speed="1">normal</button><button type="button" data-speed="0.7">faster</button></div></div></div>';
+        '<div class="aa-seg" role="group" aria-label="View"><span>View</span><button type="button" class="aa-zoom" aria-pressed="false">follow the action</button><button type="button" class="aa-fs">⤢ full screen</button></div>' +
+        '<div class="aa-seg" role="group" aria-label="Speed"><span>Speed</span><button type="button" data-speed="1.45">slower</button><button type="button" data-speed="1">normal</button><button type="button" data-speed="0.7">faster</button></div></div>';
     var stage = root.querySelector('.aa-stage'), dots = root.querySelector('.aa-dots');
     var dotEls = [], chapEls = [];
     if (E.scenes.some(function (sc) { return sc.ch; })) {
@@ -691,6 +694,26 @@
       box.hidden = false;
       if (root.HDW_GOALS) {}
     }
+    function svgEl() { return stage.querySelector('svg'); }
+    // On phones the picture sits in a window that pans and zooms to the part in play.
+    function camera(ids) {
+      var s = svgEl(); if (!s) return;
+      if (!st.cam) { s.style.transform = ''; stage.style.height = ''; return; }
+      var Wp = stage.clientWidth, k = Wp / G.W, Hp = stage.clientHeight || 460;
+      var x0 = 0, y0 = 0, x1 = G.W, y1 = G.H;
+      if (ids && ids.length) {
+        x0 = 1e9; y0 = 1e9; x1 = -1e9; y1 = -1e9;
+        ids.forEach(function (id) { var r = G[id]; if (!r) return; x0 = Math.min(x0, r[0]); y0 = Math.min(y0, r[1]); x1 = Math.max(x1, r[0] + r[2]); y1 = Math.max(y1, r[1] + r[3]); });
+        x0 -= 16; y0 -= 28; x1 += 16; y1 += 16;
+      }
+      var bw = x1 - x0, bh = y1 - y0, z = Math.min(Wp / (bw * k), Hp / (bh * k), 1.5);
+      z = Math.max(z, Hp / (G.H * k) * 0.98);
+      var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+      var tx = Wp / 2 - cx * k * z, ty = Hp / 2 - cy * k * z;
+      tx = Math.min(0, Math.max(Wp - G.W * k * z, tx)); ty = Math.min(0, Math.max(Hp - G.H * k * z, ty));
+      if (G.H * k * z < Hp) ty = (Hp - G.H * k * z) / 2;
+      s.style.transform = 'translate(' + tx.toFixed(1) + 'px,' + ty.toFixed(1) + 'px) scale(' + z.toFixed(3) + ')';
+    }
     function esc(t) { return String(t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
     function wrapText(g, t, x, y, w, lines) {
       var max = Math.floor(w / 5.5), words = t.split(' '), out = [], cur = '';
@@ -701,6 +724,7 @@
     }
     function widget(id, w) {
       var type = w[0], r = G[w[1]]; if (!r) return;
+      var svg = N.box[w[1]] || root.querySelector('svg');
       var list = [], pos = [];
       if (type === 'spawn') {
         var n = w[2], cw = Math.min(30, (r[2] - 20 - (n - 1) * 5) / n);
@@ -822,8 +846,19 @@
       }
     }
     function settled(i) { var S = stateAt(i); if (i >= 0) { S.hit = {}; S.fsync = null; } return S; }
+    function boxOf(name) {
+      var p = name.split(':')[0];
+      if (G[p] && N.box[p]) return p;
+      if (p === 'rep' || p === 'rpages') return E.rep ? E.rep.box : null;
+      var w = E.widgets[p]; return w ? w[1] : null;
+    }
     function frame(i) {
       var sc = SC(i);
+      var act = {};
+      if (sc) { sc.hl.forEach(function (k) { act[k] = 1; }); sc.moves.forEach(function (m) { var a = boxOf(m[1]), b = boxOf(m[2]); if (a) act[a] = 1; if (b) act[b] = 1; }); }
+      svgEl().classList.toggle('aa-focus', !!sc && st.focus);
+      Object.keys(N.box).forEach(function (k) { N.box[k].classList.toggle('act', !!act[k]); });
+      camera(sc ? Object.keys(act) : null);
       Object.keys(N.box).forEach(function (k) { N.box[k].classList.toggle('hl', !!(sc && sc.hl.indexOf(k) >= 0)); });
       ['proc', 'mem', 'disk'].forEach(function (k) { N['band_' + k].classList.toggle('hl', !!(sc && sc.layers.indexOf(k) >= 0)); });
       var cap = root.querySelector('.aa-cap');
@@ -866,10 +901,20 @@
       var S0 = settled(i - 1), scn = SC(i); if (scn.pre) scn.pre(S0); render(S0);
       ms.forEach(function (m, k) {
         later(function () { say(ls[k] || m[4], k + 1, ms.length); fly(m); }, k * STEP * st.speed);
+        later(function () { foot(m, k + 1); }, (k * STEP + FLIGHT) * st.speed);
       });
       later(function () { render(stateAt(i)); }, ((ms.length - 1) * STEP + FLIGHT) * st.speed);
     }
     function later(f, t) { st.tt.push(setTimeout(f, t)); }
+    function foot(m, n) {
+      var b = anchor(m[2]), same = m[1] === m[2], x = b[0] + (same ? 60 : 0) + 16, y = b[1] - 16, r = G[m[2]];
+      if (r && !same) { x = r[0] + r[2] - 30; y = r[1]; }
+      else if (/^rep:/.test(m[2]) && E.rep) { var rb = G[E.rep.box]; x = rb[0] + rb[2] - 18; }
+      var prev = svgEl().querySelectorAll('.aa-foot[data-at="' + m[2] + '"]').length; x -= prev * 22;
+      var g = el('g', { 'class': 'aa-foot aa-foot-' + m[0], 'data-at': m[2] }, svgEl());
+      el('circle', { cx: x, cy: y, r: 10 }, g);
+      el('text', { x: x, y: y + 4, 'text-anchor': 'middle' }, g, String(n));
+    }
     function fly(m) {
       var a = anchor(m[1]), b = anchor(m[2]), delay = 0, label = m[4], same = m[1] === m[2];
       var trail = same ? null : el('path', { d: 'M' + a[0] + ',' + a[1] + ' Q' + ((a[0] + b[0]) / 2) + ',' + (Math.min(a[1], b[1]) - 26) + ' ' + b[0] + ',' + b[1], 'class': 'aa-trail aa-trail-' + m[0] }, svg);
@@ -892,7 +937,7 @@
       }
       st.raf.push(requestAnimationFrame(step));
     }
-    function clearFlights() { st.raf.forEach(cancelAnimationFrame); st.raf = []; st.tt.forEach(clearTimeout); st.tt = []; Array.prototype.forEach.call(svg.querySelectorAll('.aa-pill,.aa-trail'), function (p) { p.remove(); }); }
+    function clearFlights() { st.raf.forEach(cancelAnimationFrame); st.raf = []; st.tt.forEach(clearTimeout); st.tt = []; Array.prototype.forEach.call(svg.querySelectorAll('.aa-pill,.aa-trail,.aa-foot'), function (p) { p.remove(); }); }
     function go(i, animate) { clearFlights(); st.i = i; show(i, animate !== false); }
     function next() { go(st.i + 1 >= E.scenes.length ? 0 : st.i + 1); }
     function tick() {
@@ -924,10 +969,18 @@
     });
     marks();
     root.querySelector('.aa-x').addEventListener('click', function () { root.querySelector('.aa-info').hidden = true; Object.keys(N.box).forEach(function (k) { N.box[k].classList.remove('aa-sel'); }); });
+    var zb = root.querySelector('.aa-zoom');
+    function setCam(on) { st.cam = on; zb.setAttribute('aria-pressed', String(on)); stage.classList.toggle('aa-cam', on); frame(st.i); }
+    zb.addEventListener('click', function () { setCam(!st.cam); });
+    root.querySelector('.aa-fs').addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen(); else if (root.requestFullscreen) root.requestFullscreen();
+    });
+    document.addEventListener('fullscreenchange', function () { setTimeout(function () { clearFlights(); build(); show(st.i, false); }, 120); });
     build(); show(-1, false);
+    if (st.lay === 'narrow') setCam(true);
     if (E.info) { var hint = document.createElement('p'); hint.className = 'aa-hint'; hint.textContent = 'Tap or click any box to see what it is, where it lives and how to look at it.'; root.insertBefore(hint, root.querySelector('.aa-now')); }
     var lastW = root.clientWidth;
-    addEventListener('resize', function () { var w = root.clientWidth; if ((w < 640) !== (lastW < 640)) { clearFlights(); build(); show(st.i, false); } lastW = w; });
+    addEventListener('resize', function () { var w = root.clientWidth; if ((w < 640) !== (lastW < 640)) { clearFlights(); build(); show(st.i, false); setCam(st.lay === 'narrow'); } lastW = w; });
     if ('IntersectionObserver' in window && !reduce) {
       new IntersectionObserver(function (es) { es.forEach(function (en) { if (en.isIntersecting && !st.seen) { st.seen = true; setTimeout(play, 500); } else if (!en.isIntersecting && st.playing) stop(); }); }, { threshold: 0.45 }).observe(root);
     }
