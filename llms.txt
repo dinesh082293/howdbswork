@@ -9,16 +9,15 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 
 - [Start here](https://howdbswork.com/start-here/): The full beginner course: vocabulary, teams, runbook, one insert end to end, read, update, delete, crash, three scenarios, a quiz, and eight incident cards.
 - [Ten concepts](https://howdbswork.com/concepts/): Ten database concepts, one picture and one line each, told with books and shelves: index, normalization, join, transaction, ACID, deadlock, partitioning, sharding, replication, read replica.
-- [Staff path, zero to architect](https://howdbswork.com/staff-path/): Zero to staff level in 6 levels: every concept as one problem plus one diagram, with labs on data pages, B+ trees and MVCC, and every idea on one card.
-- [Reading paths by goal](https://howdbswork.com/paths/): Three reading paths: prepare for a database interview, handle an incident on call, or choose a database. Each is an ordered list of pages.
-
-## Engines
-
 - [PostgreSQL](https://howdbswork.com/postgresql/): PostgreSQL internals: WAL, 8 KB pages, shared_buffers, MVCC and VACUUM. Files on disk, log files, outage parameters and commands.
 - [MySQL · InnoDB](https://howdbswork.com/mysql/): MySQL and InnoDB internals: .ibd files, redo log, binlog, buffer pool, undo and purge. Files on disk, log files, outage parameters and commands.
 - [MongoDB · WiredTiger](https://howdbswork.com/mongodb/): MongoDB and WiredTiger internals: .wt files, journal, oplog, cache and sharding. Files on disk, log files, outage parameters and commands.
 - [Same task, three engines](https://howdbswork.com/compare/): Four everyday events, a write, a crash, a lagging replica and a long transaction, shown side by side for PostgreSQL, MySQL and MongoDB.
 - [Database families](https://howdbswork.com/families/): Ten families of databases, from B-tree row stores to LSM, column, in-memory, distributed SQL and vector search, and the traffic each one handles well.
+- [Queries that look fine and are not](https://howdbswork.com/queries/): Column order in an index, covering queries, OFFSET against keyset paging, and N+1, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.
+- [Lost updates and write skew](https://howdbswork.com/isolation/): Two concurrency bugs, lost update and write skew, run as real interleaved sessions on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, with the fixes.
+- [Staff path, zero to architect](https://howdbswork.com/staff-path/): Zero to staff level in 6 levels: every concept as one problem plus one diagram, with labs on data pages, B+ trees and MVCC, and every idea on one card.
+- [Reading paths by goal](https://howdbswork.com/paths/): Three reading paths: prepare for a database interview, handle an incident on call, or choose a database. Each is an ordered list of pages.
 
 ## Practice
 
@@ -29,7 +28,7 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 
 ## Design
 
-- [Application designs](https://howdbswork.com/designs/): Thirteen design docs for common applications, with a picker: what kind of data goes in which database, and why.
+- [Application designs](https://howdbswork.com/designs/): Fourteen design docs for common applications, with a picker: what kind of data goes in which database, and why.
 - [Store orders and inventory](https://howdbswork.com/designs/store-orders/): Orders, order lines, payments references and stock live in one relational database, PostgreSQL or MySQL. Carts can live in Redis. Product search goes to a.
 - [Payments and ledgers](https://howdbswork.com/designs/payments-ledger/): A relational database with a double-entry ledger that is append-only, with idempotency keys and synchronous replication. Correctness first, speed.
 - [Bookings and reservations](https://howdbswork.com/designs/booking-reservations/): A relational database with the rule enforced by the database itself: a unique constraint on (resource, slot), or an exclusion constraint on time ranges in.
@@ -44,32 +43,28 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 - [Leaderboards and counters](https://howdbswork.com/designs/leaderboards-counters/): Redis or Valkey: sorted sets for leaderboards, INCR with a TTL for counters and rate limits. Flush totals to the database in batches if they must be.
 - [Analytics and reporting](https://howdbswork.com/designs/analytics-reporting/): Not on the production primary. Copy data to a column store (ClickHouse, BigQuery, Redshift, Snowflake, DuckDB for small cases) through change data capture.
 - [Agent memory and state](https://howdbswork.com/designs/agent-memory/): Where an AI agent's conversations, checkpoints, tool calls and long-term memories go: PostgreSQL with pgvector for most of it, Redis for working memory, with measured recall and filter results.
-- [Design doc template](https://howdbswork.com/designs/template/): A copyable outline for a database design doc: workload, cost of a lost write, placement, model, durability, growth, failures, alternatives and cost.
-- [Submit a design for review](https://howdbswork.com/designs/review/): Send a database design for review, in public as a GitHub issue or in private, and the questions every review asks.
-
-## Get it right
-
-- [Queries that look fine and are not](https://howdbswork.com/queries/): Column order in an index, covering queries, OFFSET against keyset paging, and N+1, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.
-- [Lost updates and write skew](https://howdbswork.com/isolation/): Two concurrency bugs, lost update and write skew, run as real interleaved sessions on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, with the fixes.
 - [Anti-patterns](https://howdbswork.com/designs/anti-patterns/): Fifteen database anti-patterns: what you see, why it happens inside the engine, and what to do instead.
 - [Decisions](https://howdbswork.com/decisions/): Ten decisions a database engineer has to make, each with the price stated up front. PostgreSQL, MySQL and MongoDB, compared on the same decision.
 - [What a commit waits for](https://howdbswork.com/decisions/sync-replication-failover/): Synchronous replication and failover: what a commit waits for before it returns, and what that choice costs when a server dies. PostgreSQL, MySQL and MongoDB, compared.
-- [Why the bill is huge](https://howdbswork.com/decisions/cost-model/): Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it.
+- [Design doc template](https://howdbswork.com/designs/template/): A copyable outline for a database design doc: workload, cost of a lost write, placement, model, durability, growth, failures, alternatives and cost.
+- [Submit a design for review](https://howdbswork.com/designs/review/): Send a database design for review, in public as a GitHub issue or in private, and the questions every review asks.
 
-## Run it
+## Operate
 
 - [Where to run the database](https://howdbswork.com/designs/hosting/): On-prem, self-managed on VMs or EC2, managed cloud, serverless, vendor services or Kubernetes: who does what, the full cost, and where to run each kind of application.
 - [On-prem vs cloud, by engine](https://howdbswork.com/cloud/): On-prem vs cloud for PostgreSQL, MySQL and MongoDB: what RDS, Aurora, Cloud SQL and Atlas take over, what the DBA still owns, and the tradeoffs.
 - [Capacity calculator](https://howdbswork.com/designs/capacity/): Estimate data size, working set, memory, disk and log volume for a table, with every assumption stated.
+- [Why the bill is huge](https://howdbswork.com/decisions/cost-model/): Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it.
 - [Migration playbooks](https://howdbswork.com/designs/migrations/): Four migration playbooks: add change data capture, split a database, move from MySQL to PostgreSQL, and add a cache, each with checks and a way back.
+- [On call tonight](https://howdbswork.com/oncall/): Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call.
+- [Real failures](https://howdbswork.com/stories/): Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.
 - [Cheat sheet](https://howdbswork.com/cheat-sheet/): Each engine in 8 rules: PostgreSQL, MySQL/InnoDB and MongoDB/WiredTiger: one rule, one plain line, one diagram, with deep-dive links.
 - [Reference: plans, logs, checklist](https://howdbswork.com/reference/): Quick lookup: side-by-side engine comparison, annotated EXPLAIN output, the log-file pattern and failure modes, and the DBA checklist.
-- [Real failures](https://howdbswork.com/stories/): Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.
-- [On call tonight](https://howdbswork.com/oncall/): Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call.
 
 ## About
 
 - [About](https://howdbswork.com/about/): Who wrote this site and why: a production database engineer on PostgreSQL, MySQL, MongoDB and Aurora, and how to use the site from zero to staff level.
+- [What's new](https://howdbswork.com/whats-new/): Every change to the site, newest first: new pages, new experiments and new tools, with the date.
 - [Corrections](https://howdbswork.com/corrections/): Every correction that changed what a page on this site teaches, with the date, what it said and what it says now.
 - [Reading list](https://howdbswork.com/references/): Books, tools and posts this site leans on, with one line each on what each is best for and which pages it backs.
 - [Work with me](https://howdbswork.com/work-with-me/): A database health check for PostgreSQL and MySQL, and a review of the database side of AI agent systems: durability, performance, cost, safe access and memory, written up and ranked by risk.

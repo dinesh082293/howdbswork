@@ -39,7 +39,7 @@
   "mysql/index.html": "2026-11-19",
   "notebooks/index.html": "2026-11-19",
   "oncall/index.html": "2026-11-18",
-  "paths/index.html": "2026-11-18",
+  "paths/index.html": "2026-11-19",
   "postgresql/index.html": "2026-11-19",
   "queries/index.html": "2026-11-19",
   "reference/index.html": "2026-11-18",
@@ -49,5 +49,6 @@
   "start-here/index.html": "2026-11-18",
   "stories/index.html": "2026-11-18",
   "tutorials/index.html": "2026-11-18",
+  "whats-new/index.html": "2026-11-19",
   "work-with-me/index.html": "2026-11-19"
 }

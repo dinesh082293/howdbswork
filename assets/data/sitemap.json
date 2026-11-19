@@ -4,7 +4,8 @@
   {
    "id": "learn",
    "name": "Learn",
-   "blurb": "Start from zero: what happens when you write a row, the words you need, and a path to staff level.",
+   "question": "How do databases actually work?",
+   "blurb": "From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then side by side, and the query and concurrency traps.",
    "pages": [
     [
      "start-here/index.html",
@@ -14,21 +15,6 @@
      "concepts/index.html",
      "Ten concepts"
     ],
-    [
-     "staff-path/index.html",
-     "Staff path, zero to architect"
-    ],
-    [
-     "paths/index.html",
-     "Reading paths by goal"
-    ]
-   ]
-  },
-  {
-   "id": "engines",
-   "name": "Engines",
-   "blurb": "PostgreSQL, MySQL and MongoDB from the files on disk up, then side by side, then the wider landscape.",
-   "pages": [
     [
      "postgresql/index.html",
      "PostgreSQL"
@@ -48,13 +34,30 @@
     [
      "families/index.html",
      "Database families"
+    ],
+    [
+     "queries/index.html",
+     "Queries that look fine and are not"
+    ],
+    [
+     "isolation/index.html",
+     "Lost updates and write skew"
+    ],
+    [
+     "staff-path/index.html",
+     "Staff path, zero to architect"
+    ],
+    [
+     "paths/index.html",
+     "Reading paths by goal"
     ]
    ]
   },
   {
    "id": "practice",
    "name": "Practice",
-   "blurb": "See it happen: simulations, a real PostgreSQL in your browser, and experiments run on real servers.",
+   "question": "Can I see it happen?",
+   "blurb": "Simulations, a real PostgreSQL in your browser, experiments run on real servers, and a coach for your own queries.",
    "pages": [
     [
      "labs/index.html",
@@ -77,7 +80,8 @@
   {
    "id": "design",
    "name": "Design",
-   "blurb": "What kind of application data goes in which database, and why, as design docs.",
+   "question": "Which database does my application need?",
+   "blurb": "What kind of application data goes in which database, and why, as design docs, plus the anti-patterns and the decisions behind them.",
    "pages": [
     [
      "designs/index.html",
@@ -140,29 +144,6 @@
      "Agent memory and state"
     ],
     [
-     "designs/template/index.html",
-     "Design doc template"
-    ],
-    [
-     "designs/review/index.html",
-     "Submit a design for review"
-    ]
-   ]
-  },
-  {
-   "id": "correct",
-   "name": "Get it right",
-   "blurb": "The decisions and habits that decide whether the design holds up: queries, concurrency, durability and cost.",
-   "pages": [
-    [
-     "queries/index.html",
-     "Queries that look fine and are not"
-    ],
-    [
-     "isolation/index.html",
-     "Lost updates and write skew"
-    ],
-    [
      "designs/anti-patterns/index.html",
      "Anti-patterns"
     ],
@@ -175,15 +156,20 @@
      "What a commit waits for"
     ],
     [
-     "decisions/cost-model/index.html",
-     "Why the bill is huge"
+     "designs/template/index.html",
+     "Design doc template"
+    ],
+    [
+     "designs/review/index.html",
+     "Submit a design for review"
     ]
    ]
   },
   {
-   "id": "run",
-   "name": "Run it",
-   "blurb": "Where it runs, how big it must be, how to change it, and what to do when it breaks.",
+   "id": "operate",
+   "name": "Operate",
+   "question": "How do I run it in production?",
+   "blurb": "Where it runs and what it costs, how big it must be, how to change it safely, and what to do when it breaks.",
    "pages": [
     [
      "designs/hosting/index.html",
@@ -198,8 +184,20 @@
      "Capacity calculator"
     ],
     [
+     "decisions/cost-model/index.html",
+     "Why the bill is huge"
+    ],
+    [
      "designs/migrations/index.html",
      "Migration playbooks"
+    ],
+    [
+     "oncall/index.html",
+     "On call tonight"
+    ],
+    [
+     "stories/index.html",
+     "Real failures"
     ],
     [
      "cheat-sheet/index.html",
@@ -208,25 +206,22 @@
     [
      "reference/index.html",
      "Reference: plans, logs, checklist"
-    ],
-    [
-     "stories/index.html",
-     "Real failures"
-    ],
-    [
-     "oncall/index.html",
-     "On call tonight"
     ]
    ]
   },
   {
    "id": "about",
    "name": "About",
-   "blurb": "Who writes this, what was corrected, what to read next, and how to reach me.",
+   "question": "Who writes this?",
+   "blurb": "Who writes this, what changed, what was corrected, what to read next, and how to reach me.",
    "pages": [
     [
      "about/index.html",
      "About"
+    ],
+    [
+     "whats-new/index.html",
+     "What's new"
     ],
     [
      "corrections/index.html",

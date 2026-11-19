@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build feed.xml (RSS 2.0) from the "What's new" list on the home page.
+"""Build feed.xml (RSS 2.0) from the list on the What's new page (whats-new/).
 
 Each <li> in the #whats-new section becomes one item. The date comes from
 the bold "Mon DD, YYYY:" prefix. Run from the site root after editing the
@@ -15,7 +15,7 @@ SITE = "https://howdbswork.com/"
 
 
 def main():
-    s = (ROOT / "index.html").read_text()
+    s = (ROOT / "whats-new/index.html").read_text()
     sec = s.split('id="whats-new"', 1)[1].split("</section>", 1)[0]
     items = []
     for n, li in enumerate(re.findall(r"<li>(.*?)</li>", sec, re.S)):
@@ -28,7 +28,7 @@ def main():
         items.append(
             "  <item>\n"
             f"    <title>{html.escape(title[:1].upper() + title[1:])}</title>\n"
-            f"    <link>{SITE}#whats-new</link>\n"
+            f"    <link>{SITE}whats-new/</link>\n"
             f"    <guid isPermaLink=\"false\">howdbswork-{hashlib.sha1(text.encode()).hexdigest()[:12]}</guid>\n"
             f"    <pubDate>{format_datetime(when.astimezone())}</pubDate>\n"
             f"    <description>{html.escape(text)}</description>\n"
