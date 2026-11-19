@@ -1444,10 +1444,13 @@
    "url": "https://howdbswork.com/paths/",
    "description": "Three reading paths: prepare for a database interview, handle an incident on call, or choose a database. Each is an ordered list of pages.",
    "headings": [
-    "I have an interview",
+    "I have a database interview",
+    "I have a system design interview",
     "I am on call and something is on fire",
     "I am choosing a database",
-    "I have an interview",
+    "I have a database interview",
+    "I have a system design interview",
+    "Practise: eight prompts, ten minutes each",
     "I am on call and something is on fire",
     "I am choosing a database"
    ]
@@ -1952,6 +1955,7 @@
    "url": "https://howdbswork.com/cloud/",
    "description": "On-prem vs cloud for PostgreSQL, MySQL and MongoDB: what RDS, Aurora, Cloud SQL and Atlas take over, what the DBA still owns, and the tradeoffs.",
    "headings": [
+    "If you read nothing else on this page",
     "On-prem vs cloud: the physics stays, the 3 AM work moves",
     "PostgreSQL RDS for PostgreSQL · Aurora PostgreSQL · Cloud SQL · Azure Database",
     "MySQL · InnoDB RDS for MySQL · Aurora MySQL · Cloud SQL for MySQL",
@@ -2069,6 +2073,8 @@
    "url": "https://howdbswork.com/stories/",
    "description": "Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.",
    "headings": [
+    "What sixteen failures have in common",
+    "All sixteen at a glance",
     "PostgreSQL: the layout is the cost",
     "Uber: one update became four writes, and the WAL crossed an ocean",
     "Notion: VACUUM stalled, and the database nearly stopped writing",

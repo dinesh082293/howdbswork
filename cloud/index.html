@@ -37,6 +37,18 @@
   <p class="learn"><b>You will learn:</b> See what the cloud takes off your plate, and what stays yours at 3 a.m.</p>
 </div></header>
 <aside class="myth"><span class="mk">Common myth</span><p class="m">A multi-zone standby is a backup.</p><p class="t">A standby copies every change as it happens, including the mistaken DELETE and the dropped table. It protects against a failed server or zone. Only backups and point-in-time recovery bring back data that was destroyed on purpose or by mistake.</p></aside>
+<section id="five-min" class="five"><div class="wrap">
+  <div class="kicker">The 5-minute version</div>
+  <h2>If you read nothing else on this page</h2>
+  <ol class="fivelist">
+    <li><b>The cloud changes who does the work, not how the database works.</b> A commit on Aurora still waits for the log; autovacuum still falls behind on RDS; an Atlas oplog window is still size divided by write rate.</li>
+    <li><b>What the provider takes over:</b> provisioning, patching, hardware failure, backups with point-in-time recovery (up to 35 days on RDS), and failover (typically one to two minutes on RDS Multi-AZ).</li>
+    <li><b>What stays yours:</b> schema, indexes, query plans, cleanup health, shard keys and the capacity arithmetic. Every incident in the symptom list can still happen.</li>
+    <li><b>Four ways to run it:</b> on your own hardware, on cloud VMs (EC2), on Kubernetes with an operator, or fully managed. Each moves a different set of jobs off your team.</li>
+    <li><b>The rule:</b> managed wins when your incidents are generic operations work. It does not help with the work that is specific to your data.</li>
+  </ol>
+  <p class="sub" style="margin-top:8px">Below, pick one engine to see only its part of the page.</p>
+</div></section>
 <section id="cloud" style="padding-top:6px"><div class="wrap">
   <div class="kicker">The cloud side · same engines, different owner</div>
   <h2>On-prem vs cloud: the physics stays, the 3 AM work moves</h2>
@@ -48,7 +60,9 @@
     <div class="hn"><b>35 days</b><span>Maximum automated-backup retention on RDS. Point-in-time recovery to any second inside that window, with no archive scripting. The on-prem equivalent is a base backup plus a WAL/binlog archive you built, monitored, and restore-tested yourself.</span></div>
   </div>
 
-  <h3 style="margin:10px 0 4px;font-size:20px"><span class="tag pg">PostgreSQL</span> RDS for PostgreSQL · Aurora PostgreSQL · Cloud SQL · Azure Database</h3>
+  <div class="ev-bar"><span class="kicker">Show</span><button type="button" data-eng="pg">PostgreSQL</button><button type="button" data-eng="my">MySQL</button><button type="button" data-eng="mo">MongoDB</button><button type="button" data-eng="all">All three</button></div>
+<div class="ev-block" data-eng="pg">
+<h3 style="margin:10px 0 4px;font-size:20px"><span class="tag pg">PostgreSQL</span> RDS for PostgreSQL · Aurora PostgreSQL · Cloud SQL · Azure Database</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> provisioning, patching, backup plumbing, and failover mechanics for the most correctness-sensitive engine. That work is identical at every company and expert at none of them by default. <b style="color:var(--ink)">Why it is easy to maintain:</b> automated backups with PITR, one-click Multi-AZ, parameter groups instead of config files, and minor-version upgrades scheduled by the provider.</p>
   <div class="owns">
     <div class="vsbox actual"><h4>The cloud takes over</h4><ul>
@@ -167,20 +181,9 @@ spec:
     <tr><td>Cost shape</td><td>VM plus EBS bill</td><td>Cluster plus storage plus operator overhead</td><td>Per-hour instance plus per-GB plus per-I/O rent</td></tr>
   </tbody></table>
   <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0"><b style="color:var(--ink)">Sources:</b> <a href="https://cloudnative-pg.io/docs/current">CloudNativePG docs</a> · <a href="https://github.com/zalando/postgres-operator">Zalando Postgres Operator</a> · <a href="https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html">Aurora overview, AWS docs</a> · <a href="https://aws.amazon.com/rds/features/multi-az/">RDS Multi-AZ</a> · <a href="https://cloud.google.com/sql/docs/features">Cloud SQL features</a></p>
-  <h4 style="margin:22px 0 8px;font-size:16px">EC2, once, for all three engines</h4>
-  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px">The EC2 column is identical for all three engines, so it lives here once instead of three times. The only row that differs is failover, where each engine names its own tooling.</p>
-  <table class="breaks"><thead><tr><th>Concern</th><th>EC2, all three engines</th></tr></thead><tbody>
-    <tr><td>Problem it solves</td><td>Same control, no hardware</td></tr>
-    <tr><td>Who patches</td><td>You, OS and engine</td></tr>
-    <tr><td>Who backs up</td><td>You, same as on-prem</td></tr>
-    <tr><td>Who fails over</td><td>You, by runbook: Patroni for PostgreSQL, your orchestrator for MySQL, a runbook for MongoDB</td></tr>
-    <tr><td>What you still own</td><td>Every operational job, plus the VM and EBS bill</td></tr>
-    <tr><td>Cost shape</td><td>VM plus EBS bill</td></tr>
-  </tbody></table>
-
-
-
-  <h3 style="margin:28px 0 4px;font-size:20px"><span class="tag my">MySQL · InnoDB</span> RDS for MySQL · Aurora MySQL · Cloud SQL for MySQL</h3>
+  </div>
+<div class="ev-block" data-eng="my">
+<h3 style="margin:28px 0 4px;font-size:20px"><span class="tag my">MySQL · InnoDB</span> RDS for MySQL · Aurora MySQL · Cloud SQL for MySQL</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> the operational machinery around InnoDB. Backups, replica provisioning, failover. That is for an engine whose typical deployment is many similar web workloads. <b style="color:var(--ink)">Why it is easy to maintain:</b> read replicas in minutes, automated snapshots plus binlog-based PITR, and on Aurora a shared storage layer that makes replica lag mostly a non-event because replicas read the same storage the writer writes.</p>
   <div class="owns">
     <div class="vsbox actual"><h4>The cloud takes over</h4><ul>
@@ -289,7 +292,9 @@ spec:
   <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0"><b style="color:var(--ink)">Sources:</b> <a href="https://docs.percona.com/percona-operator-for-mysql/latest/architecture.html">Percona Operator for MySQL architecture</a> · <a href="https://dev.mysql.com/doc/mysql-operator/en/mysql-operator-innodbcluster-simple-kubectl.html">Oracle MySQL Operator manual</a> · <a href="https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/CHAP_AuroraOverview.html">Aurora overview, AWS docs</a> · <a href="https://aws.amazon.com/rds/features/multi-az/">RDS Multi-AZ</a> · <a href="https://cloud.google.com/sql/docs/features">Cloud SQL features</a></p>
 
 
-  <h3 style="margin:28px 0 4px;font-size:20px"><span class="tag mo">MongoDB · WiredTiger</span> MongoDB Atlas (and compatible managed offerings)</h3>
+  </div>
+<div class="ev-block" data-eng="mo">
+<h3 style="margin:28px 0 4px;font-size:20px"><span class="tag mo">MongoDB · WiredTiger</span> MongoDB Atlas (and compatible managed offerings)</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> replica-set and sharded-cluster operations. Elections, member replacement, balancer supervision, backup consistency across shards. Those are the easiest parts of MongoDB to run badly by hand. <b style="color:var(--ink)">Why it is easy to maintain:</b> a replica set or a sharded cluster is a configuration choice in a console, snapshots and continuous backup are built in, and members are replaced by the platform instead of by a runbook.</p>
   <div class="owns">
     <div class="vsbox actual"><h4>The cloud takes over</h4><ul>
@@ -398,6 +403,20 @@ spec:
   <p style="font-size:13.5px;color:var(--muted);margin:8px 0 0"><b style="color:var(--ink)">Sources:</b> <a href="https://www.mongodb.com/docs/kubernetes/v1.9/reference/k8s-operator-specification/">MongoDB Kubernetes Operator reference</a> · <a href="https://www.mongodb.com/docs/atlas/architecture/current/backups/">Atlas backup guidance</a></p>
 
 
+  </div>
+<h4 style="margin:22px 0 8px;font-size:16px">EC2, once, for all three engines</h4>
+  <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px">The EC2 column is identical for all three engines, so it lives here once instead of three times. The only row that differs is failover, where each engine names its own tooling.</p>
+  <table class="breaks"><thead><tr><th>Concern</th><th>EC2, all three engines</th></tr></thead><tbody>
+    <tr><td>Problem it solves</td><td>Same control, no hardware</td></tr>
+    <tr><td>Who patches</td><td>You, OS and engine</td></tr>
+    <tr><td>Who backs up</td><td>You, same as on-prem</td></tr>
+    <tr><td>Who fails over</td><td>You, by runbook: Patroni for PostgreSQL, your orchestrator for MySQL, a runbook for MongoDB</td></tr>
+    <tr><td>What you still own</td><td>Every operational job, plus the VM and EBS bill</td></tr>
+    <tr><td>Cost shape</td><td>VM plus EBS bill</td></tr>
+  </tbody></table>
+
+
+
   <p style="font-size:14.5px;color:var(--muted);margin:16px 0 0;max-width:840px"><b style="color:var(--ink)">The decision rule that survives every vendor:</b> cloud removes operational work whose difficulty is the same everywhere. Patching, failover mechanics, backup plumbing. It removes none of the work whose difficulty is specific to your data. Schema, indexes, shard keys, cleanup health, the window math. If your incidents are mostly the first kind, managed wins. If they are mostly the second kind, and the eight cards in "When it hurts" say they usually are, the cloud changes who holds the pager, not whether it rings.</p>
   <p class="sub" style="margin-top:20px"><b style="color:var(--ink)">Before you leave, check this:</b> run <span class="mono">SELECT replay_lag FROM pg_stat_replication;</span> If lag is over 5 seconds, your replicas are not where you think they are.</p>
 </div></section>
@@ -413,5 +432,6 @@ spec:
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/engineview.js"></script>
 </body>
 </html>

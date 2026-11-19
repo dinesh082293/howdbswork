@@ -34,16 +34,35 @@
   <h1>Real stories</h1>
   <p class="qline">How did real databases fail, and what fixed them?</p>
   <p class="sub">Want to work one yourself? <a href="../oncall/index.html">On call tonight</a> walks you through three incidents, one decision at a time.</p>
-  <p class="learn"><b>You will learn:</b> Sixteen incidents, with the numbers, the fix and the lesson from each.</p>
+  <p class="learn"><b>You will learn:</b> Sixteen incidents, with the numbers, the fix and the lesson from each. Start with the 5-minute version, or filter by engine and kind of failure.</p>
   <p class="lede">Every page on this site explains a mechanism. This page shows what happens when the mechanism meets real traffic. Sixteen stories, all from companies that wrote up what broke. Each one has the numbers, the fix, and the lesson I took from it. The source is linked at the end of each story.</p>
   <p class="lede">None of these are my incidents. I read them the way I read a postmortem: what broke first, what the numbers were, and what decision would have prevented it.</p>
 </div></header>
-<section id="postgresql" style="padding-top:6px"><div class="wrap">
+<section id="five-min" class="five"><div class="wrap">
+  <div class="kicker">The 5-minute version</div>
+  <h2>What sixteen failures have in common</h2>
+  <ol class="fivelist">
+    <li><b>The physical layout decides the cost at scale.</b> How indexes point at rows, how replication ships changes, how big one partition gets. Uber, Adyen and Figma all paid for a layout chosen years earlier.</li>
+    <li><b>The shard key comes from the access pattern.</b> Slack's hot spot came from the key, and Instacart avoided one by splitting by domain first.</li>
+    <li><b>Never trust a copy you have not checked.</b> Shopify's verifiers, Notion's size check after a logical copy, GitLab's five backups that did not restore.</li>
+    <li><b>Read the plan before buying hardware.</b> Notion had the right index; the planner ignored it until its shape changed.</li>
+    <li><b>Automation needs a guard and a way back.</b> GitHub's failover tool needed a block after one failover, and its MySQL 8 upgrade kept the rollback alive until the end.</li>
+  </ol>
+  <h3 style="margin:22px 0 8px;font-size:17px">All sixteen at a glance</h3>
+  <div style="overflow-x:auto"><table class="famtable st-table"><thead><tr><th>Story</th><th>The lesson in one line</th></tr></thead><tbody><tr><td><a href="#uber">Uber: one update became four writes</a> <span class="tag pg">PostgreSQL</span></td><td>Index layout and replication format are the whole cost at write-heavy scale.</td></tr><tr><td><a href="#notion-sharding">Notion: VACUUM stalled</a> <span class="tag pg">PostgreSQL</span></td><td>Shard before cleanup falls behind for good; plan the shard count so hosts can grow evenly.</td></tr><tr><td><a href="#notion-reshard">Notion: the re-shard</a> <span class="tag pg">PostgreSQL</span></td><td>Grow a sharded fleet while it still has headroom, not after.</td></tr><tr><td><a href="#notion-gin">Notion again: the index existed</a> <span class="tag pg">PostgreSQL</span></td><td>Read the plan before you buy hardware: the fix was the shape of the index.</td></tr><tr><td><a href="#adyen">Adyen: one partition hit 30 TB</a> <span class="tag pg">PostgreSQL</span></td><td>Past a terabyte per partition, every rebuild and maintenance job takes days.</td></tr><tr><td><a href="#notion-dms">Notion again: the DMS copy came back three times the size</a> <span class="tag pg">PostgreSQL</span></td><td>Check the size and contents of a logical copy before you trust it.</td></tr><tr><td><a href="#figma">Figma: they stayed on Postgres and built the sharding layer themselves</a> <span class="tag pg">PostgreSQL</span></td><td>Staying on PostgreSQL at many terabytes meant building their own sharding layer.</td></tr><tr><td><a href="#notion-hudi">Notion: sharding fixed the live database</a> <span class="tag pg">PostgreSQL</span></td><td>Sharding the live database moved the pressure onto the warehouse sync.</td></tr><tr><td><a href="#gitlab">GitLab: five backups</a> <span class="tag pg">PostgreSQL</span></td><td>A backup you have never restored is not a backup.</td></tr><tr><td><a href="#instacart">Instacart: they split the database by domain</a> <span class="tag pg">PostgreSQL</span></td><td>Splitting by domain can buy years of room without choosing a shard key.</td></tr><tr><td><a href="#dropbox-panda">Dropbox: one shard outgrew one machine</a> <span class="tag my">MySQL</span></td><td>When one shard can outgrow one machine, the store itself must be able to split it.</td></tr><tr><td><a href="#github-orchestrator">GitHub: the master died</a> <span class="tag my">MySQL</span></td><td>Automatic failover needs a guard: one failover, then a block, then a human.</td></tr><tr><td><a href="#github-mysql-8">GitHub: upgrading 1,200 MySQL hosts without dropping a query</a> <span class="tag my">MySQL</span></td><td>A fleet upgrade is a replication project, with the rollback kept alive.</td></tr><tr><td><a href="#slack-vitess">Slack: the shard key was the hot spot</a> <span class="tag my">MySQL</span></td><td>Pick the shard key from the access pattern.</td></tr><tr><td><a href="#shopify-vitess">Shopify: the verifiers were the project</a> <span class="tag my">MySQL</span></td><td>Build the verifier first, move the data second.</td></tr><tr><td><a href="#fortnite">Fortnite: a release changed the call pattern</a> <span class="tag mo">MongoDB</span></td><td>A release changed the call pattern, and the cache and connections ran out under load.</td></tr></tbody></table></div>
+  <p class="sub" style="margin-top:10px">Each story below opens with what happened. The rest of it is folded; open it for the numbers, the fix and the source.</p>
+</div></section>
+<section id="filter" style="padding:0"><div class="wrap">
+<div class="ev-bar" data-default="all"><span class="kicker">Engine</span><button type="button" data-eng="all">All</button><button type="button" data-eng="pg">PostgreSQL</button><button type="button" data-eng="my">MySQL</button><button type="button" data-eng="mo">MongoDB</button></div>
+<div class="st-kinds" role="group" aria-label="Kind of failure"><button type="button" data-kind="" aria-pressed="true">Any kind</button><button type="button" data-kind="scale">Sharding and scale</button><button type="button" data-kind="maint">Plans and maintenance</button><button type="button" data-kind="failover">Failover and upgrades</button><button type="button" data-kind="backup">Backups</button><button type="button" data-kind="move">Moving data</button><button type="button" data-kind="load">Load</button></div>
+<p class="st-empty" id="stEmpty" hidden>No story matches both filters. Pick another engine or kind.</p>
+</div></section>
+<section id="postgresql" class="ev-block" data-eng="pg" style="padding-top:6px"><div class="wrap">
   <div class="kicker">PostgreSQL · ten stories</div>
   <h2>PostgreSQL: the layout is the cost</h2>
   <p class="sub">Most of these are the same failure wearing different clothes: a physical layout decision, made early, priced later at scale. Adyen and Figma show it at the far end, where the partition and the shard key decide everything before the first query runs. One is a planner that had the right index and refused to use it. GitLab and Instacart are the exceptions: a backup nobody tested, and a split by domain instead of by shard key.</p>
 
-  <div class="incident" id="uber">
+  <div class="incident" id="uber" data-kind="scale">
     <span class="tag pg">PostgreSQL</span>
     <h3>Uber: one update became four writes, and the WAL crossed an ocean</h3>
     <p class="inside">Uber started on Postgres. One monolithic backend, one database holding the trip data. As the company grew, the database became the constraint. The post names five limitations: inefficient writes, inefficient replication, table corruption, poor replica MVCC, and hard upgrades. The first two are the expensive ones, and they share one root cause.</p>
@@ -71,7 +90,7 @@
     <p class="backlink">Source: <a href="https://www.uber.com/in/en/blog/postgres-to-mysql-migration/">Why Uber Engineering Switched from Postgres to MySQL</a>, Uber Engineering Blog, July 26, 2016.</p>
   </div>
 
-  <div class="incident" id="notion-sharding" style="margin-top:14px">
+  <div class="incident" id="notion-sharding" data-kind="scale maint" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Notion: VACUUM stalled, and the database nearly stopped writing</h3>
     <p class="inside">Notion ran its product on one Postgres monolith. Every paragraph, heading, image, and to-do is a block, and every block is a row in one giant table. By mid-2020, usage had outgrown the single database.</p>
@@ -96,7 +115,7 @@
     <p class="backlink">Source: <a href="https://www.notion.com/de/blog/sharding-postgres-at-notion">Herding elephants: Lessons learned from sharding Postgres at Notion</a>, Notion Blog, October 6, 2021.</p>
   </div>
 
-  <div class="incident" id="notion-reshard" style="margin-top:14px">
+  <div class="incident" id="notion-reshard" data-kind="scale" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Notion: the re-shard, 32 databases to 96, with zero downtime</h3>
     <p class="inside">Part 2 of the Notion sharding story above. The 5 minute cutover and the 3 day backfill belong to the first sharding, not this one.</p>
@@ -138,7 +157,7 @@
     <p class="backlink">Source: <a href="https://notion.com/blog/the-great-re-shard">The Great Re-shard: adding Postgres capacity (again) with zero downtime</a>, Notion Blog, July 17, 2023.</p>
   </div>
 
-  <div class="incident" id="notion-gin" style="margin-top:14px">
+  <div class="incident" id="notion-gin" data-kind="maint" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Notion again: the index existed, and the planner ignored it</h3>
     <p class="inside">Same company, a different problem. Notion ran one large Postgres database on RDS from 2015 to 2020. A new feature was already 20 percent of the application's query load before it shipped to everyone. One of its queries filtered JSON on space_id and permission.</p>
@@ -159,7 +178,7 @@
     <p class="inside">Sourcing note: this one comes from a pganalyze case study, not from Notion's own blog. It quotes named Notion engineers. I keep it because the lesson is checkable. The index existed, the planner ignored it, and the fix was the index shape, not a bigger instance. When a query is slow, read the plan before you buy hardware.</p>
     <p class="backlink">Source: <a href="https://pganalyze.com/customers/how-notion-runs-postgres-at-scale-on-amazon-rds">How Notion Runs PostgreSQL at Scale on Amazon RDS with pganalyze</a>, pganalyze, February 27, 2025.</p>
   </div>
-  <div class="incident" id="adyen" style="margin-top:14px">
+  <div class="incident" id="adyen" data-kind="scale maint" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Adyen: one partition hit 30 TB, and the index rebuild took days</h3>
     <div class="hooknum">
@@ -199,7 +218,7 @@
     <p class="backlink">Source: <a href="https://www.adyen.com/knowledge-hub/updating-a-50-terabyte-postgresql-database">Updating a 50 terabyte PostgreSQL database</a>, Adyen, March 14, 2018. Companion: <a href="https://youtu.be/L6JWI296fyk">To 100TB, and beyond!</a>, Postgres.FM 100, June 7, 2024 (<a href="https://postgres.fm/episodes/to-100tb-and-beyond/transcript">full transcript</a>).</p>
   </div>
 
-  <div class="incident" id="notion-dms" style="margin-top:14px">
+  <div class="incident" id="notion-dms" data-kind="move" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Notion again: the DMS copy came back three times the size</h3>
     <h4 class="subhead">The problem</h4>
@@ -229,7 +248,7 @@
     <p class="backlink">Source: <a href="https://youtu.be/L6JWI296fyk">To 100TB, and beyond!</a>, Postgres.FM 100, June 7, 2024 (<a href="https://postgres.fm/episodes/to-100tb-and-beyond/transcript">full transcript</a>).</p>
   </div>
 
-  <div class="incident" id="figma" style="margin-top:14px">
+  <div class="incident" id="figma" data-kind="scale" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Figma: they stayed on Postgres and built the sharding layer themselves</h3>
     <h4 class="subhead">The problem</h4>
@@ -268,7 +287,7 @@
     <p class="backlink">Source: <a href="https://www.figma.com/blog/how-figmas-databases-team-lived-to-tell-the-scale/">How Figma's Databases Team Lived to Tell the Scale</a>, Figma Blog, Sammy Steele, March 14, 2024. Companion: <a href="https://youtu.be/P3mV3atVL2Q">How Figma built DBProxy for sharding Postgres</a>, pganalyze, 5mins of Postgres E106 (<a href="https://pganalyze.com/blog/5mins-postgres-figma-dbproxy-sharding-postgres">transcript</a>). Companion: <a href="https://youtu.be/8TH3iZgG1PE">5 Lessons from 5 Years of Building Databases at Scale</a>, Sammy Steele, Systems Distributed '24.</p>
   </div>
 
-  <div class="incident" id="notion-hudi" style="margin-top:14px">
+  <div class="incident" id="notion-hudi" data-kind="move" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Notion: sharding fixed the live database, and the warehouse broke next</h3>
     <div class="hooknum">
@@ -310,7 +329,7 @@
     <p class="backlink">Source: <a href="https://www.notion.com/blog/building-and-scaling-notions-data-lake">Building and scaling Notion's data lake</a>, Notion Blog, July 1, 2024. Companion: <a href="https://www.onehouse.ai/blog/notions-journey-through-different-stages-of-data-scale">Notion's Journey Through Different Stages of Data Scale</a>, Onehouse. Talk: <a href="https://youtu.be/dZbXC4mlNck">A Hudi Live Event: Notion's journey through different stages of data scale</a>, Thomas Chow and Nathan Louie, Notion Data Platform, December 13, 2023.</p>
   </div>
 
-  <div class="incident" id="gitlab" style="margin-top:14px">
+  <div class="incident" id="gitlab" data-kind="backup" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>GitLab: five backups, none of them worked</h3>
     <div class="hooknum">
@@ -347,7 +366,7 @@
     <p class="backlink">Source: <a href="https://about.gitlab.com/blog/2017/02/10/postmortem-of-database-outage-of-january-31/">Postmortem of database outage of January 31</a>, GitLab Blog, February 10, 2017.</p>
   </div>
 
-  <div class="incident" id="instacart" style="margin-top:14px">
+  <div class="incident" id="instacart" data-kind="scale" style="margin-top:14px">
     <span class="tag pg">PostgreSQL</span>
     <h3>Instacart: they split the database by domain, not by shard key</h3>
     <div class="hooknum">
@@ -385,12 +404,12 @@
     <p class="backlink">Source: <a href="https://tech.instacart.com/scaling-at-instacart-distributing-data-across-multiple-postgres-databases-with-rails-13b1e4eba202">Scaling at Instacart: Distributing Data Across Multiple Postgres Databases with Rails</a>, Instacart Engineering, 2018.</p>
   </div>
 </div></section>
-<section id="mysql" style="padding-top:6px"><div class="wrap">
+<section id="mysql" class="ev-block" data-eng="my" style="padding-top:6px"><div class="wrap">
   <div class="kicker">MySQL · five stories</div>
   <h2>MySQL: failover, upgrades, and the shard key</h2>
   <p class="sub">GitHub shows the two halves of operating MySQL at scale: the failover you automate, and the upgrade you survive. Slack and Shopify show the same lesson from the other side: the shard key decides everything, and the migration only works if you can compare both copies before you trust one. Dropbox shows what happens when one tenant outgrows a shard entirely.</p>
 
-  <div class="incident" id="dropbox-panda">
+  <div class="incident" id="dropbox-panda" data-kind="scale">
     <span class="tag my">MySQL</span>
     <h3>Dropbox: one shard outgrew one machine, so they built a new store</h3>
     <h4 class="subhead">The problem</h4>
@@ -425,7 +444,7 @@
     <p class="backlink">Source: <a href="https://dropbox.tech/infrastructure/panda-metadata-stack-petabyte-scale-transactional-key-value-store">Future-proofing our metadata stack with Panda, a scalable key-value store</a>, Dropbox Tech, November 3, 2022. Companion: <a href="https://youtu.be/8TH3iZgG1PE">5 Lessons from 5 Years of Building Databases at Scale</a>, Sammy Steele, Systems Distributed '24.</p>
   </div>
 
-  <div class="incident" id="github-orchestrator">
+  <div class="incident" id="github-orchestrator" data-kind="failover">
     <span class="tag my">MySQL</span>
     <h3>GitHub: the master died, and nobody woke up</h3>
     <p class="inside">GitHub stores its metadata in MySQL. Issues, pull requests, comments, organizations, notifications. One master takes the writes. Replicas serve the reads. A dead master used to mean a human waking up and running a failover by hand. That was too slow for the availability they wanted.</p>
@@ -448,7 +467,7 @@
     <p class="backlink">Source: <a href="https://github.blog/engineering/infrastructure/orchestrator-github/">Orchestrator at GitHub</a>, The GitHub Blog.</p>
   </div>
 
-  <div class="incident" id="github-mysql-8" style="margin-top:14px">
+  <div class="incident" id="github-mysql-8" data-kind="failover" style="margin-top:14px">
     <span class="tag my">MySQL</span>
     <h3>GitHub: upgrading 1,200 MySQL hosts without dropping a query</h3>
     <p class="inside">The fleet was 1,200-plus MySQL hosts, a mix of Azure VMs and bare metal. They held 300-plus TB of data and served 5.5 million queries per second across 50-plus clusters. MySQL 5.7 was near end of life, so they moved to 8.0. Planning, testing, and the upgrade took over a year.</p>
@@ -471,7 +490,7 @@
     <p class="backlink">Source: <a href="https://github.blog/engineering/infrastructure/upgrading-github-com-to-mysql-8-0/">Upgrading GitHub.com to MySQL 8.0</a>, The GitHub Blog, December 7, 2023.</p>
   </div>
 
-  <div class="incident" id="slack-vitess" style="margin-top:14px">
+  <div class="incident" id="slack-vitess" data-kind="scale" style="margin-top:14px">
     <span class="tag my">MySQL</span>
     <h3>Slack: the shard key was the hot spot</h3>
     <p class="inside">Slack started moving its MySQL datastores to Vitess in 2017. By December 2020, 99 percent of all MySQL traffic ran on Vitess. Peak load was 2.3 million queries per second: 2 million reads, 300 thousand writes. Median latency was 2 ms. p99 was 11 ms.</p>
@@ -504,7 +523,7 @@
     <p class="backlink">Source: <a href="https://slack.engineering/scaling-datastores-at-slack-with-vitess/">Scaling Datastores at Slack with Vitess</a>, Slack Engineering, December 1, 2020.</p>
   </div>
 
-  <div class="incident" id="shopify-vitess" style="margin-top:14px">
+  <div class="incident" id="shopify-vitess" data-kind="move" style="margin-top:14px">
     <span class="tag my">MySQL</span>
     <h3>Shopify: the verifiers were the project</h3>
     <p class="inside">The Shop app backend is Ruby on Rails on a single MySQL, their managed system called KateSQL. Growth was steep. Disk grew to many terabytes. Schema migrations took weeks. When the database got busy, they throttled background jobs.</p>
@@ -528,12 +547,12 @@
     <p class="backlink">Source: <a href="https://shopify.engineering/horizontally-scaling-the-rails-backend-of-shop-app-with-vitess">Horizontally scaling the Rails backend of Shop app with Vitess</a>, Shopify Engineering, January 17, 2024.</p>
   </div>
 </div></section>
-<section id="mongodb" style="padding-top:6px"><div class="wrap">
+<section id="mongodb" class="ev-block" data-eng="mo" style="padding-top:6px"><div class="wrap">
   <div class="kicker">MongoDB · one story</div>
   <h2>MongoDB: the cache is the database</h2>
   <p class="sub">One story so far, and it is the classic MongoDB failure: the working set outgrows RAM, the cache stalls, and the connection storm finishes the job. The fix is timeouts, throttling, and reads off the primary, not a bigger instance.</p>
 
-  <div class="incident" id="fortnite">
+  <div class="incident" id="fortnite" data-kind="load">
     <span class="tag mo">MongoDB</span>
     <h3>Fortnite: a release changed the call pattern, and the cache ran out</h3>
     <div class="hooknum">
@@ -579,12 +598,14 @@
 <footer><div class="wrap">
   <p><b style="color:var(--ink)">Real databases, simply.</b> How PostgreSQL, MySQL, MongoDB, Redis, Cassandra and vector databases work in real systems, and which database each kind of application data belongs in. Written by Dinesh, who runs production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
-  <p class="reviewed">Last updated Nov 18, 2026</p>
+  <p class="reviewed">Last updated Nov 19, 2026</p>
   <p class="footlinks"><a href="../sitemap/index.html">All pages</a> · <a href="../corrections/index.html">Corrections</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a> · <a href="../work-with-me/index.html">Work with me</a> · <a href="../assistant/index.html">Use it from your AI assistant</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/copy-buttons.js"></script>
 <script src="../assets/js/search.js"></script>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
+<script src="../assets/js/engineview.js"></script>
+<script src="../assets/js/stories.js"></script>
 </body>
 </html>
