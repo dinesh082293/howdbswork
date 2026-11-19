@@ -5,7 +5,7 @@
    "id": "learn",
    "name": "Learn",
    "question": "How do databases actually work?",
-   "blurb": "From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then side by side, and the query and concurrency traps.",
+   "blurb": "From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then Redis, Cassandra and vector search, side by side, and the query and concurrency traps.",
    "pages": [
     [
      "start-here/index.html",
@@ -26,6 +26,18 @@
     [
      "mongodb/index.html",
      "MongoDB · WiredTiger"
+    ],
+    [
+     "redis/index.html",
+     "Redis"
+    ],
+    [
+     "cassandra/index.html",
+     "Cassandra"
+    ],
+    [
+     "vector-databases/index.html",
+     "Vector databases"
     ],
     [
      "compare/index.html",

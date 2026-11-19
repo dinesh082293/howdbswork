@@ -1262,6 +1262,66 @@
    ]
   },
   {
+   "title": "Redis",
+   "section": "Learn",
+   "url": "https://howdbswork.com/redis/",
+   "description": "How Redis works: one thread, everything in memory, RDB snapshots and the AOF, asynchronous replication, and the big keys, hot keys and forks that break it. With measured numbers.",
+   "headings": [
+    "Redis: in one line",
+    "The architecture: one thread, memory, and a disk on the side",
+    "Memory, two kinds of file, and a buffer for replicas",
+    "Follow one write, and one power cut",
+    "Six settings decide what Redis is safe for",
+    "The failures I would plan for",
+    "Fast, small and rebuildable: that is where Redis belongs",
+    "Use it for",
+    "Not for",
+    "The commands I run first",
+    "Notebook 7, Redis 7.4.12, one client on the same machine",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Cassandra",
+   "section": "Learn",
+   "url": "https://howdbswork.com/cassandra/",
+   "description": "How Cassandra works: a ring of equal nodes, the partition key, commit log, memtables and SSTables, consistency levels, tombstones, repair and compaction. With measured numbers.",
+   "headings": [
+    "Cassandra: in one line",
+    "The architecture: a ring of equal nodes",
+    "A log, a memtable, and files that never change",
+    "Follow one write at QUORUM, and one node down",
+    "Choose these per keyspace and per query",
+    "The failures I would plan for",
+    "Endless writes, read by key",
+    "Use it for",
+    "Not for",
+    "The commands I run first",
+    "Notebook 7, Cassandra 5.0.9, a single node in CI",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Vector databases",
+   "section": "Learn",
+   "url": "https://howdbswork.com/vector-databases/",
+   "description": "How vector search works: embeddings, HNSW and IVF indexes, recall against speed, quantization, the filtered-search trap, and when pgvector is enough. With measured numbers.",
+   "headings": [
+    "Vector search: in one line",
+    "The architecture: a model, an index, and the data behind it",
+    "What takes the space, and where it goes",
+    "Follow one search, and one filter",
+    "pgvector's settings, with what they did in Notebook 8",
+    "The failures I would plan for",
+    "Start with the database you have",
+    "Use it for",
+    "Not for",
+    "The commands I run first",
+    "Notebook 8, PostgreSQL 18.7 with pgvector 0.8.7, 100,000 generated 384-dimension vectors",
+    "Check yourself"
+   ]
+  },
+  {
    "title": "Same task, three engines",
    "section": "Learn",
    "url": "https://howdbswork.com/compare/",
@@ -1284,6 +1344,7 @@
     "PostgreSQL",
     "MySQL · InnoDB",
     "MongoDB · WiredTiger",
+    "Redis, Cassandra and vector search, on the same questions",
     "Check yourself"
    ]
   },
