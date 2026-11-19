@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>Scale it on the store, social feed and chat design docs</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-fe0d368e8427</guid>
+    <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
+    <description>Scale it on the store, social feed and chat design docs: pick a stage of the design, from one database to sharded, then send ten times the traffic, empty the cache or fail the primary, and see what happens to latency, CPU and writes. The numbers are a model to show the shape; the measured ones are in the lab notebooks.</description>
+  </item>
+  <item>
     <title>The site is now a course</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-cdc0f568abe9</guid>
