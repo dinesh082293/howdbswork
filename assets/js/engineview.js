@@ -28,7 +28,7 @@
     var blk = t && t.closest && t.closest('.ev-block');
     return blk ? blk.getAttribute('data-eng') : null;
   }
-  var start = fromHash() || bars[0].getAttribute('data-default') || (window.HDW_ENGINE && HDW_ENGINE.get()) || 'all';
+  var start = fromHash() || bars[0].getAttribute('data-default') || (window.HDW_ENGINE && HDW_ENGINE.get()) || bars[0].getAttribute('data-fallback') || 'all';
   show(start);
   window.addEventListener('hashchange', function () { var e = fromHash(); if (e && document.body.getAttribute('data-ev') !== 'all') show(e); });
 })();

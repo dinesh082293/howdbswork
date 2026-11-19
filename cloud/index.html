@@ -60,7 +60,7 @@
     <div class="hn"><b>35 days</b><span>Maximum automated-backup retention on RDS. Point-in-time recovery to any second inside that window, with no archive scripting. The on-prem equivalent is a base backup plus a WAL/binlog archive you built, monitored, and restore-tested yourself.</span></div>
   </div>
 
-  <div class="ev-bar"><span class="kicker">Show</span><button type="button" data-eng="pg">PostgreSQL</button><button type="button" data-eng="my">MySQL</button><button type="button" data-eng="mo">MongoDB</button><button type="button" data-eng="all">All three</button></div>
+  <div class="ev-bar" data-fallback="pg"><span class="kicker">Show</span><button type="button" data-eng="pg">PostgreSQL</button><button type="button" data-eng="my">MySQL</button><button type="button" data-eng="mo">MongoDB</button><button type="button" data-eng="all">All three</button></div>
 <div class="ev-block" data-eng="pg">
 <h3 style="margin:10px 0 4px;font-size:20px"><span class="tag pg">PostgreSQL</span> RDS for PostgreSQL · Aurora PostgreSQL · Cloud SQL · Azure Database</h3>
   <p style="font-size:14.5px;color:var(--muted);margin:0 0 12px;max-width:840px"><b style="color:var(--ink)">The problem cloud solves:</b> provisioning, patching, backup plumbing, and failover mechanics for the most correctness-sensitive engine. That work is identical at every company and expert at none of them by default. <b style="color:var(--ink)">Why it is easy to maintain:</b> automated backups with PITR, one-click Multi-AZ, parameter groups instead of config files, and minor-version upgrades scheduled by the provider.</p>

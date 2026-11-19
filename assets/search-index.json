@@ -1984,5 +1984,17 @@
   "u": "paths/index.html#system-design",
   "s": "Reading paths",
   "k": "system design interview practice prompts timer design docs estimate scale"
+ },
+ {
+  "t": "Redis console in your browser",
+  "u": "redis/index.html#try",
+  "s": "Redis",
+  "k": "redis console simulator try commands zincrby leaderboard rate limit ttl scan keys"
+ },
+ {
+  "t": "Vector search lab: recall, filters, index memory",
+  "u": "vector-databases/index.html#try",
+  "s": "Vector databases",
+  "k": "vector lab ef_search recall slider filter tenant hnsw memory calculator halfvec"
  }
 ]
