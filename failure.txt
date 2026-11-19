@@ -1,0 +1,48 @@
+# Notebook 9: Redis and Cassandra when something fails
+# run at: 2026-11-19 19:40 UTC
+# runner: Linux-7.0.0-1019-azure-x86_64-with-glibc2.43 | 4 vCPU
+Timings are from a client on the same machine and include the round trip.
+
+## Redis
+### 1. The process is killed (kill -9) while one client writes, then restarted
+  AOF on, appendfsync everysec:                acknowledged  30550, present after restart  30550, lost      0
+  AOF off, snapshots on the default schedule:  acknowledged  32629, present after restart      0, lost  32629
+  Redis 7.4.12, one client, one SET per round trip: about 6110 writes a second
+  Read it this way: a killed process does not lose what it already handed to the operating system.
+  The AOF is written to the file before the reply, and only the fsync waits up to a second, so only
+  a machine crash or power loss can lose that last second. With snapshots only, everything since the
+  last snapshot is gone: the default schedule had not taken one yet.
+
+### 2. Failover to an asynchronous replica: the primary is killed, the replica is promoted
+  plain SET, replication is asynchronous:            acknowledged  27854, on the promoted replica  27854, lost    0, median write 0.175 ms
+  SET then WAIT 1 1000 (one replica must confirm):   acknowledged  12467, on the promoted replica  12467, lost    0, median write 0.395 ms
+  Read it this way: without WAIT, the writes in flight to the replica when the primary died were
+  acknowledged and are gone. WAIT makes the client wait for the replica, which closes that gap for
+  this client at the cost of a round trip to the replica on every write. It does not make Redis a
+  consensus system: a replica that confirmed can still be the one that is not promoted.
+
+## Cassandra: three nodes, replication factor 3
+  cluster of 3 up in 145 s
+    --  Address     Load        Tokens  Owns (effective)  Host ID                             
+    UN  172.18.0.3  85.07 KiB   16      59.3%             42c5e987-e58a-40f6-88e3-e7b0db89ad4c
+    UN  172.18.0.2  119.83 KiB  16      64.7%             5d5434e3-e987-4fea-ad41-c412dea191d2
+    UN  172.18.0.4  30.88 KiB   16      76.0%             2745e1a1-bc61-4537-8356-92ed8da6bb5c
+# Cassandra: 5.0.9
+### 1. All three nodes up: 500 writes and 500 reads at each consistency level
+  3 of 3 up:             ONE     writes ok  500 of 500   reads found  500   median write  3.27 ms, read  3.18 ms
+  3 of 3 up:             QUORUM  writes ok  500 of 500   reads found  500   median write  2.36 ms, read  3.37 ms
+  3 of 3 up:             ALL     writes ok  500 of 500   reads found  500   median write  1.75 ms, read  2.54 ms
+### 2. One node stopped
+  2 of 3 up:             ONE     writes ok  500 of 500   reads found  500   median write  1.23 ms, read  1.12 ms
+  2 of 3 up:             QUORUM  writes ok  500 of 500   reads found  500   median write  1.52 ms, read  1.47 ms
+  2 of 3 up:             ALL     writes ok    0 of 500 (Unavailable)   reads found    0   median write   nan ms, read   nan ms
+### 3. Two nodes stopped
+  1 of 3 up:             ONE     writes ok  500 of 500   reads found  500   median write  0.53 ms, read  0.82 ms
+  1 of 3 up:             QUORUM  writes ok    0 of 500 (NoHostAvailable)   reads found    0   median write   nan ms, read   nan ms
+  1 of 3 up:             ALL     writes ok    0 of 500 (NoHostAvailable)   reads found    0   median write   nan ms, read   nan ms
+### 4. Both nodes back: hints replay the writes they missed
+  all 4500 keys written so far, read back at ALL: 3000 found
+  Read it this way: with three copies, QUORUM needs two. One node down, QUORUM still works and ALL
+  fails at once with Unavailable. Two down, only ONE works. A write at ONE with two nodes down lives
+  on one machine until the others come back and the hints, or repair, copy it over.
+
