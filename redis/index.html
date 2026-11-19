@@ -54,7 +54,7 @@
 <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Place</th><th>What it holds</th><th>What to watch</th></tr></thead><tbody><tr><td><b>Memory, the dataset</b></td><td>every key and value</td><td>used_memory against maxmemory. When it is full, maxmemory-policy decides: refuse writes (noeviction, the default) or evict keys.</td></tr><tr><td><b>dump.rdb</b></td><td>a point-in-time snapshot, written by a forked child (BGSAVE)</td><td>While the child writes, every page the parent changes is copied, so a busy server can need much more memory during a save. latest_fork_usec shows how long the fork took.</td></tr><tr><td><b>appendonlydir/ (the AOF)</b></td><td>every write command, appended</td><td>appendfsync: always, everysec (the default) or no. The AOF is rewritten in the background when it grows.</td></tr><tr><td><b>Replication backlog</b></td><td>a ring buffer of recent writes, for replicas that reconnect</td><td>Too small, and a replica that drops for a moment needs a full resync: a fork and a copy of everything.</td></tr></tbody></table></div>
 </div></section>
 <section id="follow-it"><div class="wrap"><div class="kicker">Follow it</div><h2>Follow one write, and one power cut</h2><p class="sub">The usual setup: the AOF on, flushed once a second. Step through it, then tick the box.</p>
-<details class="predict fi-pred"><summary>Predict first: A SET got OK from Redis with appendfsync everysec. Is it on disk yet?</summary><p>Not necessarily. Redis replies before the AOF is flushed, and the flush happens about once a second in the background. Tick the box in the widget to see what a power failure in that second does.</p></details>
+<details class="predict fi-pred"><summary>A SET got OK from Redis with appendfsync everysec. Is it on disk yet?</summary><p>Not necessarily. Redis replies before the AOF is flushed, and the flush happens about once a second in the background. Tick the box in the widget to see what a power failure in that second does.</p></details>
 <div class="followit" data-mode="story" data-story="redis-write"></div></div></section>
 <section id="settings"><div class="wrap">
 <div class="kicker">The settings that matter</div>
@@ -70,6 +70,13 @@
 <div class="kicker">Where it fits in a design</div>
 <h2>Fast, small and rebuildable: that is where Redis belongs</h2>
 <div class="cmp3"><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>Use it for</h3><ul><li>Sessions: <a href="../designs/accounts-sessions/index.html">Accounts and sessions</a></li><li>Counters and leaderboards: <a href="../designs/leaderboards-counters/index.html">Leaderboards and counters</a></li><li>Rate limits and short-lived locks</li><li>Caches in front of a database: <a href="../designs/store-orders/index.html">Store orders</a>, <a href="../designs/product-catalog/index.html">Product catalog</a></li><li>Feed timelines: <a href="../designs/social-feed/index.html">Social feed</a></li><li>Presence and pub/sub: <a href="../designs/chat-messaging/index.html">Chat and messaging</a></li><li>Working memory of AI agents: <a href="../designs/agent-memory/index.html">Agent memory</a></li></ul></div><div class="cmp3-col" style="border-top-color:var(--my)"><h3>Not for</h3><ul><li>The only copy of money or orders: <a href="../designs/payments-ledger/index.html">Payments and ledgers</a></li><li>Datasets bigger than memory</li><li>Queries across many keys, joins or reports</li><li>Anything where every acknowledged write must survive a failover</li></ul></div></div>
+</div></section>
+<section id="try"><div class="wrap">
+<div class="kicker">Try it</div>
+<h2>A Redis console in your browser</h2>
+<p class="sub">Type commands as you would in redis-cli. Pick an example to see a session store, a leaderboard and a rate limit built from a handful of commands, then change them.</p>
+<details class="predict"><summary>You run KEYS * on a Redis with 50 million keys. What happens to other clients while it runs?</summary><p>They wait. KEYS walks the whole keyspace on the one main thread, so every other command queues behind it, often for seconds. SCAN returns a few keys per call and lets other commands run in between.</p></details>
+<div class="redissim"></div>
 </div></section>
 <section id="commands"><div class="wrap">
 <div class="kicker">Check it yourself</div>
@@ -103,5 +110,6 @@ redis-cli LATENCY DOCTOR        # what caused recent latency spikes</pre>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
 <script src="../assets/js/followit.js"></script>
+<script src="../assets/js/redissim.js"></script>
 </body>
 </html>

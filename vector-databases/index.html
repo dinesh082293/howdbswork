@@ -54,7 +54,7 @@
 <div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Place</th><th>What it holds</th><th>What to watch</th></tr></thead><tbody><tr><td><b>The vectors</b></td><td>dimensions × 4 bytes each, as 32-bit floats: 384 dimensions is 1,536 bytes</td><td>Notebook 8: 1,641 bytes per row in the table, with its text and row header.</td></tr><tr><td><b>An HNSW index</b></td><td>a copy of every vector plus links to about 2 × m neighbours</td><td>Notebook 8: 2,048 bytes per vector at m = 16. Table plus index: 3,689 bytes, 2.4 times the raw floats. Fast only while it fits in memory.</td></tr><tr><td><b>An IVF index (ivfflat)</b></td><td>vectors grouped around centroids learned from the data</td><td>Build it after the data is loaded. lists and probes trade speed and recall. Recall drops if new data drifts from the centroids.</td></tr><tr><td><b>Quantized vectors</b></td><td>halfvec (2 bytes a dimension), int8, or one bit a dimension</td><td>2 to 32 times smaller. Re-rank the top results with the full vectors to win back recall.</td></tr><tr><td><b>Metadata for filters</b></td><td>tenant, permissions, dates</td><td>Filtering after the index can return too few rows. Notebook 8: 1.3 rows out of 10.</td></tr></tbody></table></div>
 </div></section>
 <section id="follow-it"><div class="wrap"><div class="kicker">Follow it</div><h2>Follow one search, and one filter</h2><p class="sub">100,000 memories for 100 tenants, as in Notebook 8. Step through a search, then tick the box to filter by tenant.</p>
-<details class="predict fi-pred"><summary>Predict first: An HNSW index over 100,000 vectors returns its 10 nearest in under a millisecond. At the default settings, what share of the true 10 nearest does it find?</summary><p>About 95% in Notebook 8, with ef_search at 40. Approximate means it usually finds them, not always. Raising ef_search to 160 found all of them for a little more time.</p></details>
+<details class="predict fi-pred"><summary>An HNSW index over 100,000 vectors returns its 10 nearest in under a millisecond. At the default settings, what share of the true 10 nearest does it find?</summary><p>About 95% in Notebook 8, with ef_search at 40. Approximate means it usually finds them, not always. Raising ef_search to 160 found all of them for a little more time.</p></details>
 <div class="followit" data-mode="story" data-story="vector-search"></div></div></section>
 <section id="settings"><div class="wrap">
 <div class="kicker">The settings that matter</div>
@@ -70,6 +70,12 @@
 <div class="kicker">Where it fits in a design</div>
 <h2>Start with the database you have</h2>
 <div class="cmp3"><div class="cmp3-col" style="border-top-color:var(--teal)"><h3>Use it for</h3><ul><li>pgvector, when the index fits in one machine's memory and you want filters, joins, permissions and deletes in one transaction: <a href="../designs/search-ai-retrieval/index.html">Search and AI retrieval</a>, <a href="../designs/agent-memory/index.html">Agent memory</a></li><li>The vector search in the database you already run, MongoDB, Redis or Cassandra 5, before adding a new system</li><li>A dedicated vector database when the index is far larger than one machine, query rates are very high, or you need its hybrid search and multi-tenancy at scale</li></ul></div><div class="cmp3-col" style="border-top-color:var(--my)"><h3>Not for</h3><ul><li>The source of truth for documents, permissions or deletes</li><li>Exact lookups by id or keyword: a normal index is faster and exact</li><li>A search nobody has measured recall for</li></ul></div></div>
+</div></section>
+<section id="try"><div class="wrap">
+<div class="kicker">Try it</div>
+<h2>Trade recall for speed, filter a tenant, size an index</h2>
+<p class="sub">The first two parts replay what Notebook 8 measured. The third estimates memory for your own numbers.</p>
+<div class="vectorlab"></div>
 </div></section>
 <section id="commands"><div class="wrap">
 <div class="kicker">Check it yourself</div>
@@ -108,5 +114,6 @@ SET enable_indexscan = off;</pre>
 <script src="../assets/js/polish.js"></script>
 <script src="../assets/js/reader.js"></script>
 <script src="../assets/js/followit.js"></script>
+<script src="../assets/js/vectorlab.js"></script>
 </body>
 </html>

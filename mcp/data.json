@@ -1276,6 +1276,7 @@
     "Fast, small and rebuildable: that is where Redis belongs",
     "Use it for",
     "Not for",
+    "A Redis console in your browser",
     "The commands I run first",
     "Notebook 7, Redis 7.4.12, one client on the same machine",
     "Check yourself"
@@ -1316,6 +1317,7 @@
     "Start with the database you have",
     "Use it for",
     "Not for",
+    "Trade recall for speed, filter a tenant, size an index",
     "The commands I run first",
     "Notebook 8, PostgreSQL 18.7 with pgvector 0.8.7, 100,000 generated 384-dimension vectors",
     "Check yourself"

@@ -37,7 +37,7 @@
   <p class="lede">An index is a tree of pages, kept in key order. Insert rows below and watch where each key lands, when a page fills up and splits, and how full the pages stay. Then switch from sequential ids to random UUIDs and do it again.</p>
 </div></header>
 <section id="playground"><div class="wrap">
-  <details class="predict"><summary>Predict first: you insert 300 rows with sequential ids, and 300 with random UUIDs. Which needs more pages, and roughly how many more?</summary><p>Random UUIDs need about a third more pages, and split far more often in the middle of the tree. Sequential ids only ever split the last page, so every page they leave behind is full. Random keys split pages in the middle, and both halves stay part-empty. Press "Compare all three key types" below to see it.</p></details>
+  <details class="predict"><summary>You insert 300 rows with sequential ids, and 300 with random UUIDs. Which needs more pages, and roughly how many more?</summary><p>Random UUIDs need about a third more pages, and split far more often in the middle of the tree. Sequential ids only ever split the last page, so every page they leave behind is full. Random keys split pages in the middle, and both halves stay part-empty. Press "Compare all three key types" below to see it.</p></details>
   <div class="btlab" id="btreeLab"></div>
 </div></section>
 <section id="notice"><div class="wrap">
