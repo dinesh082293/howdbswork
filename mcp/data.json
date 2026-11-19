@@ -1155,6 +1155,7 @@
     "Durability is an ordering rule, not a feature",
     "Lookup cost is page count, nothing else",
     "MVCC trades disk for non-blocking reads",
+    "If you read nothing else on this page",
     "Six terms. Every one of them is a file, a size, or a number.",
     "What each database actually is",
     "Who manages what, on-prem",
@@ -1179,8 +1180,7 @@
     "8 · One tenant / one product / one shard is hot, the rest is fine",
     "Pick the database from the workload, not the fashion",
     "Same app, three answers: an online store",
-    "When to split across two databases",
-    "These are the books and blogs this site leans on"
+    "When to split across two databases"
    ]
   },
   {
@@ -1362,6 +1362,7 @@
    "url": "https://howdbswork.com/staff-path/",
    "description": "Zero to staff level in 6 levels: every concept as one problem plus one diagram, with labs on data pages, B+ trees and MVCC, and every idea on one card.",
    "headings": [
+    "Six levels, one line each",
     "Zero to staff-level, in order. Every concept is a problem and a diagram.",
     "Level 0, Durability: the log is written before the data",
     "Level 1, Pages, buffers, and eviction",

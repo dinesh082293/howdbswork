@@ -23,6 +23,19 @@
   <p class="qline">How do I get from zero to staff level, one step at a time?</p>
   <p class="learn"><b>You will learn:</b> Work through six levels, with labs you can break: a B+ tree, an MVCC timeline and a table-growth slider.</p>
 </div></header>
+<section id="five-min" class="five"><div class="wrap">
+  <div class="kicker">The 5-minute version</div>
+  <h2>Six levels, one line each</h2>
+  <ol class="fivelist" start="0">
+    <li><b>Durability.</b> The <span class="w-log">log</span> reaches <span class="w-disk">disk</span> before the data does, so a commit survives a power cut.</li>
+    <li><b>Pages and cache.</b> A page already in <span class="w-mem">memory</span> costs about 100 ns to use; from NVMe, about 80 µs. What the cache keeps decides how fast you are.</li>
+    <li><b>Indexes.</b> Each index costs a write on every change and saves reads on the queries that match it. Price both sides in numbers.</li>
+    <li><b>MVCC.</b> Old row versions let readers and writers avoid blocking each other. Cleanup has to keep up, and one long transaction can stop it.</li>
+    <li><b>Replication and failover.</b> A <span class="w-rep">replica</span> that lags, or a failover that loses acknowledged writes, is worse than none, because people trusted it.</li>
+    <li><b>Scale.</b> One server runs out in one of three ways: the log cannot be recycled, the data has to be split, or a copy falls too far behind to catch up.</li>
+  </ol>
+  <p class="sub" style="margin-top:8px">Each level below opens to the problem, the diagram, the numbers and a lab. Open one at a time.</p>
+</div></section>
 <section id="path"><div class="wrap">
   <div class="kicker">Guided path · 6 levels · one problem, one diagram each</div>
   <h2>Zero to staff-level, in order. Every concept is a problem and a diagram.</h2>
@@ -254,6 +267,7 @@ db.getSiblingDB('local').oplog.rs.stats().maxSize</div></div><div class="wib"><h
   <div class="kicker">Quick lookup · reference atlas</div>
   <h2>Every idea on one card. One problem, one diagram, staff depth.</h2>
   <p class="sub">Same structure as the path, compressed. The bold line is the <b style="color:var(--ink)">one problem</b>. Then the <b style="color:var(--ink)">diagram</b> of the real structures, the mechanism, the <b style="color:var(--ink)">tradeoff</b>, and <b style="color:var(--ink)">where it breaks plus the exact check</b>. Search any word. Try "crash", "wal", "ibd", "oplog", "slow", "freeze", "purge".</p>
+  <details class="deep"><summary><span>Go deeper: every idea on one card, searchable</span><em>15 min</em></summary>
   <div class="filters">
     <input type="search" id="refSearch" placeholder="Search… try: wal, binlog, vacuum, oplog, slow, cache">
   </div>
@@ -291,12 +305,13 @@ db.getSiblingDB('local').oplog.rs.stats().maxSize</div></div><div class="wib"><h
 </div>
   <p class="mono" id="refCount" style="font-size:12.5px;color:var(--muted);margin-top:14px">24 ideas shown</p>
   <p class="sub" style="margin-top:20px"><b style="color:var(--ink)">Before you leave, check this:</b> run <span class="mono">SELECT pid, now() - xact_start AS age, state FROM pg_stat_activity ORDER BY age DESC;</span> The top row owns your bloat if it is old.</p>
+</details>
 </div></section>
 <!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Part 1 of 4 · Learn · lessons 1 to 11</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px"><b>How do databases actually work?</b> From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then side by side, and the query and concurrency traps.</p><div class="secnav-list"><a href="../start-here/index.html">Start here</a><a href="../concepts/index.html">Ten concepts</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL · InnoDB</a><a href="../mongodb/index.html">MongoDB · WiredTiger</a><a href="../compare/index.html">Same task, three engines</a><a href="../families/index.html">Database families</a><a href="../queries/index.html">Queries that look fine and are not</a><a href="../isolation/index.html">Lost updates and write skew</a><a href="../staff-path/index.html" aria-current="page" class="on">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div><div class="secnav-pn"><a class="pn prev" href="../isolation/index.html"><span>← Previous</span>Lost updates and write skew<em>Two concurrency bugs, lost update and write skew, run as real interleaved sessions on PostgreSQL 18, MySQL 8.4 and…</em></a><a class="pn next" href="../paths/index.html"><span>Next →</span>Reading paths by goal<em>Three reading paths: prepare for a database interview, handle an incident on call, or choose a database. Each is an…</em></a></div></div></section><!-- SECTION:END -->
 <footer><div class="wrap">
   <p><b style="color:var(--ink)">Real databases, simply.</b> How PostgreSQL, MySQL and MongoDB work in real systems, and which database each kind of application data belongs in. Written by Dinesh, who runs production databases for a living.</p>
   <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
-  <p class="reviewed">Last updated Nov 17, 2026</p>
+  <p class="reviewed">Last updated Nov 19, 2026</p>
   <p class="footlinks"><a href="../sitemap/index.html">All pages</a> · <a href="../corrections/index.html">Corrections</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a> · <a href="../work-with-me/index.html">Work with me</a> · <a href="../assistant/index.html">Use it from your AI assistant</a></p>
 </div></footer><script src="../assets/js/main.js"></script>
 <script src="../assets/js/btree.js"></script>

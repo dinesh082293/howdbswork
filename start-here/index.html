@@ -42,6 +42,18 @@
   </div>
 </div></section>
 <div class="wrap"><aside class="myth"><span class="mk">Common myth</span><p class="m">More indexes always make reads faster.</p><p class="t">An index helps only the queries that match its leading columns. Every index also costs a write on every change to the table, plus disk space and room in the cache. Past the indexes your queries actually use, each extra one makes the database slower, not faster.</p></aside>
+<section id="five-min" class="five"><div class="wrap">
+  <div class="kicker">The 5-minute version</div>
+  <h2>If you read nothing else on this page</h2>
+  <ol class="fivelist">
+    <li><b>The <span class="w-log">log</span> is written before the data.</b> A change is recorded in the log, and the log reaches <span class="w-disk">disk</span>, before the data page has to. That ordering is why a committed row survives a power cut.</li>
+    <li><b>Finding a row costs pages.</b> Rows live in 8 KB or 16 KB pages. An index turns a search through millions of rows into about three or four page reads, and every index costs a write on every change.</li>
+    <li><b>Old versions wait for cleanup.</b> Readers never wait for writers because old row versions are kept. VACUUM, purge or WiredTiger removes them later, and one long-open transaction can stop that cleanup completely.</li>
+    <li><b>Watch one insert below.</b> The row lands in <span class="w-mem">memory</span>, its log record reaches disk at COMMIT, and only then is it safe. The data file catches up later.</li>
+    <li><b>When the app hurts, look in this order:</b> what is running right now, what is slow in total, then EXPLAIN the one query that costs the most.</li>
+  </ol>
+  <p class="sub" style="margin-top:8px">The rest of the page goes deeper. The long parts are folded; open them when you want the detail.</p>
+</div></section>
 <section id="glossary" style="padding-bottom:0">
   <div class="kicker">Vocabulary: each term with its physical referent</div>
   <h2 style="font-size:24px">Six terms. Every one of them is a file, a size, or a number.</h2>
@@ -108,7 +120,7 @@
   <p class="sub">Press play and watch one new row travel from your app into memory, to the log on disk, back to your app as "done", to the replica, and finally into the data file. Switch the database to see the same order with different file names.</p>
   <div class="lab">
     <div class="insanim" id="insAnim"></div>
-    <p class="takeaway" style="margin-top:14px"><b>The one moment that matters:</b> the row is safe at COMMIT, when the <i>log</i> reaches disk. The data file catches up later, at a checkpoint. Every engine follows that order; only the file names change.</p>
+    <p class="takeaway" style="margin-top:14px"><b>The one moment that matters:</b> the row is safe at COMMIT, when the <span class="w-log">log</span> reaches <span class="w-disk">disk</span>. The <span class="w-disk">data file</span> catches up later, at a checkpoint. Every engine follows that order; only the file names change.</p>
     <div class="lab" id="liveSql" style="margin-top:18px">
       <h3 style="margin:0 0 6px;font-size:17px">Try it live: a real Postgres, in your browser</h3>
       <p style="font-size:14px;color:var(--muted);margin:0 0 12px">No install, no account. This panel runs a real PostgreSQL in your browser. It starts with the same users table as the walkthrough above, ids 10, 25, and 87. Run the insert, then the select, then the EXPLAIN, and watch the same numbers come out of a real plan.</p>
@@ -130,6 +142,7 @@
   <div class="kicker">Every operation · end to end, like the insert</div>
   <h2>The other three journeys: read, update, delete, and a crash</h2>
   <p class="sub">Same path as the insert. Parse, index, page, log. Writes append to the log before they modify any page. Reads append to no log at all. Crash recovery is a function of exactly one input, the log written since the last checkpoint. The default max_wal_size of 1 GB caps that log: at 50 MB/s of WAL, the budget fills in about 20 seconds, so a checkpoint fires about every 20 seconds and at most 1 GB replays. How long that replay takes is 1 GB divided by your replay speed, and the server log tells you the speed: during recovery PostgreSQL logs a "redo starts at" line and a "redo done at" line, each timestamped, and the difference between their LSNs is the bytes replayed. Bytes divided by seconds is your replay speed. That number, not the crash itself, sets your recovery time.</p>
+  <details class="deep"><summary><span>Go deeper: read, update, delete and a crash, step by step</span><em>5 min</em></summary>
   <div class="diagram"><p class="dcap">Checkpoint math, from the defaults</p><div class="dflow">
     <div class="dbox"><b>Log budget</b>1 GB, max_wal_size</div><span class="darrow">÷</span>    <div class="dbox"><b>WAL rate</b>50 MB/s</div><span class="darrow">=</span>    <div class="dbox good"><b>Checkpoint</b>about every 20 s</div>
   </div></div>
@@ -200,6 +213,7 @@
   </div></div>
     </div>
   </div>
+</details>
 </div></section>
 <section id="architect" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Real examples</div>
@@ -230,6 +244,7 @@
   <div class="kicker">Real world · symptom first</div>
   <h2>When the app starts hurting</h2>
   <p class="sub">The app reports symptoms in its own words: p99 latency, pool exhaustion, random 500s. The database holds the cause in exactly three places. What is running right now (<span class="mono">pg_stat_activity</span> / <span class="mono">SHOW PROCESSLIST</span> / <span class="mono">db.currentOp()</span>). What is slow in total (<span class="mono">pg_stat_statements</span> / slow log / profiler). And why one query costs what it costs (<span class="mono">EXPLAIN ANALYZE</span> / <span class="mono">explain("executionStats")</span>). Run them in that order. Every card below follows it.</p>
+  <details class="deep"><summary><span>Go deeper: eight symptoms, from the app to the cause</span><em>10 min</em></summary>
   <div class="incgrid">
 
     <div class="incident">
@@ -436,11 +451,13 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
   <div class="diagram"><p class="dcap">The three checks, in order</p><div class="dflow">
     <div class="dbox"><b>1 · What is running</b>pg_stat_activity / SHOW PROCESSLIST / db.currentOp()</div><span class="darrow">→</span>    <div class="dbox"><b>2 · What is slow in total</b>pg_stat_statements / slow log / profiler</div><span class="darrow">→</span>    <div class="dbox good"><b>3 · Why this one query</b>EXPLAIN ANALYZE / explain("executionStats")</div>
   </div></div>
+</details>
 </div></section>
 <section id="design" style="padding-top:6px"><div class="wrap">
   <div class="kicker">Design doc · which app sits where</div>
   <h2>Pick the database from the workload, not the fashion</h2>
   <p class="sub">The full version of this section, with thirteen applications: <a href="../designs/index.html">Application designs</a>.</p>
+  <details class="deep"><summary><span>Go deeper: picking a database from the workload</span><em>6 min</em></summary>
   <p class="sub">"Which database?" is the wrong question. "Which workload, at what volume, with what correctness requirement?" is the one you can answer. Each workload below is stated with the property that decides it: access pattern, consistency requirement, retention shape. When two workloads with incompatible properties share one engine, the failure does not appear at launch. It appears in the incident cards above, at the volume where the properties start to conflict.</p>
 
   <div class="problem"><b class="label">Problem</b><div><p>One database forced to serve OLTP, analytics, search, and cache workloads degrades all four. Measurably, and in a predictable order.</p><small>The analytical scan evicts the OLTP working set first (incident #1), then its long snapshot pins cleanup (incident #5), then its result set pressures the pool (incident #2). Match each workload to its natural home first. Argue about vendors second.</small></div></div>
@@ -487,11 +504,13 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
     <div class="splitcard"><h4>Any DB + Redis</h4><p>Sessions, rate limits, and the 20 hottest pages live in Redis; the relational/document DB stays the truth. Redis dying means a slow minute, not lost data.</p><p><b style="color:var(--ink)">Split when:</b> the same read repeats thousands of times per minute and tolerates being seconds stale.</p></div>
   </div>
   <p style="font-size:14px;color:var(--muted);margin:14px 0 0"><b style="color:var(--ink)">Don't split</b> on day one, and do not split on a benchmark. Every additional database adds a backup regime, a monitoring surface, a deploy pipeline, and a sync path with its own lag and failure modes. The split is justified by a measured number: a dashboard query demonstrably evicting the checkout working set, a search requirement FTS measurably cannot meet. Never by anticipation.</p>
+</details>
 </div></section>
 <section id="reading"><div class="wrap">
   <div class="kicker">Further reading</div>
   <h2>These are the books and blogs this site leans on</h2>
   <p class="sub">Read them when you want the full story behind a page here.</p>
+  <details class="deep"><summary><span>Go deeper: the books and blogs behind this site</span><em>2 min</em></summary>
   <ol style="font-size:15.5px;line-height:1.75;max-width:760px">
     <li><b>Designing Data-Intensive Applications, 2nd edition</b>, Martin Kleppmann and Chris Riccomini, O'Reilly, 2026. The book to read first if you read one. Replication, partitioning, transactions, consistency, and stream processing, all as trade-offs instead of recipes. <a href="https://dataintensive.net/">dataintensive.net</a></li>
     <li><b>Database Internals</b>, Alex Petrov, O'Reilly, 2019. The deep dive this site is closest to. B-tree and log-structured storage engines, page cache, write-ahead log, and how clusters reach consistency. Read it after Kleppmann, when you want the implementation. <a href="https://www.goodreads.com/book/show/44647144-database-internals">goodreads.com</a></li>
@@ -501,6 +520,7 @@ db.currentOp({secs_running:{$gt:5}})</div></div>
     <li><b>Building with Patterns</b>, Daniel Coupal and Ken W. Alger, MongoDB blog. Twelve schema design patterns (polymorphic, attribute, bucket, computed, subset, outlier, and more) with the trade-off of each. Read this before you design a MongoDB schema, not after. <a href="https://www.mongodb.com/company/blog/building-with-patterns-a-summary">mongodb.com</a></li>
   </ol>
   <p style="font-size:14px;color:var(--muted);margin:16px 0 0"><b style="color:var(--ink)">Before you leave, check this:</b> pick your slowest query, run <span class="mono">EXPLAIN (ANALYZE, BUFFERS)</span> on it, and count the pages it reads. That number tells you whether you have an index problem or a volume problem.</p>
+</details>
 </div></section>
 <section class="quizsec"><div class="wrap"><div class="quiz"><div class="kicker">Check yourself · 3 questions</div><h2>Check yourself</h2><p class="sub">Pick an answer. You will see whether it is right, and why.</p><div class="qz" data-answer="1"><p class="qq"><b>1.</b> What does COMMIT promise?</p><div class="qopts"><button type="button" class="qopt" data-i="0">The data file is updated</button><button type="button" class="qopt" data-i="1">The log record is on disk</button><button type="button" class="qopt" data-i="2">Every replica has the change</button></div><p class="qe" hidden>The data files catch up later, at a checkpoint. Replicas depend on the replication setting.</p></div><div class="qz" data-answer="1"><p class="qq"><b>2.</b> Why does an index lookup stay fast as a table grows?</p><div class="qopts"><button type="button" class="qopt" data-i="0">The index is kept in memory</button><button type="button" class="qopt" data-i="1">A B+ tree is only a few levels deep</button><button type="button" class="qopt" data-i="2">The engine caches every query</button></div><p class="qe" hidden>A lookup reads a few pages: root, branches and a leaf. Ten times more rows adds about one level at most.</p></div><div class="qz" data-answer="1"><p class="qq"><b>3.</b> In PostgreSQL at REPEATABLE READ and in InnoDB, when is the snapshot taken?</p><div class="qopts"><button type="button" class="qopt" data-i="0">At BEGIN</button><button type="button" class="qopt" data-i="1">At the first query in the transaction</button><button type="button" class="qopt" data-i="2">At COMMIT</button></div><p class="qe" hidden>Statements between BEGIN and the first query pin nothing. The MVCC lab on the Staff Path shows it.</p></div><p class="qscore" aria-live="polite"></p></div></div></section>
 <!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Part 1 of 4 · Learn · lessons 1 to 11</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px"><b>How do databases actually work?</b> From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then side by side, and the query and concurrency traps.</p><div class="secnav-list"><a href="../start-here/index.html" aria-current="page" class="on">Start here</a><a href="../concepts/index.html">Ten concepts</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL · InnoDB</a><a href="../mongodb/index.html">MongoDB · WiredTiger</a><a href="../compare/index.html">Same task, three engines</a><a href="../families/index.html">Database families</a><a href="../queries/index.html">Queries that look fine and are not</a><a href="../isolation/index.html">Lost updates and write skew</a><a href="../staff-path/index.html">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div><div class="secnav-pn"><a class="pn prev" href="../index.html"><span>← Home</span>Real databases, simply</a><a class="pn next" href="../concepts/index.html"><span>Next →</span>Ten concepts<em>Ten database concepts, one picture and one line each, told with books and shelves: index, normalization, join…</em></a></div></div></section><!-- SECTION:END -->
