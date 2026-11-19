@@ -6,6 +6,13 @@
   <description>New pages and changes on howdbswork.com, by Dinesh.</description>
   <language>en</language>
   <item>
+    <title>The site is now a course</title>
+    <link>https://howdbswork.com/#whats-new</link>
+    <guid isPermaLink="false">howdbswork-cdc0f568abe9</guid>
+    <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
+    <description>the site is now a course: every page except About has a lesson number, the home page keeps your place and shows the next lesson, and All pages lists all 42 lessons in order. Also new: Follow it, where you step through one read on the PostgreSQL and MySQL pages and one change travelling to a replica on Compare and MongoDB; and Estimate it on all 13 design docs, with sliders for your own numbers, a link that keeps them, and a Your turn question to answer before you open mine.</description>
+  </item>
+  <item>
     <title>Reading aids</title>
     <link>https://howdbswork.com/#whats-new</link>
     <guid isPermaLink="false">howdbswork-99d57cb7e300</guid>
