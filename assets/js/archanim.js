@@ -23,48 +23,57 @@
     disk: [['base', 'base/', 'table and index files', 2.2, { full: 1 }], ['wal', 'pg_wal/', '16 MB log segments', 1.8], ['xact', 'pg_xact/', 'commit status', 1]],
     widgets: { bk: ['spawn', 'backend', 3, 'b'], pages: ['slots', 'buffers', 8, ['clean', 'clean', 'clean', 'clean', 'clean', 'empty', 'empty', 'empty']], rec: ['bar', 'walbuf'], seg: ['segs', 'wal', 5, 3], ck: ['mark', 'wal', '⚑ checkpoint'], sr: ['rep', 'standby', ['WAL receiver', 'pg_wal/ (its copy)', 'startup: replays'], ['clean', 'clean', 'clean', 'clean']] },
     rep: { box: 'standby', name: 'Standby', promotedName: 'New primary', primary: 'primary', unit: 'commit', label: 'Replication', modes: ['async', 'synchronous'], def: 0, lostText: 'the last commit is lost', keptText: 'every commit is here' },
+    info: {"client": ["Your application, through a driver such as libpq, JDBC or psycopg. It usually keeps a pool of open connections.", "your application servers", "the pool size in the application", "SELECT application_name, count(*) FROM pg_stat_activity GROUP BY 1;"], "postmaster": ["The first process. It listens for connections, starts a backend for each one, starts the background processes, and restarts them if one crashes.", "process \"postgres\" (the parent); postmaster.pid in the data directory", "listen_addresses, port, max_connections", "ps -ef --forest | grep postgres"], "backend": ["One operating system process per connection. It parses, plans and runs your queries, reading pages through shared_buffers.", "process \"postgres: user db host state\"", "work_mem, statement_timeout, idle_in_transaction_session_timeout", "SELECT pid, state, wait_event, query FROM pg_stat_activity;"], "walwriter": ["Writes the WAL buffers to pg_wal/ in the background, so a commit usually finds little left to flush.", "process \"postgres: walwriter\"", "wal_writer_delay, wal_buffers", "SELECT * FROM pg_stat_wal;"], "checkpointer": ["At each checkpoint, writes every dirty page to its data file and records where recovery would start.", "process \"postgres: checkpointer\"", "checkpoint_timeout, max_wal_size, checkpoint_completion_target", "SELECT * FROM pg_stat_checkpointer;"], "autovac": ["A launcher and worker processes that vacuum and analyze tables once enough rows have changed.", "processes \"autovacuum launcher\" and \"autovacuum worker\"", "autovacuum_vacuum_scale_factor, autovacuum_max_workers", "SELECT relname, n_dead_tup, last_autovacuum FROM pg_stat_user_tables ORDER BY n_dead_tup DESC;"], "walsender": ["One process per connected standby. It reads WAL from pg_wal/ and streams it.", "process \"postgres: walsender\"", "max_wal_senders, wal_level, synchronous_standby_names", "SELECT client_addr, state, replay_lag FROM pg_stat_replication;"], "buffers": ["PostgreSQL's own cache of 8 KB pages, shared by every backend. Reads and writes go through it.", "shared memory, allocated at start", "shared_buffers (start at about 25% of RAM)", "SELECT blks_hit, blks_read FROM pg_stat_database WHERE datname = current_database();"], "walbuf": ["Shared memory where WAL records wait until they are written to pg_wal/.", "shared memory", "wal_buffers", "SELECT pg_current_wal_insert_lsn(), pg_current_wal_flush_lsn();"], "workmem": ["Private memory one sort or hash can use. One query can use it several times, and every connection has its own.", "each backend's own memory", "work_mem, hash_mem_multiplier", "EXPLAIN (ANALYZE) …  -- look for \"Sort Method: external merge\""], "base": ["The table and index files: one directory per database, files of up to 1 GB per table or index.", "$PGDATA/base/<database oid>/<relfilenode>", "(none: sizes come from your data)", "SELECT pg_relation_filepath('users');"], "wal": ["The write-ahead log: every change, in order, in 16 MB segment files. Recovery, standbys and point-in-time restore all read it.", "$PGDATA/pg_wal/", "max_wal_size, wal_keep_size, archive_mode", "SELECT pg_walfile_name(pg_current_wal_lsn());"], "xact": ["The commit log: two bits per transaction saying in progress, committed or aborted. Readers check it to decide what they can see.", "$PGDATA/pg_xact/", "(none)", "SELECT pg_current_xact_id();"], "standby": ["A second server that replays the primary's WAL. It can answer read-only queries and be promoted if the primary fails.", "another machine, with its own data directory", "primary_conninfo, hot_standby, synchronous_commit on the primary", "SELECT pg_is_in_recovery(), now() - pg_last_xact_replay_timestamp();"]},
     scenes: [
       { layers: ['proc'], hl: ['client', 'postmaster', 'backend'], t: 'A client connects, and gets its own process',
         s: 'The postmaster accepts the connection and starts a backend process just for it. A hundred connections means a hundred processes, each with its own memory.',
         d: 'This is why PostgreSQL connections are expensive and why poolers like PgBouncer exist: the pooler keeps a few backends busy instead of hundreds idle.',
-        moves: [['q', 'client', 'postmaster', 0, 'connect'], ['q', 'postmaster', 'backend', 0.5, 'fork']], fx: function (S) { S.bk = 3; } },
+        moves: [['q', 'client', 'postmaster', 0, 'connect'], ['q', 'postmaster', 'backend', 0.5, 'fork']], fx: function (S) { S.bk = 3; }, ch: "Connect", cmd: "SELECT pid, backend_start FROM pg_stat_activity WHERE pid = pg_backend_pid();" },
       { layers: ['proc', 'mem'], hl: ['backend', 'buffers'], t: 'A SELECT finds its page in memory',
         s: 'The backend looks for the page in shared_buffers first. It is there, so the answer comes straight from memory: no disk at all.',
         d: 'A healthy OLTP server serves almost every read this way. pg_stat_database counts these as blks_hit.',
-        moves: [['q', 'client', 'backend', 0, 'SELECT'], ['q', 'backend', 'pages:2', 0.45, 'find'], ['r', 'pages:2', 'client', 0.75, 'rows']], fx: function (S) { S.hit.pages = 2; } },
+        moves: [['q', 'client', 'backend', 0, 'SELECT'], ['q', 'backend', 'pages:2', 0.45, 'find'], ['r', 'pages:2', 'client', 0.75, 'rows']], fx: function (S) { S.hit.pages = 2; }, ch: "Read", cmd: "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM users WHERE id = 42;  -- Buffers: shared hit=…" },
       { layers: ['mem', 'disk'], hl: ['buffers', 'base'], t: 'Not in memory: read 8 KB from disk',
         s: 'For a page that is not cached, the backend reads it from the table file in base/ into a free slot in shared_buffers. Slower, and then cached for next time.',
         d: 'The operating system has its own cache too, so a "disk" read may still come from RAM. pg_stat_database counts these as blks_read.',
-        moves: [['q', 'backend', 'buffers', 0, 'miss'], ['p', 'base', 'pages:5', 0.35, '8 KB page']], fx: function (S) { S.pages[5] = 'clean'; } },
+        moves: [['q', 'backend', 'buffers', 0, 'miss'], ['p', 'base', 'pages:5', 0.35, '8 KB page']], fx: function (S) { S.pages[5] = 'clean'; }, ch: "Read", cmd: "EXPLAIN (ANALYZE, BUFFERS) SELECT * FROM users WHERE id = 42;  -- Buffers: shared read=…" },
       { layers: ['mem'], hl: ['backend', 'walbuf', 'buffers'], t: 'An UPDATE: the log first, then the page',
         s: 'The backend writes a WAL record describing the change into the WAL buffers, then changes the page in shared_buffers. The page is now dirty: newer in memory than on disk.',
         d: 'An UPDATE in PostgreSQL writes a new row version and leaves the old one behind as a dead row. Vacuum deals with it later.',
-        moves: [['q', 'client', 'backend', 0, 'UPDATE'], ['w', 'backend', 'walbuf', 0.4, 'WAL record'], ['q', 'backend', 'pages:2', 0.65, 'change']], fx: function (S) { S.pages[2] = 'dirty'; S.dead.pages = 2; S.rec = 1; } },
+        moves: [['q', 'client', 'backend', 0, 'UPDATE'], ['w', 'backend', 'walbuf', 0.4, 'WAL record'], ['q', 'backend', 'pages:2', 0.65, 'change']], fx: function (S) { S.pages[2] = 'dirty'; S.dead.pages = 2; S.rec = 1; }, ch: "Write", cmd: "SELECT pg_current_wal_insert_lsn();  -- run before and after: it moves forward" },
       { layers: ["mem", "disk"], hl: ["walbuf", "walwriter", "wal", "xact"], t: "COMMIT: the WAL reaches disk, then the app hears back",
         s: "The WAL record is flushed to pg_wal/ and the commit is recorded in pg_xact/, then the client gets its answer. With asynchronous replication the standby has not received it yet: it is one commit behind.",
         d: "This one flush is the price of a durable commit: a fraction of a millisecond on local NVMe, more on network storage. Notebook 2 measures it.",
         moves: [["w", "walbuf", "wal", 0, "flush"], ["w", "wal", "xact", 0.45, "committed"], ["a", "backend", "client", 0.7, "✓ COMMIT"]], fx: function (S) { S.rec = 0; S.seg = 4; S.fsync = 'wal'; S.lag = S.sync ? 0 : 1; },
-        alt: { t: "COMMIT with a synchronous standby: it confirms first", s: "The WAL record is flushed locally and streamed to the standby, which writes it to its own pg_wal/ and confirms. Only then does the app hear back. Every acknowledged commit is now on two machines.", d: "The cost is a network round trip on every commit. synchronous_commit = on with synchronous_standby_names waits for the standby to flush; remote_apply also waits for it to replay.", moves: [["w", "walbuf", "wal", 0, "flush"], ["w", "walsender", "rep:0", 0.2, "WAL"], ["w", "rep:0", "rep:1", 0.4, "write"], ["a", "rep:0", "backend", 0.6, "✓ flushed"], ["w", "wal", "xact", 0.75, "committed"], ["a", "backend", "client", 0.9, "✓ COMMIT"]], lines: ["COMMIT: the WAL record is flushed to pg_wal/", "The WAL sender streams it to the standby", "The standby writes it to its own pg_wal/", "The standby confirms: flushed", "The commit is recorded in pg_xact/", "Only now does the app hear back"], fx: function (S) { S.rec = 0; S.seg = 4; S.fsync = 'wal'; S.lag = 0; } } },
+        alt: { t: "COMMIT with a synchronous standby: it confirms first", s: "The WAL record is flushed locally and streamed to the standby, which writes it to its own pg_wal/ and confirms. Only then does the app hear back. Every acknowledged commit is now on two machines.", d: "The cost is a network round trip on every commit. synchronous_commit = on with synchronous_standby_names waits for the standby to flush; remote_apply also waits for it to replay.", moves: [["w", "walbuf", "wal", 0, "flush"], ["w", "walsender", "rep:0", 0.2, "WAL"], ["w", "rep:0", "rep:1", 0.4, "write"], ["a", "rep:0", "backend", 0.6, "✓ flushed"], ["w", "wal", "xact", 0.75, "committed"], ["a", "backend", "client", 0.9, "✓ COMMIT"]], lines: ["COMMIT: the WAL record is flushed to pg_wal/", "The WAL sender streams it to the standby", "The standby writes it to its own pg_wal/", "The standby confirms: flushed", "The commit is recorded in pg_xact/", "Only now does the app hear back"], fx: function (S) { S.rec = 0; S.seg = 4; S.fsync = 'wal'; S.lag = 0; } }, ch: "Commit", cmd: "SHOW synchronous_commit;  SELECT pg_current_wal_flush_lsn();" },
       { layers: ['proc', 'disk'], hl: ['checkpointer', 'buffers', 'base', 'wal'], t: 'Later, the checkpointer writes dirty pages to disk',
         s: 'In the background, the checkpointer writes every dirty page to its file in base/ and marks a checkpoint in the WAL. A crash now only needs the WAL written after it.',
         d: 'checkpoint_timeout and max_wal_size decide how often this happens. Too often means write bursts; too rarely means longer crash recovery.',
-        moves: [['p', 'pages:2', 'base', 0.1, 'dirty page'], ['c', 'checkpointer', 'wal', 0.55, 'checkpoint']], fx: function (S) { S.pages[2] = 'clean'; S.ck = 1; } },
+        moves: [['p', 'pages:2', 'base', 0.1, 'dirty page'], ['c', 'checkpointer', 'wal', 0.55, 'checkpoint']], fx: function (S) { S.pages[2] = 'clean'; S.ck = 1; }, ch: "Background", cmd: "SELECT num_timed, num_requested, buffers_written FROM pg_stat_checkpointer;" },
       { layers: ['proc', 'mem'], hl: ['autovac', 'buffers'], t: 'Autovacuum removes the dead row version',
-        s: 'The old version left by the UPDATE is invisible to every transaction now. Autovacuum finds it and marks the space free for new rows.',
+        s: 'The old version left by the UPDATE is invisible to every transaction now. Autovacuum finds it and marks the space free for new rows. That changes the page again, and the change is logged in the WAL.',
         d: 'One transaction left open for hours stops this cleanup for every table, which is how tables bloat. The symptom pages show how to find it.',
-        moves: [['v', 'autovac', 'pages:2', 0, 'vacuum']], fx: function (S) { S.dead.pages = -1; } },
+        moves: [['v', 'autovac', 'pages:2', 0, 'vacuum']], fx: function (S) { S.dead.pages = -1; S.pages[2] = 'dirty'; }, ch: "Background", cmd: "SELECT n_dead_tup, last_autovacuum FROM pg_stat_user_tables WHERE relname = 'users';" },
       { layers: ["proc", "disk"], hl: ["wal", "walsender", "standby"], t: "The standby receives the WAL and replays it",
         s: "The WAL sender streams the new records, the standby's WAL receiver writes them to its own pg_wal/, and the startup process replays them into its copy of the page. Now it is in step.",
         d: "The standby replays the log, not the SQL, so it ends up with the same bytes. pg_stat_replication on the primary shows how far behind each standby is.",
         moves: [["w", "wal", "walsender", 0, "WAL"], ["w", "walsender", "rep:0", 0.2, "WAL stream"], ["w", "rep:0", "rep:1", 0.4, "write"], ["w", "rep:1", "rep:2", 0.6, "replay"], ["p", "rep:2", "rpages:2", 0.8, "page"]], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; },
         lines: ["The WAL sender reads the new WAL", "and streams it to the standby's WAL receiver", "The receiver writes it to the standby's pg_wal/", "The startup process replays it", "and the standby's copy of the page changes"],
-        alt: { t: "The standby replays the WAL it already has", s: "With a synchronous standby the WAL arrived during the commit. Replay still runs on its own schedule, so a read on the standby can briefly see the old row.", d: "synchronous_commit = remote_apply makes the commit wait for replay too, so reads on the standby are never behind. It costs more on every commit.", moves: [["w", "rep:1", "rep:2", 0, "replay"], ["p", "rep:2", "rpages:2", 0.4, "page"]], lines: ["The startup process replays the WAL it already received", "and the standby's copy of the page changes"], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; } } },
+        alt: { t: "The standby replays the WAL it already has", s: "With a synchronous standby the WAL arrived during the commit. Replay still runs on its own schedule, so a read on the standby can briefly see the old row.", d: "synchronous_commit = remote_apply makes the commit wait for replay too, so reads on the standby are never behind. It costs more on every commit.", moves: [["w", "rep:1", "rep:2", 0, "replay"], ["p", "rep:2", "rpages:2", 0.4, "page"]], lines: ["The startup process replays the WAL it already received", "and the standby's copy of the page changes"], fx: function (S) { S.lag = 0; S.rpages[2] = 'dirty'; } }, ch: "Replicate", cmd: "SELECT client_addr, state, sent_lsn, replay_lsn, replay_lag FROM pg_stat_replication;" },
+      { layers: ["proc", "mem", "disk"], hl: ["postmaster", "wal", "buffers", "base"], ch: "Crash", t: "The server crashes, and the log brings everything back",
+        s: "Power fails. Everything in shared_buffers is gone, including the page vacuum changed but never wrote to disk. On restart, PostgreSQL finds the last checkpoint and replays the WAL written after it, so every committed change comes back. The cache starts cold.",
+        d: "Recovery time depends on how much WAL was written since the last checkpoint: that is the trade behind max_wal_size and checkpoint_timeout. The server log shows \"redo starts at\" and \"redo done at\".",
+        cmd: "pg_controldata $PGDATA | grep 'REDO location'",
+        moves: [["x", "postmaster", "postmaster", 0, "power cut"], ["c", "base", "postmaster", 0.2, "pg_control"], ["w", "wal", "buffers", 0.4, "replay WAL"], ["p", "base", "pages:2", 0.6, "8 KB page"], ["a", "postmaster", "client", 0.8, "ready"]],
+        lines: ["The power fails: memory is wiped, the disk is not", "On restart, pg_control says where the last checkpoint is", "The WAL written after it is replayed", "into the page, read back from base/", "Recovery is done: connections are accepted again"],
+        pre: function (S) { S.down = 1; S.pages = ["empty", "empty", "empty", "empty", "empty", "empty", "empty", "empty"]; S.dead.pages = -1; S.rec = 0; },
+        fx: function (S) { S.down = 0; S.pages = ["empty", "empty", "dirty", "empty", "empty", "empty", "empty", "empty"]; S.rec = 0; } },
       { layers: ["proc", "mem", "disk"], hl: ["client", "standby"], t: "The primary fails: a commit that was not streamed is gone",
         s: "One more commit is acknowledged, and the primary crashes before streaming it. The standby is promoted and the app reconnects, but that commit does not exist on the new primary. With asynchronous replication, the replication lag is what you lose.",
         d: "This is the trade in Decision 2 on this site: what a commit waits for, and what each choice costs when a server dies.",
         moves: [["q", "client", "backend", 0, "UPDATE"], ["a", "backend", "client", 0.25, "✓ COMMIT"], ["x", "postmaster", "postmaster", 0.5, "crash"], ["q", "client", "standby", 0.75, "reconnect"]], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = S.sync ? 2 : 1; S.lag = 0; },
         lines: ["One more UPDATE commits on the primary", "The app is told it committed", "The primary crashes before streaming it", "The standby is promoted, and that commit is not on it"],
-        alt: { t: "The primary fails: nothing acknowledged is lost", s: "With a synchronous standby, the last commit reached the standby before the app heard back. The promoted standby has every commit the app was told about.", d: "The price was the extra round trip on every commit. And if the only synchronous standby is down, commits wait: plan for two standbys or a quorum.", moves: [["q", "client", "backend", 0, "UPDATE"], ["w", "walsender", "rep:0", 0.2, "WAL"], ["a", "rep:0", "backend", 0.4, "✓ flushed"], ["a", "backend", "client", 0.6, "✓ COMMIT"], ["x", "postmaster", "postmaster", 0.75, "crash"], ["q", "client", "standby", 0.9, "reconnect"]], lines: ["One more UPDATE commits on the primary", "Its WAL reaches the standby first", "The standby confirms", "Then the app is told it committed", "The primary crashes", "The standby is promoted, with every commit"], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = 2; S.lag = 0; } } }
+        alt: { t: "The primary fails: nothing acknowledged is lost", s: "With a synchronous standby, the last commit reached the standby before the app heard back. The promoted standby has every commit the app was told about.", d: "The price was the extra round trip on every commit. And if the only synchronous standby is down, commits wait: plan for two standbys or a quorum.", moves: [["q", "client", "backend", 0, "UPDATE"], ["w", "walsender", "rep:0", 0.2, "WAL"], ["a", "rep:0", "backend", 0.4, "✓ flushed"], ["a", "backend", "client", 0.6, "✓ COMMIT"], ["x", "postmaster", "postmaster", 0.75, "crash"], ["q", "client", "standby", 0.9, "reconnect"]], lines: ["One more UPDATE commits on the primary", "Its WAL reaches the standby first", "The standby confirms", "Then the app is told it committed", "The primary crashes", "The standby is promoted, with every commit"], fx: function (S) { S.down = 1; S.promoted = 1; S.lost = 2; S.lag = 0; } }, ch: "Failover", cmd: "SELECT pg_promote();  -- run on the standby, or: pg_ctl promote" }
     ]
   };
 
@@ -604,15 +613,34 @@
     root.innerHTML =
       '<div class="aa-stage"></div>' +
       '<div class="aa-now" aria-hidden="true"><span class="aa-now-n"></span><span class="aa-now-t"></span></div>' +
-      '<div class="aa-cap" aria-live="polite"><div class="aa-layers"></div><div class="aa-step"></div><div class="aa-title"></div><p class="aa-sub"></p><details class="aa-more"><summary>Why it works this way</summary><p class="aa-detail"></p></details></div>' +
+      '<div class="aa-info" hidden><button type="button" class="aa-x" aria-label="Close">×</button><div class="aa-ik"></div><div class="aa-it"></div><p class="aa-iw"></p><dl class="aa-idl"></dl></div>' +
+      '<div class="aa-cap" aria-live="polite"><div class="aa-layers"></div><div class="aa-step"></div><div class="aa-title"></div><p class="aa-sub"></p><div class="aa-see" hidden><span>See it yourself</span><code></code></div><details class="aa-more"><summary>Why it works this way</summary><p class="aa-detail"></p></details></div>' +
       '<div class="aa-ctl"><button type="button" class="aa-btn aa-prev" aria-label="Previous scene">‹</button><button type="button" class="aa-btn aa-play">▶ Play</button><button type="button" class="aa-btn aa-next" aria-label="Next scene">›</button><div class="aa-dots"></div><div class="aa-opts">' +
         (E.rep ? '<div class="aa-seg" role="group" aria-label="Replication"><span>' + E.rep.label + '</span><button type="button" data-sync="0">' + E.rep.modes[0] + '</button><button type="button" data-sync="1">' + E.rep.modes[1] + '</button></div>' : '') +
         '<div class="aa-seg" role="group" aria-label="Speed"><span>Speed</span><button type="button" data-speed="1.45">slower</button><button type="button" data-speed="1">normal</button><button type="button" data-speed="0.7">faster</button></div></div></div>';
     var stage = root.querySelector('.aa-stage'), dots = root.querySelector('.aa-dots');
-    E.scenes.forEach(function (sc, k) {
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'aa-dot'; b.setAttribute('aria-label', 'Scene ' + (k + 1) + ': ' + sc.t);
-      b.addEventListener('click', function () { go(k); stop(); }); dots.appendChild(b);
-    });
+    var dotEls = [], chapEls = [];
+    if (E.scenes.some(function (sc) { return sc.ch; })) {
+      dots.classList.add('aa-chaps');
+      var cur = null;
+      E.scenes.forEach(function (sc, k) {
+        if (!cur || cur.name !== sc.ch) {
+          var g = document.createElement('div'); g.className = 'aa-ch';
+          var cb = document.createElement('button'); cb.type = 'button'; cb.className = 'aa-chb'; cb.textContent = sc.ch;
+          (function (start) { cb.addEventListener('click', function () { go(start); stop(); }); })(k);
+          var dd = document.createElement('span'); dd.className = 'aa-chd';
+          g.appendChild(cb); g.appendChild(dd); dots.appendChild(g);
+          cur = { name: sc.ch, el: g, dots: dd, first: k }; chapEls.push(cur);
+        }
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'aa-dot'; b.setAttribute('aria-label', 'Scene ' + (k + 1) + ': ' + sc.t);
+        b.addEventListener('click', function () { go(k); stop(); }); cur.dots.appendChild(b); dotEls.push(b); sc._chap = cur;
+      });
+    } else {
+      E.scenes.forEach(function (sc, k) {
+        var b = document.createElement('button'); b.type = 'button'; b.className = 'aa-dot'; b.setAttribute('aria-label', 'Scene ' + (k + 1) + ': ' + sc.t);
+        b.addEventListener('click', function () { go(k); stop(); }); dots.appendChild(b); dotEls.push(b);
+      });
+    }
 
     function build() {
       var lay = root.clientWidth < 640 ? 'narrow' : 'wide'; st.lay = lay;
@@ -637,6 +665,12 @@
         wrapText(g, b[2], r[0] + 10, r[1] + 37, r[2] - 18, r[3] >= 70 ? 2 : 1);
         el('circle', { cx: r[0] + r[2] - 11, cy: r[1] + 13, r: 4, 'class': 'aa-led' }, g);
         N.box[b[0]] = g; N.lab[b[0]] = lab;
+        if (E.info && E.info[b[0]]) {
+          g.setAttribute('tabindex', '0'); g.setAttribute('role', 'button'); g.setAttribute('aria-label', b[1] + ': what it is');
+          g.classList.add('aa-click');
+          g.addEventListener('click', function () { info(b[0], b[1]); });
+          g.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); info(b[0], b[1]); } });
+        }
       });
       Object.keys(E.widgets).forEach(function (id) { widget(id, E.widgets[id]); });
       if (E.rep) {
@@ -646,6 +680,18 @@
         el('text', { x: pb[0] + pb[2] - 92, y: pb[1] + 22, 'text-anchor': 'middle' }, N.downMark, '✕ ' + E.rep.primary + ' down');
       }
     }
+    function info(id, name) {
+      var I = E.info[id], box = root.querySelector('.aa-info');
+      Object.keys(N.box).forEach(function (k) { N.box[k].classList.toggle('aa-sel', k === id); });
+      box.querySelector('.aa-ik').textContent = ({ proc: 'Process', mem: 'Memory', disk: 'Disk', out: 'Outside the server' })[INFO[id] || 'out'];
+      box.querySelector('.aa-it').textContent = name;
+      box.querySelector('.aa-iw').innerHTML = colorize(I[0]);
+      var rows = [['Where', I[1]], ['Setting', I[2]], ['See it', I[3]]].filter(function (r) { return r[1]; });
+      box.querySelector('.aa-idl').innerHTML = rows.map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + (r[0] === 'Where' ? esc(r[1]) : '<code>' + esc(r[1]) + '</code>') + '</dd>'; }).join('');
+      box.hidden = false;
+      if (root.HDW_GOALS) {}
+    }
+    function esc(t) { return String(t).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
     function wrapText(g, t, x, y, w, lines) {
       var max = Math.floor(w / 5.5), words = t.split(' '), out = [], cur = '';
       words.forEach(function (wd) { if ((cur + ' ' + wd).trim().length > max && cur) { out.push(cur); cur = wd; } else cur = (cur + ' ' + wd).trim(); });
@@ -789,13 +835,16 @@
         cap.querySelector('.aa-more').hidden = true;
       } else {
         cap.querySelector('.aa-layers').innerHTML = sc.layers.map(function (l) { return '<span class="aa-chip aa-chip-' + l + '">' + BAND[l] + '</span>'; }).join('');
-        cap.querySelector('.aa-step').textContent = 'Scene ' + (i + 1) + ' of ' + E.scenes.length;
+        cap.querySelector('.aa-step').textContent = (sc.ch ? sc.ch + ' · ' : '') + 'Scene ' + (i + 1) + ' of ' + E.scenes.length;
         cap.querySelector('.aa-title').textContent = sc.t;
         cap.querySelector('.aa-sub').innerHTML = colorize(sc.s);
         cap.querySelector('.aa-detail').innerHTML = colorize(sc.d);
         cap.querySelector('.aa-more').hidden = false;
       }
-      Array.prototype.forEach.call(dots.children, function (d, k) { d.classList.toggle('on', k === i); d.classList.toggle('done', k < i); });
+      dotEls.forEach(function (d, k) { d.classList.toggle('on', k === i); d.classList.toggle('done', k < i); });
+      chapEls.forEach(function (c) { c.el.classList.toggle('on', !!(sc && E.scenes[i]._chap === c)); });
+      var see = cap.querySelector('.aa-see');
+      if (sc && sc.cmd) { see.hidden = false; see.querySelector('code').textContent = sc.cmd; } else see.hidden = true;
     }
     var now = root.querySelector('.aa-now'), nowN = root.querySelector('.aa-now-n'), nowT = root.querySelector('.aa-now-t');
     function say(text, n, total) {
@@ -814,7 +863,7 @@
       now.classList.remove('idle');
       var ms = ordered(i), ls = lines(i);
       if (!animate || reduce) { render(stateAt(i)); nowN.textContent = ''; nowT.innerHTML = colorize(ls.join(' · ')); return; }
-      render(settled(i - 1));
+      var S0 = settled(i - 1), scn = SC(i); if (scn.pre) scn.pre(S0); render(S0);
       ms.forEach(function (m, k) {
         later(function () { say(ls[k] || m[4], k + 1, ms.length); fly(m); }, k * STEP * st.speed);
       });
@@ -874,7 +923,9 @@
       b.addEventListener('click', function () { st.speed = +b.getAttribute('data-speed'); marks(); });
     });
     marks();
+    root.querySelector('.aa-x').addEventListener('click', function () { root.querySelector('.aa-info').hidden = true; Object.keys(N.box).forEach(function (k) { N.box[k].classList.remove('aa-sel'); }); });
     build(); show(-1, false);
+    if (E.info) { var hint = document.createElement('p'); hint.className = 'aa-hint'; hint.textContent = 'Tap or click any box to see what it is, where it lives and how to look at it.'; root.insertBefore(hint, root.querySelector('.aa-now')); }
     var lastW = root.clientWidth;
     addEventListener('resize', function () { var w = root.clientWidth; if ((w < 640) !== (lastW < 640)) { clearFlights(); build(); show(st.i, false); } lastW = w; });
     if ('IntersectionObserver' in window && !reduce) {
