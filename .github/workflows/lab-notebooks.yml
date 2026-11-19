@@ -1,7 +1,7 @@
 name: Lab notebooks
 
 # Runs the experiments behind the Notebooks page on real PostgreSQL 18,
-# MySQL 8.4, MongoDB 8.0, Redis 7.4, ClickHouse 24.8 and Cassandra 5.0 containers, then pushes the plain-text
+# MySQL 8.4, MongoDB 8.0, Redis 7.4, ClickHouse 24.8, Cassandra 5.0 and pgvector containers, then pushes the plain-text
 # transcripts to the lab-results branch. The page quotes them as captured,
 # with the run date. Trigger it by hand, or by pushing to the lab-run branch.
 on:
@@ -48,15 +48,20 @@ jobs:
           until curl -sf http://127.0.0.1:8123/ping; do sleep 2; done
           for i in $(seq 1 90); do docker exec nb-cass cqlsh -e 'DESCRIBE KEYSPACES' >/dev/null 2>&1 && break; sleep 4; done
 
+      - name: Start PostgreSQL 18 with pgvector
+        run: |
+          docker run -d --name nb-vec -p 5433:5432 --shm-size=1g -e POSTGRES_PASSWORD=ci -e POSTGRES_DB=shop pgvector/pgvector:pg18
+          until docker exec nb-vec pg_isready -U postgres -d shop; do sleep 2; done
+
       - name: Install drivers
-        run: pip install --quiet psycopg2-binary pymysql pymongo redis clickhouse-connect cassandra-driver
+        run: pip install --quiet psycopg2-binary pymysql pymongo redis clickhouse-connect cassandra-driver numpy
 
       - name: Run the notebooks
         run: |
           # A push to lab-run may carry scripts/notebooks/selected.txt to run only some scripts.
           # Each line: a script, then optional notebook function names.
           if [ -f scripts/notebooks/selected.txt ]; then SEL=scripts/notebooks/selected.txt
-          else printf 'run_all.py\nrun_more.py\n' > /tmp/sel.txt; SEL=/tmp/sel.txt; fi
+          else printf 'run_all.py\nrun_more.py\nrun_vector.py\n' > /tmp/sel.txt; SEL=/tmp/sel.txt; fi
           while read -r script names; do
             [ -n "$script" ] && python3 scripts/notebooks/$script lab-output $names
           done < "$SEL"
