@@ -30,7 +30,7 @@
   }
 
   /* 2 and 3. contents panel and heading links */
-  var SKIP = '.famcard,.cmp3-col,.labcard,.pathcard,.logcard,.opcard,.incident,.mapcard,.mapsec,.tut,.viz,.steplist,.myth,.secnav,nav,footer,.quiz,.navmenu,.oncall';
+  var SKIP = '.famcard,.cmp3-col,.labcard,.pathcard,.logcard,.opcard,.incident,.mapcard,.mapsec,.partcard,.door,.tut,.viz,.steplist,.myth,.secnav,nav,footer,.quiz,.navmenu,.oncall';
   function headings() {
     var hs = Array.prototype.filter.call(document.querySelectorAll('main h2, body > section h2, body > header h2, body > section h3'), function (h) {
       return !h.closest(SKIP);
@@ -156,7 +156,7 @@
   }
   function markLinks() {
     var r = getRead();
-    Array.prototype.forEach.call(document.querySelectorAll('.secnav-list a, .mapsec li a'), function (a) {
+    Array.prototype.forEach.call(document.querySelectorAll('.secnav-list a, .mapsec li a, .partcard li a'), function (a) {
       a.classList.toggle('read', !!r[pageKey(a.getAttribute('href'))]);
     });
     var head = document.querySelector('.secnav-head .kicker');

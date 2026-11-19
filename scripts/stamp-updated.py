@@ -29,7 +29,7 @@ def main():
         # so a change there does not count as an update to the page.
         text = re.sub(r"<(nav|footer)>.*?</\1>", "", text, flags=re.S)
         # Generated navigation (breadcrumb, section index, old next-page blocks) is not content either.
-        text = re.sub(r"<!-- (CRUMBS|SECTION|SITEMAP|CONTINUE):BEGIN -->.*?<!-- \1:END -->", "", text, flags=re.S)
+        text = re.sub(r"<!-- (CRUMBS|SECTION|SITEMAP|CONTINUE|NEWS):BEGIN -->.*?<!-- \1:END -->", "", text, flags=re.S)
         text = re.sub(r'<section class="nextpage">.*?</section>', "", text, flags=re.S)
         text = re.sub(r"<script[^>]*></script>", "", text)
         return re.sub(r"\s+", " ", text)

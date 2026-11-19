@@ -10,7 +10,7 @@
                       assets/data/updated.json (scripts/stamp-updated.py)
        {{STAMP_DOCS}} the "Checked against docs" line, built from
                       assets/data/engines.json (versions + stamp month)
-     The "one invariant" paragraph lives here and nowhere else. -->
+     The footer text lives here and nowhere else. -->
 <!-- NAV -->
 <nav><div class="wrap navin">
   <div class="logo"><i>▦</i> Real databases, simply</div>
@@ -19,10 +19,8 @@
 </div></nav>
 <!-- FOOTER -->
 <footer><div class="wrap">
-{{BACK_HOME}}  <p><b style="color:var(--ink)">The one invariant:</b> COMMIT means the log record is on disk. <span class="mono">pg_wal</span> in PostgreSQL, <span class="mono">#innodb_redo/#ib_redo0</span> + <span class="mono">mysql-bin</span> in MySQL, <span class="mono">journal/WiredTigerLog</span> + the oplog in MongoDB. The data files (<span class="mono">base/…</span>, <span class="mono">*.ibd</span>, <span class="mono">collection-*.wt</span>) are where checkpoints place the result afterwards, on their own schedule. Every guarantee on this page, durability, replication, point-in-time recovery, is a consequence of that ordering, and every number on this page is checkable with the commands given beside it.</p>
-  <p>PostgreSQL, MySQL/InnoDB, and MongoDB/WiredTiger internals, from physical layout to production failure modes. File names, paths, thresholds, and commands are the production ones.</p>
-  <p>Written by Dinesh. I run production databases for a living.</p>
+{{BACK_HOME}}  <p><b style="color:var(--ink)">Real databases, simply.</b> How PostgreSQL, MySQL and MongoDB work in real systems, and which database each kind of application data belongs in. Written by Dinesh, who runs production databases for a living.</p>
   <p>{{STAMP_DOCS}}</p>
-  <p class="reviewed">Last updated {{UPDATED}} · <a href="{{ROOT}}corrections/index.html">Corrections</a> · <a href="{{ROOT}}feed.xml">RSS feed</a> · <a href="{{ROOT}}work-with-me/index.html">Work with me</a></p>
-  <p><a href="{{ROOT}}sitemap/index.html">All pages</a> · <a href="{{ROOT}}references/index.html">Reading list</a> · <a href="{{ROOT}}about/index.html">About</a></p>
+  <p class="reviewed">Last updated {{UPDATED}}</p>
+  <p class="footlinks"><a href="{{ROOT}}sitemap/index.html">All pages</a> · <a href="{{ROOT}}whats-new/index.html">What's new</a> · <a href="{{ROOT}}corrections/index.html">Corrections</a> · <a href="{{ROOT}}references/index.html">Reading list</a> · <a href="{{ROOT}}about/index.html">About</a> · <a href="{{ROOT}}work-with-me/index.html">Work with me</a> · <a href="{{ROOT}}assistant/index.html">Use it from your AI assistant</a> · <a href="{{ROOT}}feed.xml">RSS</a></p>
 </div></footer>

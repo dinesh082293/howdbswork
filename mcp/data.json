@@ -1202,6 +1202,161 @@
    ]
   },
   {
+   "title": "PostgreSQL",
+   "section": "Learn",
+   "url": "https://howdbswork.com/postgresql/",
+   "description": "PostgreSQL internals: WAL, 8 KB pages, shared_buffers, MVCC and VACUUM. Files on disk, log files, outage parameters and commands.",
+   "headings": [
+    "PostgreSQL: in one line",
+    "The architecture: processes, memory, disk",
+    "Every log file a DBA needs to know",
+    "The parameters DBAs actually touch during outages",
+    "Write-Ahead Log (WAL)",
+    "Open a real database and check every claim on this page",
+    "Try it live: a real Postgres, in your browser",
+    "See the plan as a tree: which step is the villain",
+    "One incident I keep coming back to",
+    "Before you leave, check this",
+    "Follow one read",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "MySQL · InnoDB",
+   "section": "Learn",
+   "url": "https://howdbswork.com/mysql/",
+   "description": "MySQL and InnoDB internals: .ibd files, redo log, binlog, buffer pool, undo and purge. Files on disk, log files, outage parameters and commands.",
+   "headings": [
+    "MySQL · InnoDB: in one line",
+    "The architecture: processes, memory, disk",
+    "Every log file a DBA needs to know",
+    "The parameters DBAs actually touch during outages",
+    "Redo log",
+    "Binary log (binlog)",
+    "Open a real database and check every claim on this page",
+    "The optimizer's selectivity decision",
+    "One incident I keep coming back to",
+    "Before you leave, check this",
+    "Follow one read",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "MongoDB · WiredTiger",
+   "section": "Learn",
+   "url": "https://howdbswork.com/mongodb/",
+   "description": "MongoDB and WiredTiger internals: .wt files, journal, oplog, cache and sharding. Files on disk, log files, outage parameters and commands.",
+   "headings": [
+    "MongoDB · WiredTiger: in one line",
+    "The architecture: processes, memory, disk",
+    "Every log file a DBA needs to know",
+    "The parameters DBAs actually touch during outages",
+    "Journal",
+    "Oplog: the replica set log",
+    "Open a real database and check every claim on this page",
+    "ESR: the index order that avoids a sort",
+    "One incident I keep coming back to",
+    "Before you leave, check this",
+    "Follow one change to a secondary",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Same task, three engines",
+   "section": "Learn",
+   "url": "https://howdbswork.com/compare/",
+   "description": "Four everyday events, a write, a crash, a lagging replica and a long transaction, shown side by side for PostgreSQL, MySQL and MongoDB.",
+   "headings": [
+    "Same job, same shape, different files",
+    "I commit one row. What touches disk, and when?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "The server is killed in the middle of traffic. What does the restart do?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "A replica falls behind. Why, and how do I see it?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "One transaction stays open for an hour. What does it cost?",
+    "PostgreSQL",
+    "MySQL · InnoDB",
+    "MongoDB · WiredTiger",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Database families",
+   "section": "Learn",
+   "url": "https://howdbswork.com/families/",
+   "description": "Ten families of databases, from B-tree row stores to LSM, column, in-memory, distributed SQL and vector search, and the traffic each one handles well.",
+   "headings": [
+    "The layout decides the traffic it can take",
+    "How each one stores data, and what hurts it",
+    "B-tree row stores",
+    "LSM-tree stores",
+    "Column stores",
+    "In-memory key-value",
+    "Document stores",
+    "Distributed SQL",
+    "Shared-storage cloud databases",
+    "Search engines",
+    "Vector search",
+    "Time-series databases",
+    "Start boring, add a family when the traffic asks for it",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Queries that look fine and are not",
+   "section": "Learn",
+   "url": "https://howdbswork.com/queries/",
+   "description": "Column order in an index, covering queries, OFFSET against keyset paging, and N+1, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.",
+   "headings": [
+    "Why is my query slow when the index exists?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Can a query skip the table entirely?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Why does page 25,000 take a hundred times longer than page 1?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Why is a fast query making the page slow?",
+    "PostgreSQL 18",
+    "MySQL 8.4",
+    "MongoDB 8.0",
+    "Check yourself"
+   ]
+  },
+  {
+   "title": "Lost updates and write skew",
+   "section": "Learn",
+   "url": "https://howdbswork.com/isolation/",
+   "description": "Two concurrency bugs, lost update and write skew, run as real interleaved sessions on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, with the fixes.",
+   "headings": [
+    "Lost update: two deposits, one survives",
+    "PostgreSQL, READ COMMITTED",
+    "PostgreSQL, REPEATABLE READ",
+    "MySQL, REPEATABLE READ",
+    "MySQL, with SELECT ... FOR UPDATE",
+    "MongoDB, two transactions",
+    "Two sessions, one row",
+    "Write skew: two doctors go off call",
+    "PostgreSQL, REPEATABLE READ",
+    "PostgreSQL, SERIALIZABLE",
+    "MySQL, REPEATABLE READ",
+    "MongoDB, two transactions",
+    "What I reach for, in order",
+    "Check yourself"
+   ]
+  },
+  {
    "title": "Staff path, zero to architect",
    "section": "Learn",
    "url": "https://howdbswork.com/staff-path/",
@@ -1233,113 +1388,6 @@
     "I have an interview",
     "I am on call and something is on fire",
     "I am choosing a database"
-   ]
-  },
-  {
-   "title": "PostgreSQL",
-   "section": "Engines",
-   "url": "https://howdbswork.com/postgresql/",
-   "description": "PostgreSQL internals: WAL, 8 KB pages, shared_buffers, MVCC and VACUUM. Files on disk, log files, outage parameters and commands.",
-   "headings": [
-    "PostgreSQL: in one line",
-    "The architecture: processes, memory, disk",
-    "Every log file a DBA needs to know",
-    "The parameters DBAs actually touch during outages",
-    "Write-Ahead Log (WAL)",
-    "Open a real database and check every claim on this page",
-    "Try it live: a real Postgres, in your browser",
-    "See the plan as a tree: which step is the villain",
-    "One incident I keep coming back to",
-    "Before you leave, check this",
-    "Follow one read",
-    "Check yourself"
-   ]
-  },
-  {
-   "title": "MySQL · InnoDB",
-   "section": "Engines",
-   "url": "https://howdbswork.com/mysql/",
-   "description": "MySQL and InnoDB internals: .ibd files, redo log, binlog, buffer pool, undo and purge. Files on disk, log files, outage parameters and commands.",
-   "headings": [
-    "MySQL · InnoDB: in one line",
-    "The architecture: processes, memory, disk",
-    "Every log file a DBA needs to know",
-    "The parameters DBAs actually touch during outages",
-    "Redo log",
-    "Binary log (binlog)",
-    "Open a real database and check every claim on this page",
-    "The optimizer's selectivity decision",
-    "One incident I keep coming back to",
-    "Before you leave, check this",
-    "Follow one read",
-    "Check yourself"
-   ]
-  },
-  {
-   "title": "MongoDB · WiredTiger",
-   "section": "Engines",
-   "url": "https://howdbswork.com/mongodb/",
-   "description": "MongoDB and WiredTiger internals: .wt files, journal, oplog, cache and sharding. Files on disk, log files, outage parameters and commands.",
-   "headings": [
-    "MongoDB · WiredTiger: in one line",
-    "The architecture: processes, memory, disk",
-    "Every log file a DBA needs to know",
-    "The parameters DBAs actually touch during outages",
-    "Journal",
-    "Oplog: the replica set log",
-    "Open a real database and check every claim on this page",
-    "ESR: the index order that avoids a sort",
-    "One incident I keep coming back to",
-    "Before you leave, check this",
-    "Follow one change to a secondary",
-    "Check yourself"
-   ]
-  },
-  {
-   "title": "Same task, three engines",
-   "section": "Engines",
-   "url": "https://howdbswork.com/compare/",
-   "description": "Four everyday events, a write, a crash, a lagging replica and a long transaction, shown side by side for PostgreSQL, MySQL and MongoDB.",
-   "headings": [
-    "I commit one row. What touches disk, and when?",
-    "PostgreSQL",
-    "MySQL · InnoDB",
-    "MongoDB · WiredTiger",
-    "The server is killed in the middle of traffic. What does the restart do?",
-    "PostgreSQL",
-    "MySQL · InnoDB",
-    "MongoDB · WiredTiger",
-    "A replica falls behind. Why, and how do I see it?",
-    "PostgreSQL",
-    "MySQL · InnoDB",
-    "MongoDB · WiredTiger",
-    "One transaction stays open for an hour. What does it cost?",
-    "PostgreSQL",
-    "MySQL · InnoDB",
-    "MongoDB · WiredTiger",
-    "Check yourself"
-   ]
-  },
-  {
-   "title": "Database families",
-   "section": "Engines",
-   "url": "https://howdbswork.com/families/",
-   "description": "Ten families of databases, from B-tree row stores to LSM, column, in-memory, distributed SQL and vector search, and the traffic each one handles well.",
-   "headings": [
-    "The layout decides the traffic it can take",
-    "How each one stores data, and what hurts it",
-    "B-tree row stores",
-    "LSM-tree stores",
-    "Column stores",
-    "In-memory key-value",
-    "Document stores",
-    "Distributed SQL",
-    "Shared-storage cloud databases",
-    "Search engines",
-    "Vector search",
-    "Time-series databases",
-    "Start boring, add a family when the traffic asks for it",
-    "Check yourself"
    ]
   },
   {
@@ -1405,7 +1453,7 @@
    "title": "Application designs",
    "section": "Design",
    "url": "https://howdbswork.com/designs/",
-   "description": "Thirteen design docs for common applications, with a picker: what kind of data goes in which database, and why.",
+   "description": "Fourteen design docs for common applications, with a picker: what kind of data goes in which database, and why.",
    "headings": [
     "Where should this data go?",
     "Five rules I apply before naming a product",
@@ -1678,74 +1726,8 @@
    ]
   },
   {
-   "title": "Design doc template",
-   "section": "Design",
-   "url": "https://howdbswork.com/designs/template/",
-   "description": "A copyable outline for a database design doc: workload, cost of a lost write, placement, model, durability, growth, failures, alternatives and cost.",
-   "headings": []
-  },
-  {
-   "title": "Submit a design for review",
-   "section": "Design",
-   "url": "https://howdbswork.com/designs/review/",
-   "description": "Send a database design for review, in public as a GitHub issue or in private, and the questions every review asks.",
-   "headings": [
-    "In public, or in private",
-    "In public, on GitHub",
-    "In private",
-    "The questions every review asks"
-   ]
-  },
-  {
-   "title": "Queries that look fine and are not",
-   "section": "Get it right",
-   "url": "https://howdbswork.com/queries/",
-   "description": "Column order in an index, covering queries, OFFSET against keyset paging, and N+1, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.",
-   "headings": [
-    "Why is my query slow when the index exists?",
-    "PostgreSQL 18",
-    "MySQL 8.4",
-    "MongoDB 8.0",
-    "Can a query skip the table entirely?",
-    "PostgreSQL 18",
-    "MySQL 8.4",
-    "MongoDB 8.0",
-    "Why does page 25,000 take a hundred times longer than page 1?",
-    "PostgreSQL 18",
-    "MySQL 8.4",
-    "MongoDB 8.0",
-    "Why is a fast query making the page slow?",
-    "PostgreSQL 18",
-    "MySQL 8.4",
-    "MongoDB 8.0",
-    "Check yourself"
-   ]
-  },
-  {
-   "title": "Lost updates and write skew",
-   "section": "Get it right",
-   "url": "https://howdbswork.com/isolation/",
-   "description": "Two concurrency bugs, lost update and write skew, run as real interleaved sessions on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0, with the fixes.",
-   "headings": [
-    "Lost update: two deposits, one survives",
-    "PostgreSQL, READ COMMITTED",
-    "PostgreSQL, REPEATABLE READ",
-    "MySQL, REPEATABLE READ",
-    "MySQL, with SELECT ... FOR UPDATE",
-    "MongoDB, two transactions",
-    "Two sessions, one row",
-    "Write skew: two doctors go off call",
-    "PostgreSQL, REPEATABLE READ",
-    "PostgreSQL, SERIALIZABLE",
-    "MySQL, REPEATABLE READ",
-    "MongoDB, two transactions",
-    "What I reach for, in order",
-    "Check yourself"
-   ]
-  },
-  {
    "title": "Anti-patterns",
-   "section": "Get it right",
+   "section": "Design",
    "url": "https://howdbswork.com/designs/anti-patterns/",
    "description": "Fifteen database anti-patterns: what you see, why it happens inside the engine, and what to do instead.",
    "headings": [
@@ -1768,7 +1750,7 @@
   },
   {
    "title": "Decisions",
-   "section": "Get it right",
+   "section": "Design",
    "url": "https://howdbswork.com/decisions/",
    "description": "Ten decisions a database engineer has to make, each with the price stated up front. PostgreSQL, MySQL and MongoDB, compared on the same decision.",
    "headings": [
@@ -1777,7 +1759,7 @@
   },
   {
    "title": "What a commit waits for",
-   "section": "Get it right",
+   "section": "Design",
    "url": "https://howdbswork.com/decisions/sync-replication-failover/",
    "description": "Synchronous replication and failover: what a commit waits for before it returns, and what that choice costs when a server dies. PostgreSQL, MySQL and MongoDB, compared.",
    "headings": [
@@ -1814,28 +1796,27 @@
    ]
   },
   {
-   "title": "Why the bill is huge",
-   "section": "Get it right",
-   "url": "https://howdbswork.com/decisions/cost-model/",
-   "description": "Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it.",
+   "title": "Design doc template",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/template/",
+   "description": "A copyable outline for a database design doc: workload, cost of a lost write, placement, model, durability, growth, failures, alternatives and cost.",
+   "headings": []
+  },
+  {
+   "title": "Submit a design for review",
+   "section": "Design",
+   "url": "https://howdbswork.com/designs/review/",
+   "description": "Send a database design for review, in public as a GitHub issue or in private, and the questions every review asks.",
    "headings": [
-    "Pay for the load you have, plus a reserve you chose on purpose",
-    "Six lines on the invoice",
-    "Find each one with a query",
-    "1. An instance sized for the fear",
-    "2. IOPS and throughput nobody uses",
-    "3. Replicas nobody reads",
-    "4. Indexes that nothing uses",
-    "5. Data that should have left",
-    "6. Connections forcing a bigger box",
-    "Cheapest and safest first, commitments last",
-    "Six ways to save money and cause an outage",
-    "A monthly review that takes an hour"
+    "In public, or in private",
+    "In public, on GitHub",
+    "In private",
+    "The questions every review asks"
    ]
   },
   {
    "title": "Where to run the database",
-   "section": "Run it",
+   "section": "Operate",
    "url": "https://howdbswork.com/designs/hosting/",
    "description": "On-prem, self-managed on VMs or EC2, managed cloud, serverless, vendor services or Kubernetes: who does what, the full cost, and where to run each kind of application.",
    "headings": [
@@ -1858,7 +1839,7 @@
   },
   {
    "title": "On-prem vs cloud, by engine",
-   "section": "Run it",
+   "section": "Operate",
    "url": "https://howdbswork.com/cloud/",
    "description": "On-prem vs cloud for PostgreSQL, MySQL and MongoDB: what RDS, Aurora, Cloud SQL and Atlas take over, what the DBA still owns, and the tradeoffs.",
    "headings": [
@@ -1870,14 +1851,34 @@
   },
   {
    "title": "Capacity calculator",
-   "section": "Run it",
+   "section": "Operate",
    "url": "https://howdbswork.com/designs/capacity/",
    "description": "Estimate data size, working set, memory, disk and log volume for a table, with every assumption stated.",
    "headings": []
   },
   {
+   "title": "Why the bill is huge",
+   "section": "Operate",
+   "url": "https://howdbswork.com/decisions/cost-model/",
+   "description": "Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it.",
+   "headings": [
+    "Pay for the load you have, plus a reserve you chose on purpose",
+    "Six lines on the invoice",
+    "Find each one with a query",
+    "1. An instance sized for the fear",
+    "2. IOPS and throughput nobody uses",
+    "3. Replicas nobody reads",
+    "4. Indexes that nothing uses",
+    "5. Data that should have left",
+    "6. Connections forcing a bigger box",
+    "Cheapest and safest first, commitments last",
+    "Six ways to save money and cause an outage",
+    "A monthly review that takes an hour"
+   ]
+  },
+  {
    "title": "Migration playbooks",
-   "section": "Run it",
+   "section": "Operate",
    "url": "https://howdbswork.com/designs/migrations/",
    "description": "Four migration playbooks: add change data capture, split a database, move from MySQL to PostgreSQL, and add a cache, each with checks and a way back.",
    "headings": [
@@ -1892,39 +1893,15 @@
    ]
   },
   {
-   "title": "Cheat sheet",
-   "section": "Run it",
-   "url": "https://howdbswork.com/cheat-sheet/",
-   "description": "Each engine in 8 rules: PostgreSQL, MySQL/InnoDB and MongoDB/WiredTiger: one rule, one plain line, one diagram, with deep-dive links.",
-   "headings": [
-    "Each engine, in 8 rules. Scan it in a minute, then go deep.",
-    "Best Practices in PostgreSQL",
-    "Best Practices in MySQL · InnoDB",
-    "Best Practices in MongoDB"
-   ]
-  },
-  {
-   "title": "Reference: plans, logs, checklist",
-   "section": "Run it",
-   "url": "https://howdbswork.com/reference/",
-   "description": "Quick lookup: side-by-side engine comparison, annotated EXPLAIN output, the log-file pattern and failure modes, and the DBA checklist.",
-   "headings": [
-    "Explain output, annotated line by line. Red flags named.",
-    "PostgreSQL: EXPLAIN (ANALYZE, BUFFERS) on a lookup by email",
-    "MongoDB: explain(\"executionStats\") on an orders query",
-    "Paste your own plan: EXPLAIN, annotated",
-    "The same work, done by three different file layouts",
-    "Five logs run everything. Know these five.",
-    "The pattern behind all five",
-    "Where the logs break: the five failure modes that page people",
-    "What to check before go-live, and in the first 5 minutes of an incident",
-    "Before go-live",
-    "When something breaks, first 5 minutes, in order"
-   ]
+   "title": "On call tonight",
+   "section": "Operate",
+   "url": "https://howdbswork.com/oncall/",
+   "description": "Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call.",
+   "headings": []
   },
   {
    "title": "Real failures",
-   "section": "Run it",
+   "section": "Operate",
    "url": "https://howdbswork.com/stories/",
    "description": "Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.",
    "headings": [
@@ -1950,11 +1927,35 @@
    ]
   },
   {
-   "title": "On call tonight",
-   "section": "Run it",
-   "url": "https://howdbswork.com/oncall/",
-   "description": "Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call.",
-   "headings": []
+   "title": "Cheat sheet",
+   "section": "Operate",
+   "url": "https://howdbswork.com/cheat-sheet/",
+   "description": "Each engine in 8 rules: PostgreSQL, MySQL/InnoDB and MongoDB/WiredTiger: one rule, one plain line, one diagram, with deep-dive links.",
+   "headings": [
+    "Each engine, in 8 rules. Scan it in a minute, then go deep.",
+    "Best Practices in PostgreSQL",
+    "Best Practices in MySQL · InnoDB",
+    "Best Practices in MongoDB"
+   ]
+  },
+  {
+   "title": "Reference: plans, logs, checklist",
+   "section": "Operate",
+   "url": "https://howdbswork.com/reference/",
+   "description": "Quick lookup: side-by-side engine comparison, annotated EXPLAIN output, the log-file pattern and failure modes, and the DBA checklist.",
+   "headings": [
+    "Explain output, annotated line by line. Red flags named.",
+    "PostgreSQL: EXPLAIN (ANALYZE, BUFFERS) on a lookup by email",
+    "MongoDB: explain(\"executionStats\") on an orders query",
+    "Paste your own plan: EXPLAIN, annotated",
+    "The same work, done by three different file layouts",
+    "Five logs run everything. Know these five.",
+    "The pattern behind all five",
+    "Where the logs break: the five failure modes that page people",
+    "What to check before go-live, and in the first 5 minutes of an incident",
+    "Before go-live",
+    "When something breaks, first 5 minutes, in order"
+   ]
   },
   {
    "title": "About",
@@ -1965,6 +1966,13 @@
     "Most of what I know, I learned the expensive way",
     "Three ways in, depending on where you are"
    ]
+  },
+  {
+   "title": "What's new",
+   "section": "About",
+   "url": "https://howdbswork.com/whats-new/",
+   "description": "Every change to the site, newest first: new pages, new experiments and new tools, with the date.",
+   "headings": []
   },
   {
    "title": "Corrections",
@@ -2018,11 +2026,9 @@
    "description": "Every page on the site in seven sections, in reading order: Learn, Engines, Practice, Design, Get it right, Run it, About.",
    "headings": [
     "Part 1 · Learn",
-    "Part 2 · Engines",
-    "Part 3 · Practice",
-    "Part 4 · Design",
-    "Part 5 · Get it right",
-    "Part 6 · Run it",
+    "Part 2 · Practice",
+    "Part 3 · Design",
+    "Part 4 · Operate",
     "About"
    ]
   }

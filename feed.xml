@@ -7,210 +7,210 @@
   <language>en</language>
   <item>
     <title>The Query coach. Paste a PostgreSQL or MySQL query, and optionally the table definitions...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-e69711f38441</guid>
     <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
     <description>the Query coach. Paste a PostgreSQL or MySQL query, and optionally the table definitions and an EXPLAIN plan, and get what I would flag in a review: risky statements, slow shapes, missing indexes, locking migrations and plan red flags, each with the fix and the lesson behind it. It runs in your browser, and the same checks are now a tool in the MCP server.</description>
   </item>
   <item>
     <title>Databases for AI agents. A new design doc, Agent memory and state, says where an agent&#x27;s...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-921c7fe61f1b</guid>
     <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
     <description>databases for AI agents. A new design doc, Agent memory and state, says where an agent&#x27;s run log, checkpoints, long-term memories and working memory go. Notebook 8 measures pgvector on 100,000 memories: what they cost to store, recall against speed, and how a tenant filter returned 1.3 rows out of 10 until iterative scan was on. The site can now be used from Claude, Cursor or any MCP client: Use it from your AI assistant. And an agents review on Work with me.</description>
   </item>
   <item>
     <title>A Your turn question at the end of twelve more lessons</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-2bc9192adf5d</guid>
     <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
     <description>a Your turn question at the end of twelve more lessons: the three engine pages, Compare, Ten concepts, the failover and cost decisions, anti-patterns, the capacity calculator, migrations, Cloud and the lab notebooks. Each one is a situation from real systems, with my answer folded until you ask for it.</description>
   </item>
   <item>
     <title>Scale it is now on all 13 design docs, each following its own growth path (payments shard...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-98fbf04d754f</guid>
     <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
     <description>Scale it is now on all 13 design docs, each following its own growth path (payments shard by account, bookings add a waiting room, telemetry puts a queue in front, and so on). Also a new Follow it on Lost updates and write skew: two sessions update the same row in PostgreSQL and InnoDB, with what REPEATABLE READ changes in PostgreSQL and what one forgotten transaction does in MySQL.</description>
   </item>
   <item>
     <title>Scale it on the store, social feed and chat design docs</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-fe0d368e8427</guid>
     <pubDate>Thu, 19 Nov 2026 12:00:00 -0800</pubDate>
     <description>Scale it on the store, social feed and chat design docs: pick a stage of the design, from one database to sharded, then send ten times the traffic, empty the cache or fail the primary, and see what happens to latency, CPU and writes. The numbers are a model to show the shape; the measured ones are in the lab notebooks.</description>
   </item>
   <item>
     <title>The site is now a course</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-cdc0f568abe9</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>the site is now a course: every page except About has a lesson number, the home page keeps your place and shows the next lesson, and All pages lists all 42 lessons in order. Also new: Follow it, where you step through one read on the PostgreSQL and MySQL pages and one change travelling to a replica on Compare and MongoDB; and Estimate it on all 13 design docs, with sliders for your own numbers, a link that keeps them, and a Your turn question to answer before you open mine.</description>
   </item>
   <item>
     <title>Reading aids</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-99d57cb7e300</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>reading aids: On call tonight, three branching incidents where you pick what to check and learn why it was a good or bad call; a Check yourself quiz on nine pages; hover cards for database terms; a Contents button on long pages; links on headings; a reading progress bar; and a tick next to every page you have finished, kept in your browser.</description>
   </item>
   <item>
     <title>One structure for the whole site</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-b43e25978b2e</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>one structure for the whole site: seven sections in reading order (Learn, Engines, Practice, Design, Get it right, Run it, About), a menu per section, a breadcrumb on every page, and at the bottom of every page its section&#x27;s pages with previous and next links, so you can read the site from the first page to the last. Plus an All pages page, and fixes so every page fits a phone screen.</description>
   </item>
   <item>
     <title>An animated commit on Compare (step through one change from memory to the log to the data...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-7c1a302c4d8e</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>an animated commit on Compare (step through one change from memory to the log to the data file, for each engine), a problem and fix picture on every anti-pattern, a phase diagram for each migration playbook, and a &quot;where your bill goes&quot; chart on the cost page that takes your own invoice lines.</description>
   </item>
   <item>
     <title>More pictures</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-f092a073c7e3</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>more pictures: charts of every measured result on the Notebooks page, step-by-step timelines of lost updates and write skew, the write path and crash recovery on Compare, B-tree, LSM and column layouts on Families, an index-order diagram on Queries, an ownership map on Where to run it, and the oversell chart on the store design doc. Also fixed: some notebook text quoted an earlier run (see Corrections).</description>
   </item>
   <item>
     <title>Where to run the database</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-5e5b08211bc7</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>where to run the database: on-prem, self-managed on VMs or EC2, managed, cloud-native managed, serverless, vendor services, or Kubernetes. A picker, a who-does-what table, a full-cost comparison that counts people as well as the bill, the storage choices that matter on EC2, the honest version of databases on Kubernetes, and a &quot;where to run it&quot; section on every design doc.</description>
   </item>
   <item>
     <title>Designs, round two</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-e450e2471c2f</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>designs, round two: a data-flow diagram on every design doc, fifteen anti-patterns, a capacity calculator, four migration playbooks (add CDC, split a database, MySQL to PostgreSQL, add a cache), and a way to submit a design for review. Two new notebooks: the rules the design docs rely on, measured (read-then-write oversold 1,600 units of a 1,000-unit stock in all three engines), and Redis, ClickHouse and Cassandra in the roles the design docs give them.</description>
   </item>
   <item>
     <title>Application designs</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-6f36078a9a67</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>application designs: thirteen design docs, one per kind of application (store orders, payments, bookings, accounts, multi-tenant SaaS, catalogs, feeds, search and AI retrieval, chat, telemetry, audit logs, counters, analytics), each with the workload, what goes where and why, the data model, how it grows, what breaks and what I rejected. Plus a picker that suggests where a kind of data should go, and a design doc template to copy.</description>
   </item>
   <item>
     <title>Lab notebooks</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-e97c7c3390a9</guid>
     <pubDate>Wed, 18 Nov 2026 12:00:00 -0800</pubDate>
     <description>lab notebooks: five experiments run on real PostgreSQL 18.7, MySQL 8.4.13 and MongoDB 8.0.38 servers, with the output pasted as captured. New pages built on them: queries that look fine and are not (column order, covering, paging, N+1) and lost updates and write skew, each measured on all three engines. Also new: database families, guided tutorials on a PostgreSQL in your browser, a corrections page, an RSS feed, a &quot;last updated&quot; date on every page, a work-with-me page, and a question to answer before each lab.</description>
   </item>
   <item>
     <title>A round of reading changes</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-f30af59a4f97</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>a round of reading changes: a Compare page (same task, three engines: a write, a crash, a lagging replica, a long transaction), a Labs page with four simulations (crash recovery, replica lag, lock pile-up, page count), three reading paths for interviews, incidents and choosing a database, a Decision 10 page on why a database bill is huge, a &quot;common myth&quot; box on the main pages, a question line, a reading time and a next-page link on every page, and print buttons for each engine on the cheat sheet.</description>
   </item>
   <item>
     <title>10 database concepts, explained in a library</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-8c7a75004907</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>10 database concepts, explained in a library: index, normalization, join, transaction, ACID, deadlock, partitioning, sharding, replication, read replica, one picture and one line each.</description>
   </item>
   <item>
     <title>Architecture is now a full layered picture per engine</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-a521cf025bda</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>architecture is now a full layered picture per engine: every process, memory area, and file as its own box, with the write path and the read path traced through it, on home and on each engine page. The log box is marked, because the log is written first.</description>
   </item>
   <item>
     <title>Comparisons now look like the Process vs Thread vs Async graphic</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-7731878a1490</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>comparisons now look like the Process vs Thread vs Async graphic: three columns, one color each, a tiny diagram in every row, numbered steps, and a bar for the one number that matters. The three engines on home, the three durability modes on Decisions, and the four ways to run each engine on Cloud.</description>
   </item>
   <item>
     <title>The site is now playable, not just readable</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-d2c23e268d92</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>the site is now playable, not just readable: a B+ tree you can search, insert, delete, and range-scan step by step, an animated failover on the Decisions page, an EXPLAIN visualizer that names the slowest step, and a table-growth slider. Every engine page has a diagram for every concept, and the home page has a map of the whole site.</description>
   </item>
   <item>
     <title>Start here now has a graphic for every concept too, including the 4 buffers vs 1,250,000...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-33cdb3470461</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>Start here now has a graphic for every concept too, including the 4 buffers vs 1,250,000 pages chart, drawn to scale.</description>
   </item>
   <item>
     <title>The Decisions page now has a graphic for every concept, diagrams, bar charts, and summary...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-f84e0a4338e1</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>the Decisions page now has a graphic for every concept, diagrams, bar charts, and summary tables, not just text.</description>
   </item>
   <item>
     <title>Architecture diagrams on the home page, one per engine, client to memory to log to data...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-6696b2415958</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>architecture diagrams on the home page, one per engine, client to memory to log to data files.</description>
   </item>
   <item>
     <title>The Decisions page samples are now real captured output from a lab run, PostgreSQL 18,...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-2762cf7c433d</guid>
     <pubDate>Tue, 17 Nov 2026 12:00:00 -0800</pubDate>
     <description>the Decisions page samples are now real captured output from a lab run, PostgreSQL 18, MySQL 8.4.13, MongoDB 8.0, not illustrative text.</description>
   </item>
   <item>
     <title>Three more real stories</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-19fae32f42d7</guid>
     <pubDate>Mon, 16 Nov 2026 12:00:00 -0800</pubDate>
     <description>three more real stories: Fortnite on MongoDB, plus GitLab and Instacart on Postgres. Every design section now labels its costs. The site is at sixteen stories.</description>
   </item>
   <item>
     <title>The home page is now a front door, and the full beginner course moved to a new Start here...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-4b902fb62286</guid>
     <pubDate>Mon, 16 Nov 2026 12:00:00 -0800</pubDate>
     <description>the home page is now a front door, and the full beginner course moved to a new Start here page.</description>
   </item>
   <item>
     <title>Six more real stories, Adyen, Figma, Dropbox, and three more from Notion, each with a...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-0190a28f03aa</guid>
     <pubDate>Mon, 16 Nov 2026 12:00:00 -0800</pubDate>
     <description>six more real stories, Adyen, Figma, Dropbox, and three more from Notion, each with a diagram, and story links added from the staff path.</description>
   </item>
   <item>
     <title>Real stories added, seven incidents from Uber, GitHub, Notion, Slack, and Shopify, each...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-0faf64388205</guid>
     <pubDate>Mon, 16 Nov 2026 12:00:00 -0800</pubDate>
     <description>real stories added, seven incidents from Uber, GitHub, Notion, Slack, and Shopify, each with a diagram, plus hosting blocks for all three engines on the Cloud page.</description>
   </item>
   <item>
     <title>The site split into eight pages, one per engine plus cheat sheet, staff path, reference,...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-3a3d4cb9af96</guid>
     <pubDate>Mon, 16 Nov 2026 12:00:00 -0800</pubDate>
     <description>the site split into eight pages, one per engine plus cheat sheet, staff path, reference, and cloud.</description>
   </item>
   <item>
     <title>Every page rewritten in my...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-e8872b26aca2</guid>
     <pubDate>Mon, 16 Nov 2026 12:00:00 -0800</pubDate>
     <description>every page rewritten in my voice.</description>
   </item>
   <item>
     <title>The cheat sheet added, three sheets, one per engine, eight rules...</title>
-    <link>https://howdbswork.com/#whats-new</link>
+    <link>https://howdbswork.com/whats-new/</link>
     <guid isPermaLink="false">howdbswork-aeca53dd5cce</guid>
     <pubDate>Sun, 15 Nov 2026 12:00:00 -0800</pubDate>
     <description>the cheat sheet added, three sheets, one per engine, eight rules each.</description>
