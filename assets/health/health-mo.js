@@ -22,7 +22,8 @@ safe(function () {
   });
   var oplog = db.getSiblingDB('local').oplog.rs;
   var first = oplog.find().sort({ $natural: 1 }).limit(1).next(), last = oplog.find().sort({ $natural: -1 }).limit(1).next();
-  out('oplog_window_s', last.ts.getTime() - first.ts.getTime());
+  function secs(t) { return typeof t.getHighBits === "function" ? t.getHighBits() : (t.t != null ? t.t : t.getTime()); }
+  out("oplog_window_s", secs(last.ts) - secs(first.ts));
 });
 safe(function () {
   var ops = db.adminCommand({ currentOp: 1, active: true, secs_running: { $gte: 60 } }).inprog;

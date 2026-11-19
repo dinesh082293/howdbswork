@@ -153,8 +153,8 @@
     if ((v = g('storage.journal.enabled')) != null && off(v)) f.push(F('risk', 'storage.journal.enabled', v, 'Journaling is off', 'A crash can lose everything since the last checkpoint, up to a minute of writes. (Since 6.1 the journal cannot be turned off.)', 'Remove the setting.', L.mo));
     if (g('replication.replSetName', 'replication.replSet') == null) f.push(F('risk', 'replication.replSetName', '(not set)', 'Not a replica set', 'There is no failover, no oplog for point-in-time recovery, and majority write concern is not available.', 'Run a three-member replica set, even for small deployments. A single-member set at least gives you an oplog.', L.mo));
     var auth = g('security.authorization');
-    var bind = g('net.bindIp', 'net.bind_ip');
-    if (!auth || /disabled/i.test(auth)) f.push(F(bind && /0\.0\.0\.0|::/.test(bind) ? 'risk' : 'tip', 'security.authorization', auth || '(not set)', 'Authentication is not enforced', bind && /0\.0\.0\.0|::/.test(bind) ? 'Combined with bindIp ' + bind + ', anyone who can reach the port can read and delete everything.' : 'Anyone who can reach the port can read and change data.', 'Set security.authorization: enabled and create users with the least privileges they need.', L.mo));
+    var bind = g('net.bindIp', 'net.bind_ip') || (on(g('net.bindIpAll') || '') ? '0.0.0.0' : null);
+    if (!auth || /disabled/i.test(auth)) f.push(F(bind && /0\.0\.0\.0|::|^\*$/.test(bind) ? 'risk' : 'tip', 'security.authorization', auth || '(not set)', 'Authentication is not enforced', bind && /0\.0\.0\.0|::|^\*$/.test(bind) ? 'Combined with bindIp ' + bind + ', anyone who can reach the port can read and delete everything.' : 'Anyone who can reach the port can read and change data.', 'Set security.authorization: enabled and create users with the least privileges they need.', L.mo));
     var cache = g('storage.wiredTiger.engineConfig.cacheSizeGB');
     if (cache != null && ram) {
       var cb = +cache * 1073741824;
