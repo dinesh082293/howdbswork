@@ -1203,3 +1203,5 @@ body.ev-js[data-ev="pg"] .ev-block:not([data-eng="pg"]),body.ev-js[data-ev="my"]
 .vl-form input,.vl-form select{font:inherit;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 8px;min-width:0}
 @media (max-width:600px){.vl-charts{grid-template-columns:minmax(0,1fr)}.vl-tiles b{font-size:17px}}
 .vl-charts svg{max-width:440px}
+.fixbtn{position:absolute;z-index:60;background:var(--ink);color:var(--bg);font-size:13px;font-weight:600;padding:7px 12px;border-radius:999px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.18)}
+.fixbtn:hover{color:var(--bg);opacity:.92}.fixbtn[hidden]{display:none}
