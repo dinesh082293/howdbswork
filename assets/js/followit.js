@@ -59,8 +59,77 @@
       doneFlag: 'One forgotten transaction blocked every writer to that row for 50 seconds each. Look for long-open transactions in information_schema.innodb_trx before you raise the timeout.',
       watch: 'performance_schema.data_lock_waits and information_schema.innodb_trx' }
   };
+
+  // Single-engine stories: one write in Redis, one write in Cassandra, one vector search.
+  // A tick box swaps some steps for what happens when something goes wrong.
+  var STORY = {
+    'redis-write': { name: 'Redis', intro: 'SET cart:42 with appendonly yes and appendfsync everysec, the usual setup. Press Step.',
+      flagLabel: 'The power fails just after the reply',
+      nodes: [
+        ['Client', 'SET cart:42 …', 'The app sends one command over its open connection.'],
+        ['Redis', 'runs it in memory', 'One main thread runs commands one at a time, so the command is atomic and the key is now in memory.'],
+        ['Redis', 'appends to the AOF', 'The command is appended to the append-only file\'s buffer, in memory.'],
+        ['Client', 'gets OK', 'Redis replies straight away. The AOF has not been flushed to disk yet.'],
+        ['Disk', 'fsync, once a second', 'A background thread flushes the AOF to disk about once a second. Replicas receive the command too, asynchronously.']],
+      swap: { 4: ['Disk', 'lost', 'The power failed before the next fsync. Writes from the last second that already got OK are gone, on this server and possibly on replicas that had not received them.'] },
+      done: 'The write reaches disk within about a second. That is the default trade: fast replies, and up to a second of loss in a power failure.',
+      doneFlag: 'That second is the price of everysec. appendfsync always closes the gap at the cost of a disk flush per write. For a cache you can rebuild, losing a second is fine; for data you cannot rebuild, keep it in a database that waits for the disk.',
+      watch: 'INFO persistence (aof_last_write_status, aof_delayed_fsync) and CONFIG GET appendfsync' },
+    'cassandra-write': { name: 'Cassandra', intro: 'One chat message, replication factor 3, written at QUORUM. Press Step.',
+      flagLabel: 'One of the three replicas is down',
+      nodes: [
+        ['Client', 'INSERT … at QUORUM', 'The driver sends the write to a coordinator node, usually one that holds the data.'],
+        ['Coordinator', 'hash the partition key', 'The partition key (conversation_id, bucket) is hashed to a token, and the token decides which three nodes keep a copy.'],
+        ['Replicas', 'commit log, then memtable', 'Each replica appends the write to its commit log and adds it to the memtable in memory. There is no read first: a write is just a new cell with a timestamp.'],
+        ['Coordinator', '2 of 3 answered', 'QUORUM needs two of the three replicas. The client hears OK; the third finishes on its own.'],
+        ['Disk, later', 'flush to an SSTable', 'When the memtable fills, it is written out as an immutable SSTable file. Compaction later merges SSTables in the background.']],
+      swap: { 2: ['Replicas', 'two write, one is down', 'Two replicas write it. The coordinator stores a hint for the third, to replay when it comes back.'],
+              4: ['Later', 'hint replayed, or repair', 'If the node returns within max_hint_window (3 hours by default) the hint is replayed. After longer than that, only a repair brings its copy back in line.'] },
+      done: 'Two of three replicas have it, so a QUORUM read, which also asks two, is sure to see it.',
+      doneFlag: 'QUORUM still succeeded with a node down; at consistency ALL this write would have failed. Run repair at least once every gc_grace_seconds (10 days by default), or deleted data can come back.',
+      watch: 'nodetool status, nodetool tpstats, and nodetool repair history' },
+    'vector-search': { name: 'pgvector · HNSW', intro: 'One tenant asks a question; find the 10 closest memories among 100,000. Press Step.',
+      flagLabel: 'Filter by tenant after the index',
+      nodes: [
+        ['App', 'embed the question', 'The question is turned into a vector by the same embedding model that made the stored vectors.'],
+        ['Index', 'enter at the top layer', 'HNSW starts at one entry point on its sparse top layer and hops to whichever neighbour is closest to the question.'],
+        ['Index', 'descend the layers', 'Each lower layer is denser. The search keeps a list of the best candidates, ef_search of them (40 by default), on the way down.'],
+        ['Index', 'best 40 candidates', 'On the bottom layer it returns the closest candidates it found. It is approximate: it can miss a true neighbour.'],
+        ['Table', 'top 10 to the app', 'The 10 closest rows go back to the app, and on to the model as context.']],
+      swap: { 4: ['Filter', '1.3 rows of 10', 'The WHERE tenant_id filter ran after the index. Of the 40 candidates, about 99% belonged to other tenants, so 1.3 rows came back on average.'] },
+      done: 'In Notebook 8 this found 95% of the true top 10 in about 0.65 ms. An exact search, reading every row, took 21.7 ms.',
+      doneFlag: 'Measured in Notebook 8. Turning on hnsw.iterative_scan (pgvector 0.8 and later) kept searching until 10 rows passed the filter, in about 9 ms. For a tenant this small, an exact search inside the tenant was exact and took 2.7 ms.',
+      watch: 'EXPLAIN ANALYZE, and recall measured against an exact search on your own data' }
+  };
+  function mountStory(el) {
+    var key = el.getAttribute('data-story'), D = STORY[key]; if (!D) return;
+    var st = { flag: false, i: 0 };
+    function draw() {
+      var nodes = D.nodes.slice(), sw = st.flag ? D.swap : {};
+      Object.keys(sw).forEach(function (k) { nodes[+k] = sw[k]; });
+      var n = nodes.length, done = st.i >= n;
+      var h = '<div class="fi-ctl"><span class="fi-name">' + esc(D.name) + '</span><label class="fi-flag"><input type="checkbox"' + (st.flag ? ' checked' : '') + '> ' + esc(D.flagLabel) + '</label>' +
+        '<button type="button" class="labbtn fi-step">' + (done ? 'Run it again' : (st.i ? 'Next step' : 'Step')) + '</button><button type="button" class="labbtn fi-reset">Reset</button></div>';
+      h += '<div class="fi-chain">' + nodes.map(function (d, k) {
+        var last = k === n - 1, bad = st.flag && sw[k];
+        var cls = st.i > k ? (bad ? 'fi-node visited slow' : 'fi-node visited') : (st.i === k ? 'fi-node next' : 'fi-node');
+        return '<div class="' + cls + '"><span class="fk">' + esc(d[0]) + '</span><b>' + esc(d[1]) + '</b><span class="fn">' + esc(d[2]) + '</span>' +
+          (st.i > k ? '<span class="fw">' + (bad ? 'went wrong' : 'done') + '</span>' : '') + '</div>' + (last ? '' : '<span class="fi-arrow" aria-hidden="true">→</span>');
+      }).join('') + '</div>';
+      var cap = st.i === 0 ? D.intro : (!done ? 'Step ' + st.i + ' of ' + n + ': ' + nodes[st.i - 1][2] : (st.flag ? D.doneFlag : D.done) + ' Watch: ' + D.watch + '.');
+      h += '<p class="fi-cap" aria-live="polite">' + esc(cap) + '</p>';
+      el.innerHTML = h;
+      if (window.HDW_GOALS) { if (done && !st.flag) HDW_GOALS.done('story-' + key, 'normal'); if (done && st.flag) HDW_GOALS.done('story-' + key, 'broken'); }
+      el.querySelector('.fi-flag input').addEventListener('change', function (e) { st.flag = e.target.checked; st.i = 0; draw(); });
+      el.querySelector('.fi-step').addEventListener('click', function () { st.i = st.i >= n ? 1 : st.i + 1; draw(); el.querySelector('.fi-step').focus(); });
+      el.querySelector('.fi-reset').addEventListener('click', function () { st.i = 0; draw(); });
+    }
+    draw();
+    if (window.HDW_GOALS) HDW_GOALS.attach(el, 'story-' + key, [['normal', 'Step through to the end'], ['broken', 'Tick the box and step through again: what changed?']]);
+  }
   function mount(el) {
     var mode = el.getAttribute('data-mode') || 'read';
+    if (mode === 'story') return mountStory(el);
     var TBL = mode === 'read' ? READ : (mode === 'lock' ? LOCK : REP);
     var engines = mode === 'replicate' ? ['pg', 'my', 'mo'] : ['pg', 'my'];
     var pref = window.HDW_ENGINE && HDW_ENGINE.get();

@@ -12,6 +12,9 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 - [PostgreSQL](https://howdbswork.com/postgresql/): PostgreSQL internals: WAL, 8 KB pages, shared_buffers, MVCC and VACUUM. Files on disk, log files, outage parameters and commands.
 - [MySQL · InnoDB](https://howdbswork.com/mysql/): MySQL and InnoDB internals: .ibd files, redo log, binlog, buffer pool, undo and purge. Files on disk, log files, outage parameters and commands.
 - [MongoDB · WiredTiger](https://howdbswork.com/mongodb/): MongoDB and WiredTiger internals: .wt files, journal, oplog, cache and sharding. Files on disk, log files, outage parameters and commands.
+- [Redis](https://howdbswork.com/redis/): How Redis works: one thread, everything in memory, RDB snapshots and the AOF, asynchronous replication, and the big keys, hot keys and forks that break it. With measured numbers.
+- [Cassandra](https://howdbswork.com/cassandra/): How Cassandra works: a ring of equal nodes, the partition key, commit log, memtables and SSTables, consistency levels, tombstones, repair and compaction. With measured numbers.
+- [Vector databases](https://howdbswork.com/vector-databases/): How vector search works: embeddings, HNSW and IVF indexes, recall against speed, quantization, the filtered-search trap, and when pgvector is enough. With measured numbers.
 - [Same task, three engines](https://howdbswork.com/compare/): Four everyday events, a write, a crash, a lagging replica and a long transaction, shown side by side for PostgreSQL, MySQL and MongoDB.
 - [Database families](https://howdbswork.com/families/): Ten families of databases, from B-tree row stores to LSM, column, in-memory, distributed SQL and vector search, and the traffic each one handles well.
 - [Queries that look fine and are not](https://howdbswork.com/queries/): Column order in an index, covering queries, OFFSET against keyset paging, and N+1, measured on PostgreSQL 18, MySQL 8.4 and MongoDB 8.0.

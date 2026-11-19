@@ -1,14 +1,14 @@
 
 :root{
   --bg:#fbfbf9; --surface:#ffffff; --surface2:#f2f4f1; --ink:#131a17; --muted:#5b6b62; --line:#dde3dd;
-  --pg:#2f6da3; --pg-bg:#e8f0f8; --my:#b96a12; --my-bg:#fdf0dd; --mo:#2e7d32; --mo-bg:#e6f3e6;
+  --pg:#2f6da3; --pg-bg:#e8f0f8; --my:#b96a12; --my-bg:#fdf0dd; --mo:#2e7d32; --mo-bg:#e6f3e6; --rd:#b3261e; --rd-bg:#fbe9e7; --cs:#1f6f8b; --cs-bg:#e3f1f6; --vx:#7b3fa0; --vx-bg:#f2e8f8;
   --teal:#0f766e; --teal-bg:#e6f4f1; --c-mem:#00897b; --c-mem-bg:#e3f3f1; --c-disk:#b96a12; --c-disk-bg:#fdf0dd; --c-log:#6a5acd; --c-log-bg:#eeebfb; --c-rep:#c2185b; --c-rep-bg:#fbe7ef; --problem-bg:#fff7e6; --problem-line:#f59e0b; --problem-ink:#78350f;
   --term-bg:#101613; --term-ink:#cfe3d4; --term-dim:#7d8f83; --term-hl:#f5c86b;
   --radius:14px;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#0d1110; --surface:#151b18; --surface2:#1c2420; --ink:#e8ede9; --muted:#9aaca1; --line:#2a352f;
-  --pg:#7db3dd; --pg-bg:#1a2c3f; --my:#f0b26b; --my-bg:#332412; --mo:#8bc98e; --mo-bg:#1d2f1e; --teal:#5ec8bc; --teal-bg:#17302c; --c-mem:#1f9a8c; --c-mem-bg:#15302c; --c-disk:#c97a2c; --c-disk-bg:#332412; --c-log:#8b7fe0; --c-log-bg:#221f38; --c-rep:#e25a8f; --c-rep-bg:#3a1626; --problem-bg:#2a2113; --problem-line:#f59e0b; --problem-ink:#fde68a; }
+  --pg:#7db3dd; --pg-bg:#1a2c3f; --my:#f0b26b; --my-bg:#332412; --mo:#8bc98e; --mo-bg:#1d2f1e; --rd:#f28b82; --rd-bg:#3a1a17; --cs:#7cc4dc; --cs-bg:#15303a; --vx:#c99be6; --vx-bg:#2c1d38; --teal:#5ec8bc; --teal-bg:#17302c; --c-mem:#1f9a8c; --c-mem-bg:#15302c; --c-disk:#c97a2c; --c-disk-bg:#332412; --c-log:#8b7fe0; --c-log-bg:#221f38; --c-rep:#e25a8f; --c-rep-bg:#3a1626; --problem-bg:#2a2113; --problem-line:#f59e0b; --problem-ink:#fde68a; }
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
@@ -1144,3 +1144,10 @@ details.deep>*:not(summary){margin-left:16px;margin-right:16px}
 .cm-lane li em{font-style:normal;font-size:11px;font-weight:700;background:var(--ink);color:var(--bg);padding:1px 6px;border-radius:999px}
 @media(max-width:900px){.cmap{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.cmap{grid-template-columns:minmax(0,1fr)}}
+.fi-name{font-family:"IBM Plex Mono",monospace;font-size:13px;font-weight:700;padding:6px 12px;border-radius:999px;background:var(--surface2)}
+.fi-chain:has(> .fi-node:nth-of-type(5)) .fi-node .fn{font-size:12.5px}
+
+.filecard.rd header{background:var(--rd-bg);color:var(--rd)} .filecard.cs header{background:var(--cs-bg);color:var(--cs)} .filecard.vx header{background:var(--vx-bg);color:var(--vx)}
+.tag.rd{background:var(--rd-bg);color:var(--rd)} .tag.cs{background:var(--cs-bg);color:var(--cs)} .tag.vx{background:var(--vx-bg);color:var(--vx)}
+.deeplink{margin:10px 0 0;font-size:14px;font-weight:600}
+.filegrid:has(> .filecard:only-child){grid-template-columns:minmax(0,860px)}

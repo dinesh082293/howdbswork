@@ -140,6 +140,15 @@ window.HDW_GOALS = window.HDW_GOALS || (function () {
   /* 4. glossary cards */
   var G = {
     'WAL': ['The write-ahead log: PostgreSQL writes every change here first, and COMMIT waits for it to reach disk.', 'postgresql/index.html'],
+    'AOF': ["The append-only file: Redis logs every write command to it. appendfsync decides how often it reaches disk.", "redis/index.html"],
+    'RDB': ["A Redis snapshot file, written by a forked child process at intervals.", "redis/index.html"],
+    'SSTable': ["An immutable sorted file on disk in an LSM store such as Cassandra. Compaction merges them.", "cassandra/index.html"],
+    'memtable': ["The in-memory, sorted buffer of recent writes in an LSM store, flushed to an SSTable when full.", "cassandra/index.html"],
+    'tombstone': ["A marker that records a delete in Cassandra until compaction removes the data, after gc_grace_seconds.", "cassandra/index.html"],
+    'consistency level': ["How many Cassandra replicas must answer a read or a write: ONE, QUORUM, ALL and others.", "cassandra/index.html"],
+    'HNSW': ["A layered graph index for approximate nearest-neighbour search. Fast and accurate, and hungry for memory.", "vector-databases/index.html"],
+    'embedding': ["A list of numbers produced by a model so that similar things end up close together.", "vector-databases/index.html"],
+    'recall': ["In vector search, the share of the true nearest neighbours that an approximate index actually returns.", "vector-databases/index.html"],
     'redo log': ['InnoDB\'s write-ahead log. Crash recovery replays it into the data files.', 'mysql/index.html'],
     'binlog': ['MySQL\'s logical log of committed changes, used by replicas and point-in-time recovery, not by crash recovery.', 'mysql/index.html'],
     'oplog': ['MongoDB\'s replication log, a capped collection in the local database that secondaries copy and apply.', 'mongodb/index.html'],

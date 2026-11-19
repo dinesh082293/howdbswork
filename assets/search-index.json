@@ -1828,5 +1828,65 @@
   "u": "oncall/index.html",
   "s": "Run it",
   "k": "incident on call pager simulator disk full replication slot lock pile-up idle in transaction replica lag big delete"
+ },
+ {
+  "t": "Redis: one thread, memory first, disk on the side",
+  "u": "redis/index.html",
+  "s": "Redis",
+  "k": "redis valkey aof rdb appendfsync everysec maxmemory eviction big key hot key fork sentinel cluster sorted set cache session"
+ },
+ {
+  "t": "Redis persistence: RDB snapshots and the AOF",
+  "u": "redis/index.html#where",
+  "s": "Redis",
+  "k": "redis rdb aof appendonly bgsave fork copy on write backlog"
+ },
+ {
+  "t": "What breaks first in Redis",
+  "u": "redis/index.html#breaks",
+  "s": "Redis",
+  "k": "redis big key hot key keys slowlog oom unlink failover"
+ },
+ {
+  "t": "Cassandra: a ring of equal nodes",
+  "u": "cassandra/index.html",
+  "s": "Cassandra",
+  "k": "cassandra scylla wide column partition key commit log memtable sstable compaction quorum consistency level"
+ },
+ {
+  "t": "Cassandra tombstones, repair and gc_grace_seconds",
+  "u": "cassandra/index.html#breaks",
+  "s": "Cassandra",
+  "k": "cassandra tombstone repair gc_grace_seconds deleted data returns large partition allow filtering"
+ },
+ {
+  "t": "Cassandra consistency levels and replication factor",
+  "u": "cassandra/index.html#settings",
+  "s": "Cassandra",
+  "k": "cassandra quorum local_quorum one all replication factor hinted handoff"
+ },
+ {
+  "t": "Vector databases: embeddings, HNSW and recall",
+  "u": "vector-databases/index.html",
+  "s": "Vector databases",
+  "k": "vector database embedding pgvector hnsw ivfflat recall ef_search qdrant milvus pinecone rag semantic search"
+ },
+ {
+  "t": "Vector index memory: what HNSW costs",
+  "u": "vector-databases/index.html#where",
+  "s": "Vector databases",
+  "k": "hnsw memory halfvec quantization bytes per vector index size"
+ },
+ {
+  "t": "Filtered vector search returns too few rows",
+  "u": "vector-databases/index.html#breaks",
+  "s": "Vector databases",
+  "k": "filtered search tenant iterative_scan relaxed_order pgvector recall"
+ },
+ {
+  "t": "Redis, Cassandra and vector search side by side",
+  "u": "compare/index.html#beyond",
+  "s": "Compare",
+  "k": "redis cassandra vector compare beyond"
  }
 ]
