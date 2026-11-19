@@ -1,7 +1,8 @@
 name: Lab notebooks
 
 # Runs the experiments behind the Notebooks page on real PostgreSQL 18,
-# MySQL 8.4, MongoDB 8.0, Redis 7.4, ClickHouse 24.8, Cassandra 5.0 and pgvector containers, then pushes the plain-text
+# MySQL 8.4, MongoDB 8.0, Redis 7.4, ClickHouse 24.8, Cassandra 5.0 and pgvector containers (run_failure.py
+# starts its own Redis pairs and a three-node Cassandra), then pushes the plain-text
 # transcripts to the lab-results branch. The page quotes them as captured,
 # with the run date. Trigger it by hand, or by pushing to the lab-run branch.
 on:
@@ -15,7 +16,7 @@ permissions:
 jobs:
   notebooks:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
 
@@ -61,7 +62,7 @@ jobs:
           # A push to lab-run may carry scripts/notebooks/selected.txt to run only some scripts.
           # Each line: a script, then optional notebook function names.
           if [ -f scripts/notebooks/selected.txt ]; then SEL=scripts/notebooks/selected.txt
-          else printf 'run_all.py\nrun_more.py\nrun_vector.py\n' > /tmp/sel.txt; SEL=/tmp/sel.txt; fi
+          else printf 'run_all.py\nrun_more.py\nrun_vector.py\nrun_failure.py\n' > /tmp/sel.txt; SEL=/tmp/sel.txt; fi
           while read -r script names; do
             [ -n "$script" ] && python3 scripts/notebooks/$script lab-output $names
           done < "$SEL"

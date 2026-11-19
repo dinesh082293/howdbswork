@@ -29,6 +29,9 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 - [Guided tutorials](https://howdbswork.com/tutorials/): Three guided tutorials on a real PostgreSQL running in your browser: row versions, scan against index, and column order in an index.
 - [Lab notebooks](https://howdbswork.com/notebooks/): Eight experiments run on real PostgreSQL 18, MySQL 8.4, MongoDB 8.0, Redis, ClickHouse, Cassandra and pgvector, with the captured output: long transactions, commit cost, scans, concurrency anomalies, query shapes, design checks, other engines and agent memory.
 - [Query coach](https://howdbswork.com/coach/): Paste a SQL query, and optionally the table definitions and an EXPLAIN plan. The coach lists what to look at, why, the fix, and the lesson that explains it. Runs in your browser.
+- [EXPLAIN reader](https://howdbswork.com/plan/): Paste a PostgreSQL, MySQL or MongoDB query plan and see it as a tree, with the slow step found and the usual causes named. Runs in your browser.
+- [Config checker](https://howdbswork.com/config/): Paste PostgreSQL, MySQL or MongoDB settings and see which are risky, which cost speed, and what to change. Runs in your browser.
+- [Health check](https://howdbswork.com/health/): Run a read-only script on PostgreSQL, MySQL or MongoDB, paste the output, and get a report: connections, cache, long transactions, bloat, unused indexes, replication, top queries and settings.
 
 ## Design
 
