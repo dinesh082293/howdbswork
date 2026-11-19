@@ -55,11 +55,15 @@ Written by Dinesh Lakkineni, a database engineer. An MCP server for AI assistant
 
 ## Operate
 
+- [Something is slow or broken](https://howdbswork.com/symptoms/): From the symptom to the cause: too many connections, CPU at 100%, disk filling, replica lag, lock waits, a query that got slow, and the first commands to run in PostgreSQL, MySQL and MongoDB.
 - [Where to run the database](https://howdbswork.com/designs/hosting/): On-prem, self-managed on VMs or EC2, managed cloud, serverless, vendor services or Kubernetes: who does what, the full cost, and where to run each kind of application.
 - [On-prem vs cloud, by engine](https://howdbswork.com/cloud/): On-prem vs cloud for PostgreSQL, MySQL and MongoDB: what RDS, Aurora, Cloud SQL and Atlas take over, what the DBA still owns, and the tradeoffs.
 - [Capacity calculator](https://howdbswork.com/designs/capacity/): Estimate data size, working set, memory, disk and log volume for a table, with every assumption stated.
 - [Why the bill is huge](https://howdbswork.com/decisions/cost-model/): Where a database bill comes from, six patterns that inflate it with a query to find each, and a safe order for cutting it.
+- [Connection pooling](https://howdbswork.com/decisions/connection-pooling/): How many database connections you need, what each costs in PostgreSQL, MySQL and MongoDB, where PgBouncer, ProxySQL or RDS Proxy fit, and the pool-size arithmetic.
+- [Backups and restore time](https://howdbswork.com/decisions/backup-restore/): How to back up PostgreSQL, MySQL and MongoDB so you can restore to any moment: physical backups, log archiving, PITR, restore-time arithmetic and what breaks.
 - [Migration playbooks](https://howdbswork.com/designs/migrations/): Four migration playbooks: add change data capture, split a database, move from MySQL to PostgreSQL, and add a cache, each with checks and a way back.
+- [Major version upgrades](https://howdbswork.com/decisions/major-upgrades/): How to upgrade PostgreSQL, MySQL and MongoDB major versions: pg_upgrade, logical replication, newer replicas, rolling upgrades, feature compatibility, and what breaks afterwards.
 - [On call tonight](https://howdbswork.com/oncall/): Three branching database incidents: a disk filling up, checkout timing out, and a replica far behind. Pick what to check, and see why it was a good or bad call.
 - [Real failures](https://howdbswork.com/stories/): Sixteen real database incidents from Uber, GitHub, Notion, Slack, Shopify, Adyen, Figma, Dropbox, Epic Games, GitLab and Instacart, each with the numbers, the fix, and the lesson. Plus a diagram per story.
 - [Cheat sheet](https://howdbswork.com/cheat-sheet/): Each engine in 8 rules: PostgreSQL, MySQL/InnoDB and MongoDB/WiredTiger: one rule, one plain line, one diagram, with deep-dive links.

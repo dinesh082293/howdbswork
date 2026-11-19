@@ -140,6 +140,10 @@ window.HDW_GOALS = window.HDW_GOALS || (function () {
   /* 4. glossary cards */
   var G = {
     'WAL': ['The write-ahead log: PostgreSQL writes every change here first, and COMMIT waits for it to reach disk.', 'postgresql/index.html'],
+    'PITR': ["Point-in-time recovery: restore a backup, then replay the log up to a chosen moment.", "decisions/backup-restore/index.html"],
+    'RPO': ["Recovery point objective: how much recent data you can afford to lose.", "decisions/backup-restore/index.html"],
+    'RTO': ["Recovery time objective: how long you can afford to be down.", "decisions/backup-restore/index.html"],
+    'PgBouncer': ["A connection pooler for PostgreSQL. In transaction mode, many clients share a few server connections.", "decisions/connection-pooling/index.html"],
     'AOF': ["The append-only file: Redis logs every write command to it. appendfsync decides how often it reaches disk.", "redis/index.html"],
     'RDB': ["A Redis snapshot file, written by a forked child process at intervals.", "redis/index.html"],
     'SSTable': ["An immutable sorted file on disk in an LSM store such as Cassandra. Compaction merges them.", "cassandra/index.html"],

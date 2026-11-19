@@ -3,6 +3,8 @@
 // Run from the site root after adding or retitling a page:
 //   node scripts/build-og.mjs            (only pages without an image)
 //   node scripts/build-og.mjs --all      (redo every image)
+// The images are then reduced to 64 colours with Pillow to keep them small:
+//   python3 -c "from PIL import Image;import glob;[Image.open(f).convert('RGB').quantize(64).save(f,optimize=True) for f in glob.glob('assets/og/*.png')]"
 // scripts/build-seo.py points each page's og:image at its file.
 import { readFileSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -32,7 +34,7 @@ for (const [rel, title, sec, num] of jobs) {
   if (!all && existsSync(out)) continue;
   const { h1, q } = info(rel);
   const col = sec ? COL[sec.id] : '#131a17';
-  const kick = sec ? (num ? `${sec.name} · lesson ${num}` : sec.name) : 'PostgreSQL · MySQL · MongoDB · Redis · Cassandra · vector search';
+  const kick = sec ? sec.name : 'PostgreSQL · MySQL · MongoDB · Redis · Cassandra · vector search';
   const head = rel === 'index.html' ? 'How databases really work, from the files on disk up' : (h1 || title);
   const sub = rel === 'index.html' ? 'Internals, measured numbers, design docs for real applications, and what to do when it breaks.' : q;
   const size = head.length > 60 ? 54 : head.length > 36 ? 64 : 76;

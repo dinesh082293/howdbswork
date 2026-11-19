@@ -9,8 +9,11 @@
   <url><loc>https://howdbswork.com/compare/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/concepts/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/corrections/</loc><lastmod>2026-11-19</lastmod></url>
+  <url><loc>https://howdbswork.com/decisions/backup-restore/</loc><lastmod>2026-11-19</lastmod></url>
+  <url><loc>https://howdbswork.com/decisions/connection-pooling/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/decisions/cost-model/</loc><lastmod>2026-11-19</lastmod></url>
-  <url><loc>https://howdbswork.com/decisions/</loc><lastmod>2026-11-17</lastmod></url>
+  <url><loc>https://howdbswork.com/decisions/</loc><lastmod>2026-11-19</lastmod></url>
+  <url><loc>https://howdbswork.com/decisions/major-upgrades/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/decisions/sync-replication-failover/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/designs/accounts-sessions/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/designs/agent-memory/</loc><lastmod>2026-11-19</lastmod></url>
@@ -52,6 +55,7 @@
   <url><loc>https://howdbswork.com/staff-path/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/start-here/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/stories/</loc><lastmod>2026-11-18</lastmod></url>
+  <url><loc>https://howdbswork.com/symptoms/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/tutorials/</loc><lastmod>2026-11-18</lastmod></url>
   <url><loc>https://howdbswork.com/vector-databases/</loc><lastmod>2026-11-19</lastmod></url>
   <url><loc>https://howdbswork.com/work-with-me/</loc><lastmod>2026-11-19</lastmod></url>

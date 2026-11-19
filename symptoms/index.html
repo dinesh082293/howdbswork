@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="color-scheme" content="light dark"/>
+<meta name="description" content="From the symptom to the cause: too many connections, CPU at 100%, disk filling, replica lag, lock waits, a query that got slow, and the first commands to run in PostgreSQL, MySQL and MongoDB."/>
+<link rel="icon" href="data:,"/>
+<title>Something is slow or broken · Real Databases, Simply</title>
+<!-- SEO:BEGIN -->
+<link rel="canonical" href="https://howdbswork.com/symptoms/"/>
+<meta property="og:site_name" content="Real databases, simply"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Something is slow or broken"/>
+<meta property="og:description" content="From the symptom to the cause: too many connections, CPU at 100%, disk filling, replica lag, lock waits, a query that got slow, and the first commands to run in PostgreSQL, MySQL and MongoDB."/>
+<meta property="og:url" content="https://howdbswork.com/symptoms/"/>
+<meta property="og:image" content="https://howdbswork.com/assets/og/symptoms.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<!-- SEO:END -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,700;8..60,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/css/style.css"/>
+</head>
+<body>
+<nav><div class="wrap navin">
+  <div class="logo"><i>▦</i> Real databases, simply</div>
+  <div class="navlinks"><a href="../index.html">Home</a><details class="navgrp"><summary>Learn</summary><div class="navmenu cols2"><p class="navblurb">From one row on disk to transactions: the words you need, PostgreSQL, MySQL and MongoDB from the files up, then Redis, Cassandra and vector search, side by side, and the query and concurrency traps.</p><a href="../start-here/index.html">Start here</a><a href="../concepts/index.html">Ten concepts</a><a href="../postgresql/index.html">PostgreSQL</a><a href="../mysql/index.html">MySQL · InnoDB</a><a href="../mongodb/index.html">MongoDB · WiredTiger</a><a href="../redis/index.html">Redis</a><a href="../cassandra/index.html">Cassandra</a><a href="../vector-databases/index.html">Vector databases</a><a href="../compare/index.html">Engines side by side</a><a href="../families/index.html">Database families</a><a href="../queries/index.html">Queries that look fine and are not</a><a href="../isolation/index.html">Lost updates and write skew</a><a href="../staff-path/index.html">Staff path, zero to architect</a><a href="../paths/index.html">Reading paths by goal</a></div></details><details class="navgrp"><summary>Practice</summary><div class="navmenu"><p class="navblurb">Simulations, an index you build yourself, a real PostgreSQL in your browser, experiments run on real servers, and a coach for your own queries.</p><a href="../labs/index.html">Labs</a><a href="../index-playground/index.html">Watch an index grow</a><a href="../tutorials/index.html">Guided tutorials</a><a href="../notebooks/index.html">Lab notebooks</a><a href="../coach/index.html">Query coach</a></div></details><details class="navgrp"><summary>Design</summary><div class="navmenu cols2"><p class="navblurb">What kind of application data goes in which database, and why, as design docs, plus the anti-patterns and the decisions behind them.</p><a href="../designs/index.html">Application designs</a><a href="../designs/store-orders/index.html">Store orders and inventory</a><a href="../designs/payments-ledger/index.html">Payments and ledgers</a><a href="../designs/booking-reservations/index.html">Bookings and reservations</a><a href="../designs/accounts-sessions/index.html">Accounts and sessions</a><a href="../designs/multi-tenant-saas/index.html">Multi-tenant SaaS</a><a href="../designs/product-catalog/index.html">Product catalog</a><a href="../designs/social-feed/index.html">Social feed</a><a href="../designs/search-ai-retrieval/index.html">Search and AI retrieval</a><a href="../designs/chat-messaging/index.html">Chat and messaging</a><a href="../designs/iot-telemetry/index.html">IoT and telemetry</a><a href="../designs/audit-event-log/index.html">Audit and event logs</a><a href="../designs/leaderboards-counters/index.html">Leaderboards and counters</a><a href="../designs/analytics-reporting/index.html">Analytics and reporting</a><a href="../designs/agent-memory/index.html">Agent memory and state</a><a href="../designs/anti-patterns/index.html">Anti-patterns</a><a href="../decisions/index.html">Decisions</a><a href="../decisions/sync-replication-failover/index.html">What a commit waits for</a><a href="../designs/template/index.html">Design doc template</a><a href="../designs/review/index.html">Submit a design for review</a></div></details><details class="navgrp here"><summary>Operate</summary><div class="navmenu cols2"><p class="navblurb">What to check when it is slow or broken, where it runs and what it costs, how big it must be, pooling, backups, upgrades and other changes made safely.</p><a href="../symptoms/index.html" aria-current="page">Something is slow or broken</a><a href="../designs/hosting/index.html">Where to run the database</a><a href="../cloud/index.html">On-prem vs cloud, by engine</a><a href="../designs/capacity/index.html">Capacity calculator</a><a href="../decisions/cost-model/index.html">Why the bill is huge</a><a href="../decisions/connection-pooling/index.html">Connection pooling</a><a href="../decisions/backup-restore/index.html">Backups and restore time</a><a href="../designs/migrations/index.html">Migration playbooks</a><a href="../decisions/major-upgrades/index.html">Major version upgrades</a><a href="../oncall/index.html">On call tonight</a><a href="../stories/index.html">Real failures</a><a href="../cheat-sheet/index.html">Cheat sheet</a><a href="../reference/index.html">Reference: plans, logs, checklist</a></div></details><details class="navgrp"><summary>About</summary><div class="navmenu"><p class="navblurb">Who writes this, what was corrected, what to read next, and how to reach me.</p><a href="../about/index.html">About</a><a href="../corrections/index.html">Corrections</a><a href="../references/index.html">Reading list</a><a href="../work-with-me/index.html">Work with me</a><a href="../assistant/index.html">Use it from your AI assistant</a><a href="../sitemap/index.html">All pages</a></div></details></div>
+  <div class="sitesearch"><input type="search" id="siteSearch" placeholder="Search the site" autocomplete="off"><div id="siteSearchResults"></div></div>
+</div></nav>
+<!-- CRUMBS:BEGIN --><div class="crumbs"><div class="wrap"><a href="../index.html">Home</a><span>›</span><a href="../symptoms/index.html">Operate</a><span>›</span><b aria-current="page">Something is slow or broken</b><em>Lesson 40 of 52</em></div></div><!-- CRUMBS:END -->
+<header class="hero"><div class="wrap">
+  <h1>Something is slow or broken</h1>
+  <p class="qline">What do I check first, and what is it usually?</p>
+  <p class="lede">Pick the symptom that matches what you see. Each one lists the causes I would check, most common first, the first safe move, and the commands to run for your engine. Most commands only read. The few that change something (refreshing statistics, clearing a plan cache, turning on the profiler) are safe to run and say so in a comment.</p>
+</div></header>
+<section id="pick" style="padding-top:4px"><div class="wrap">
+<div class="sy-bar"><span class="kicker">Your engine</span><div class="sy-engs" role="group" aria-label="Engine"><button type="button" data-eng="pg">PostgreSQL</button><button type="button" data-eng="my">MySQL</button><button type="button" data-eng="mo">MongoDB</button><button type="button" data-eng="all">All three</button></div></div>
+<div class="sy-index"><a href="#connections"><b>Too many connections</b><span>New connections fail with "too many connections" (MySQL, PostgreSQL) or the app's pool times out waiting for one.</span></a><a href="#cpu"><b>CPU at 100%</b><span>The database CPU is pinned and everything is slower.</span></a><a href="#disk"><b>The disk is filling up</b><span>Free space is falling faster than the data is growing, or an alert fired at 85%.</span></a><a href="#lag"><b>A replica is far behind</b><span>Reads from replicas return old data, or the lag alert fired.</span></a><a href="#locks"><b>Queries waiting on locks, or timing out</b><span>Requests hang, then fail with lock wait timeouts or deadlock errors.</span></a><a href="#plan"><b>One query suddenly got slow</b><span>A query that took milliseconds yesterday takes seconds today.</span></a><a href="#io"><b>Everything is slow and the disk is busy</b><span>Read latency is up across many queries.</span></a><a href="#memory"><b>Out of memory, or the server restarted</b><span>The database process was killed by the operating system, or restarted on its own.</span></a><a href="#commits"><b>Writes and commits are slow</b><span>Reads are fine, but inserts and updates take longer.</span></a><a href="#bloat"><b>Tables grow but rows do not</b><span>Table size keeps rising while the row count is flat.</span></a></div>
+<p class="sub" style="margin-top:12px">Something else? Redis, Cassandra and vector search have their own lists below. To practise before it is real, work through <a href="../oncall/index.html">On call tonight</a>.</p>
+</div></section>
+<section id="connections" class="sy"><div class="wrap">
+<h2>Too many connections</h2>
+<p class="sy-see"><b>What you see.</b> New connections fail with "too many connections" (MySQL, PostgreSQL) or the app's pool times out waiting for one. Often right after a deploy, a failover or a traffic spike.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>Each app instance opens its own pool, and instances × pool size went past the server limit. A deploy that doubles instances for a few minutes is enough.</li><li>Connections are held while idle in a transaction, so the pool runs dry while the database is mostly idle.</li><li>Queries got slower, so each connection is busy longer and more are needed for the same traffic.</li><li>Clients reconnect all at once after a failover or restart.</li></ol><p class="sy-first"><b>First move.</b> Find who holds the connections before raising the limit. Raising max_connections on PostgreSQL costs memory per process and can make a slow server slower. Kill sessions idle in a transaction for minutes.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">SHOW max_connections;
+SELECT usename, application_name, state, count(*)
+FROM pg_stat_activity GROUP BY 1, 2, 3 ORDER BY 4 DESC;
+-- sessions holding a transaction open while doing nothing
+SELECT pid, now() - xact_start AS open_for, query
+FROM pg_stat_activity WHERE state = &#x27;idle in transaction&#x27;
+ORDER BY open_for DESC LIMIT 10;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SHOW VARIABLES LIKE &#x27;max_connections&#x27;;
+SHOW GLOBAL STATUS WHERE Variable_name IN
+  (&#x27;Threads_connected&#x27;, &#x27;Threads_running&#x27;, &#x27;Max_used_connections&#x27;);
+SELECT user, command, count(*) FROM performance_schema.processlist
+GROUP BY 1, 2 ORDER BY 3 DESC;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.serverStatus().connections   // current, available, totalCreated
+db.currentOp(true).inprog.length
+// who is connected, by app name
+db.aggregate([{ $currentOp: { allUsers: true, idleConnections: true } },
+  { $group: { _id: &quot;$appName&quot;, n: { $sum: 1 } } }, { $sort: { n: -1 } }])</pre></div></div></div>
+<p class="sy-more">The pooling decision: <a href="../decisions/connection-pooling/index.html">Connection management and pooling</a>.</p>
+</div></section>
+<section id="cpu" class="sy"><div class="wrap">
+<h2>CPU at 100%</h2>
+<p class="sy-see"><b>What you see.</b> The database CPU is pinned and everything is slower. Often no single query looks slow on its own.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>A query that runs thousands of times a second lost its index or changed plan.</li><li>A new feature added a query without an index: each call scans.</li><li>Many short queries with high per-call overhead, such as one query per row in a loop.</li><li>Sorting or hashing large results in memory.</li></ol><p class="sy-first"><b>First move.</b> Rank queries by total time, not by the slowest single run. The query to fix is usually a fast one that runs very often.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">-- needs the pg_stat_statements extension
+SELECT calls, round(total_exec_time) AS total_ms,
+       round(mean_exec_time::numeric, 2) AS mean_ms, left(query, 80)
+FROM pg_stat_statements ORDER BY total_exec_time DESC LIMIT 10;
+SELECT state, wait_event_type, wait_event, count(*)
+FROM pg_stat_activity GROUP BY 1, 2, 3 ORDER BY 4 DESC;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">-- the sys schema, sorted by total latency
+SELECT query, exec_count, total_latency, rows_examined_avg
+FROM sys.statement_analysis LIMIT 10;
+SELECT * FROM sys.statements_with_full_table_scans LIMIT 10;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.currentOp({ active: true, secs_running: { $gte: 1 } })
+db.setProfilingLevel(1, { slowms: 50 })   // changes a setting: logs ops over 50 ms
+db.system.profile.find().sort({ millis: -1 }).limit(5)
+// planSummary &quot;COLLSCAN&quot; means no index was used</pre></div></div></div>
+<p class="sy-more">How plans go wrong: <a href="../queries/index.html">Queries that look fine and are not</a>, and paste one into the <a href="../coach/index.html">query coach</a>.</p>
+</div></section>
+<section id="disk" class="sy"><div class="wrap">
+<h2>The disk is filling up</h2>
+<p class="sy-see"><b>What you see.</b> Free space is falling faster than the data is growing, or an alert fired at 85%.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>Log files are being kept: a PostgreSQL replication slot whose reader is gone, MySQL binlogs kept for 30 days by default, a MongoDB oplog sized large.</li><li>Dead rows or old versions are not being cleaned up, so tables grow without growing in rows.</li><li>A large temporary sort or index build.</li><li>Real growth that nobody projected.</li></ol><p class="sy-first"><b>First move.</b> Find out which of data, logs or temp files is growing before deleting anything. Never delete WAL, redo or binlog files by hand.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">SELECT slot_name, active,
+  pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS wal_kept
+FROM pg_replication_slots;
+SELECT relname, pg_size_pretty(pg_total_relation_size(relid)) AS size
+FROM pg_statio_user_tables ORDER BY pg_total_relation_size(relid) DESC LIMIT 10;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SHOW BINARY LOGS;
+SHOW VARIABLES LIKE &#x27;binlog_expire_logs_seconds&#x27;;
+SELECT table_schema, table_name,
+  round((data_length + index_length + data_free) / 1024 / 1024) AS mb
+FROM information_schema.tables ORDER BY mb DESC LIMIT 10;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.stats(1024 * 1024)            // sizes in MB
+rs.printReplicationInfo()          // oplog size and window
+db.orders.stats().wiredTiger[&quot;block-manager&quot;][&quot;file bytes available for reuse&quot;]</pre></div></div></div>
+<p class="sy-more">The on-call drill for this one: <a href="../oncall/index.html">On call tonight, incident 1</a>. And <a href="../decisions/cost-model/index.html">why the bill is huge</a>.</p>
+</div></section>
+<section id="lag" class="sy"><div class="wrap">
+<h2>A replica is far behind</h2>
+<p class="sy-see"><b>What you see.</b> Reads from replicas return old data, or the lag alert fired. A failover now would lose more, or take longer.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>One large transaction on the primary: a big DELETE or UPDATE replays as one long unit.</li><li>The replica applies changes with fewer threads than the primary writes them.</li><li>Long queries on the replica block or delay replay.</li><li>The replica has a slower disk, or is busy with backups or reports.</li></ol><p class="sy-first"><b>First move.</b> Check whether the replica is receiving changes or applying them; the fix is different. Do not fail over to a lagging replica unless you have accepted the loss.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">-- on the primary
+SELECT client_addr, state, write_lag, flush_lag, replay_lag
+FROM pg_stat_replication;
+-- on the standby
+SELECT now() - pg_last_xact_replay_timestamp() AS behind;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SHOW REPLICA STATUS\G
+-- Seconds_Behind_Source, Replica_SQL_Running_State,
+-- Retrieved_Gtid_Set against Executed_Gtid_Set
+SHOW VARIABLES LIKE &#x27;replica_parallel_workers&#x27;;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">rs.printSecondaryReplicationInfo()
+rs.status().members.map(m =&gt; [m.name, m.stateStr, m.optimeDate])</pre></div></div></div>
+<p class="sy-more">The drill: <a href="../oncall/index.html">incident 3</a>. Side by side: <a href="../compare/index.html#replica-lag">a replica falls behind</a>.</p>
+</div></section>
+<section id="locks" class="sy"><div class="wrap">
+<h2>Queries waiting on locks, or timing out</h2>
+<p class="sy-see"><b>What you see.</b> Requests hang, then fail with lock wait timeouts or deadlock errors. CPU may be low: things are waiting, not working.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>One transaction holds a row or table lock and is not finishing: a slow job, or an app that opened a transaction and went off to call another service.</li><li>A schema change waiting for a lock, with everything else queued behind it.</li><li>Two code paths lock the same rows in different orders: deadlocks.</li><li>Hot rows: many sessions updating one counter or one inventory row.</li></ol><p class="sy-first"><b>First move.</b> Find the session at the head of the chain, the blocker, not the hundreds waiting behind it. Ending the blocker usually clears the rest.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">SELECT pid, pg_blocking_pids(pid) AS blocked_by, wait_event_type,
+       now() - query_start AS waiting, left(query, 60)
+FROM pg_stat_activity WHERE cardinality(pg_blocking_pids(pid)) &gt; 0;
+-- then look at the blocker&#x27;s pid in pg_stat_activity</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SELECT * FROM sys.innodb_lock_waits\G
+SELECT * FROM performance_schema.metadata_locks
+WHERE lock_status = &#x27;PENDING&#x27;;
+SHOW ENGINE INNODB STATUS\G   -- LATEST DETECTED DEADLOCK</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.currentOp({ waitingForLock: true })
+db.currentOp({ active: true, secs_running: { $gte: 5 } })</pre></div></div></div>
+<p class="sy-more">The drill: <a href="../oncall/index.html">incident 2</a>. The theory: <a href="../isolation/index.html">Lost updates and write skew</a>.</p>
+</div></section>
+<section id="plan" class="sy"><div class="wrap">
+<h2>One query suddenly got slow</h2>
+<p class="sy-see"><b>What you see.</b> A query that took milliseconds yesterday takes seconds today. The code did not change.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>The planner picked a different plan: statistics went stale after a big load or delete.</li><li>The data crossed a threshold, so a plan that was right for small tables is wrong now.</li><li>A parameter value with very different selectivity: one customer with a million rows.</li><li>An index was dropped, or became invalid after a failed build.</li></ol><p class="sy-first"><b>First move.</b> Get the actual plan with real timings, then compare it with what you expect. Refreshing statistics is cheap and often the fix.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">EXPLAIN (ANALYZE, BUFFERS) SELECT ...;
+SELECT relname, last_autoanalyze, n_mod_since_analyze
+FROM pg_stat_user_tables ORDER BY n_mod_since_analyze DESC LIMIT 10;
+ANALYZE orders;   -- changes: refreshes statistics</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">EXPLAIN ANALYZE SELECT ...;
+SELECT table_name, index_name, cardinality
+FROM information_schema.statistics WHERE table_name = &#x27;orders&#x27;;
+ANALYZE TABLE orders;   -- changes: refreshes statistics</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.orders.find({ ... }).explain(&quot;executionStats&quot;)
+// compare totalDocsExamined with nReturned
+db.orders.getPlanCache().clear()   // changes: forgets cached plans</pre></div></div></div>
+<p class="sy-more">Reading plans line by line: <a href="../reference/index.html">Reference</a>. Try it on a real database: <a href="../tutorials/index.html">Guided tutorials</a>.</p>
+</div></section>
+<section id="io" class="sy"><div class="wrap">
+<h2>Everything is slow and the disk is busy</h2>
+<p class="sy-see"><b>What you see.</b> Read latency is up across many queries. Disk reads per second climbed, and CPU waits on I/O.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>The data that is read often no longer fits in memory, so pages are read from disk again and again.</li><li>A new report or job scans large tables and pushes hot pages out of the cache.</li><li>A backup, vacuum or compaction is competing for the disk.</li><li>The cloud volume ran out of burst credits or provisioned IOPS.</li></ol><p class="sy-first"><b>First move.</b> Compare cache reads with disk reads now against last week. If the cache share fell, the working set grew or something new is scanning.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">SELECT datname, blks_hit, blks_read,
+  round(100.0 * blks_hit / nullif(blks_hit + blks_read, 0), 2) AS hit_pct
+FROM pg_stat_database WHERE datname = current_database();
+SELECT * FROM pg_stat_io WHERE reads &gt; 0 ORDER BY reads DESC LIMIT 10;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SHOW GLOBAL STATUS LIKE &#x27;Innodb_buffer_pool_read%&#x27;;
+-- Innodb_buffer_pool_reads (from disk) against _read_requests
+SELECT * FROM sys.io_global_by_file_by_latency LIMIT 10;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.serverStatus().wiredTiger.cache[&quot;bytes currently in the cache&quot;]
+db.serverStatus().wiredTiger.cache[&quot;pages read into cache&quot;]
+db.serverStatus().wiredTiger.cache[&quot;maximum bytes configured&quot;]</pre></div></div></div>
+<p class="sy-more">How big the hot data is: <a href="../designs/capacity/index.html">Capacity calculator</a>.</p>
+</div></section>
+<section id="memory" class="sy"><div class="wrap">
+<h2>Out of memory, or the server restarted</h2>
+<p class="sy-see"><b>What you see.</b> The database process was killed by the operating system, or restarted on its own. Clients saw connection errors.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>Too many connections, each with its own memory for sorts and hashes (work_mem in PostgreSQL is per operation, not per connection).</li><li>A buffer pool or cache set too close to the machine's total memory.</li><li>A large query building a huge hash or sort in memory.</li><li>Something else on the same machine using memory: a backup, an agent, another service.</li></ol><p class="sy-first"><b>First move.</b> Check the operating system log for the out-of-memory killer first. Then leave headroom: the cache should not take the whole machine.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">SHOW shared_buffers; SHOW work_mem; SHOW max_connections;
+SHOW maintenance_work_mem;
+-- the OS side: dmesg -T | grep -i -E &quot;killed process|out of memory&quot;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SHOW VARIABLES LIKE &#x27;innodb_buffer_pool_size&#x27;;
+SELECT * FROM sys.memory_global_by_current_bytes LIMIT 10;
+-- the OS side: dmesg -T | grep -i -E &quot;killed process|out of memory&quot;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.serverStatus().mem              // resident and virtual, MB
+db.serverStatus().wiredTiger.cache[&quot;maximum bytes configured&quot;]
+// the OS side: dmesg -T | grep -i -E &quot;killed process|out of memory&quot;</pre></div></div></div>
+<p class="sy-more">Where memory goes in each engine: <a href="../postgresql/index.html">PostgreSQL</a>, <a href="../mysql/index.html">MySQL</a>, <a href="../mongodb/index.html">MongoDB</a>.</p>
+</div></section>
+<section id="commits" class="sy"><div class="wrap">
+<h2>Writes and commits are slow</h2>
+<p class="sy-see"><b>What you see.</b> Reads are fine, but inserts and updates take longer. Commit latency rose while CPU is low.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>Every commit waits for a disk flush, and the log disk is slow or shared.</li><li>Synchronous replication: each commit waits for a standby that is far away or overloaded.</li><li>Too many indexes: every insert updates every one of them.</li><li>Hot pages or rows that many sessions write at once.</li></ol><p class="sy-first"><b>First move.</b> Look at what commits are waiting on. A wait for the log flush points at the disk; a wait for the standby points at replication.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">SELECT wait_event_type, wait_event, count(*)
+FROM pg_stat_activity WHERE state = &#x27;active&#x27;
+GROUP BY 1, 2 ORDER BY 3 DESC;
+-- WALSync or WALWrite: the disk. SyncRep: the standby.
+SHOW synchronous_commit; SHOW synchronous_standby_names;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SHOW VARIABLES WHERE Variable_name IN
+  (&#x27;innodb_flush_log_at_trx_commit&#x27;, &#x27;sync_binlog&#x27;);
+SHOW GLOBAL STATUS LIKE &#x27;Rpl_semi_sync_source_%&#x27;;
+SELECT * FROM sys.waits_global_by_latency LIMIT 10;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.serverStatus().opLatencies.writes
+rs.printSecondaryReplicationInfo()   // majority writes wait for this
+db.getMongo().getWriteConcern()</pre></div></div></div>
+<p class="sy-more">What a commit waits for: <a href="../decisions/sync-replication-failover/index.html">Synchronous replication and failover</a>.</p>
+</div></section>
+<section id="bloat" class="sy"><div class="wrap">
+<h2>Tables grow but rows do not</h2>
+<p class="sy-see"><b>What you see.</b> Table size keeps rising while the row count is flat. Scans get slower over weeks.</p>
+<div class="sy-grid"><div><h3>Likely causes, most common first</h3><ol><li>Old row versions are not being removed because a long transaction or a forgotten replication slot holds them.</li><li>Cleanup cannot keep up with the update rate on one hot table.</li><li>Space freed inside the files is reused, not given back to the operating system, which is normal.</li></ol><p class="sy-first"><b>First move.</b> Find the oldest open transaction first. Cleanup cannot remove anything that transaction might still need to see.</p></div><div><h3>Run these first</h3><div class="sy-eng" data-eng="pg"><span class="tag pg">PostgreSQL</span><pre class="cmdshow">SELECT relname, n_live_tup, n_dead_tup, last_autovacuum
+FROM pg_stat_user_tables ORDER BY n_dead_tup DESC LIMIT 10;
+SELECT pid, now() - xact_start AS open_for, state
+FROM pg_stat_activity WHERE backend_xmin IS NOT NULL
+ORDER BY age(backend_xmin) DESC LIMIT 5;</pre></div><div class="sy-eng" data-eng="my"><span class="tag my">MySQL</span><pre class="cmdshow">SELECT count FROM information_schema.innodb_metrics
+WHERE name = &#x27;trx_rseg_history_len&#x27;;
+SELECT trx_id, trx_started, trx_mysql_thread_id
+FROM information_schema.innodb_trx ORDER BY trx_started LIMIT 5;</pre></div><div class="sy-eng" data-eng="mo"><span class="tag mo">MongoDB</span><pre class="cmdshow">db.orders.stats().wiredTiger[&quot;block-manager&quot;][&quot;file bytes available for reuse&quot;]
+db.currentOp({ active: true, secs_running: { $gte: 60 } })</pre></div></div></div>
+<p class="sy-more">Why it happens: <a href="../start-here/index.html">Start here</a>, and the <a href="../labs/index.html">MVCC timeline lab</a>.</p>
+</div></section>
+<section id="other-engines"><div class="wrap"><div class="kicker">Other engines</div><h2>Redis, Cassandra and vector search</h2><div style="overflow-x:auto"><table class="famtable"><thead><tr><th>Engine</th><th>What you see</th><th>Usual causes</th></tr></thead><tbody><tr><td><b>Redis</b></td><td><a href="../redis/index.html#breaks">Latency spikes, memory full, writes refused</a></td><td>Big keys, hot keys, a fork during a snapshot, maxmemory reached.</td></tr><tr><td><b>Cassandra</b></td><td><a href="../cassandra/index.html#breaks">Slow reads on some nodes, deleted data returning</a></td><td>Huge partitions, tombstones, repair not run within gc_grace_seconds.</td></tr><tr><td><b>Vector search</b></td><td><a href="../vector-databases/index.html#breaks">Search misses results, or got slow</a></td><td>The index outgrew memory, or a filter ran after the index.</td></tr></tbody></table></div></div></section>
+<section id="after"><div class="wrap"><div class="kicker">After it is fixed</div><h2>Three things I do once it is quiet</h2>
+<ol style="font-size:15px;line-height:1.7;max-width:860px"><li>Write down what you saw, what you ran and what fixed it, while it is fresh. The commands that helped become the start of a runbook.</li><li>Add the alert that would have caught it earlier: connections at 80% of the limit, lag over a threshold, disk at 75%, the oldest transaction older than an hour.</li><li>Fix the cause, not only the symptom: the missing index, the pool size, the slot nobody reads.</li></ol>
+</div></section>
+<script>
+(function(){
+  document.body.classList.add('sy-js');
+  var btns=document.querySelectorAll('.sy-engs button');
+  function show(e){
+    document.body.setAttribute('data-sy',e);
+    btns.forEach(function(b){b.setAttribute('aria-pressed',String(b.getAttribute('data-eng')===e))});
+  }
+  btns.forEach(function(b){b.addEventListener('click',function(){var e=b.getAttribute('data-eng');show(e);if(e!=='all'&&window.HDW_ENGINE)HDW_ENGINE.set(e)})});
+  show((window.HDW_ENGINE&&HDW_ENGINE.get())||'pg');
+})();
+</script>
+<!-- SECTION:BEGIN --><section class="secnav"><div class="wrap"><div class="secnav-head"><span class="kicker">Part 4 of 4 · Operate · lessons 40 to 52</span><a href="../sitemap/index.html">All pages</a></div><p class="sub" style="margin:0 0 10px"><b>How do I run it in production?</b> What to check when it is slow or broken, where it runs and what it costs, how big it must be, pooling, backups, upgrades and other changes made safely.</p><div class="secnav-list"><a href="../symptoms/index.html" aria-current="page" class="on">Something is slow or broken</a><a href="../designs/hosting/index.html">Where to run the database</a><a href="../cloud/index.html">On-prem vs cloud, by engine</a><a href="../designs/capacity/index.html">Capacity calculator</a><a href="../decisions/cost-model/index.html">Why the bill is huge</a><a href="../decisions/connection-pooling/index.html">Connection pooling</a><a href="../decisions/backup-restore/index.html">Backups and restore time</a><a href="../designs/migrations/index.html">Migration playbooks</a><a href="../decisions/major-upgrades/index.html">Major version upgrades</a><a href="../oncall/index.html">On call tonight</a><a href="../stories/index.html">Real failures</a><a href="../cheat-sheet/index.html">Cheat sheet</a><a href="../reference/index.html">Reference: plans, logs, checklist</a></div><div class="secnav-pn"><a class="pn prev" href="../designs/review/index.html"><span>← Previous part: Design</span>Submit a design for review<em>Send a database design for review, in public as a GitHub issue or in private, and the questions every review asks.</em></a><a class="pn next" href="../designs/hosting/index.html"><span>Next →</span>Where to run the database<em>On-prem, self-managed on VMs or EC2, managed cloud, serverless, vendor services or Kubernetes: who does what, the full…</em></a></div></div></section><!-- SECTION:END -->
+<footer><div class="wrap">
+  <p><b style="color:var(--ink)">Real databases, simply.</b> How PostgreSQL, MySQL, MongoDB, Redis, Cassandra and vector databases work in real systems, and which database each kind of application data belongs in. Written by Dinesh, who runs production databases for a living.</p>
+  <p>Checked against docs: PostgreSQL 18, MySQL 8.4 LTS, MongoDB 8.0, Nov 2026.</p>
+  <p class="reviewed">Last updated Nov 19, 2026</p>
+  <p class="footlinks"><a href="../sitemap/index.html">All pages</a> · <a href="../corrections/index.html">Corrections</a> · <a href="../references/index.html">Reading list</a> · <a href="../about/index.html">About</a> · <a href="../work-with-me/index.html">Work with me</a> · <a href="../assistant/index.html">Use it from your AI assistant</a></p>
+</div></footer><script src="../assets/js/main.js"></script>
+<script src="../assets/js/copy-buttons.js"></script>
+<script src="../assets/js/search.js"></script>
+<script src="../assets/js/polish.js"></script>
+<script src="../assets/js/reader.js"></script>
+</body>
+</html>
