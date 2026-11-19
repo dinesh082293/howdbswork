@@ -131,25 +131,56 @@ def nb_redis(log):
     log("  last snapshot is gone: the default schedule had not taken one yet.")
 
     log("")
-    log("### 2. Failover to an asynchronous replica: the primary is killed, the replica is promoted")
-    for label, use_wait in (("plain SET, replication is asynchronous:", False), ("SET then WAIT 1 1000 (one replica must confirm):", True)):
+    log("### 2. Failover to a lagging replica")
+    log("  The replica is frozen (docker pause) for one second to stand in for a slow network or a busy")
+    log("  replica. The primary is killed during that second, then the replica is unfrozen and promoted.")
+    for label, use_wait in (("plain SET, replication is asynchronous:", False), ("SET then WAIT 1 500, count only confirmed writes:", True)):
         docker_rm("nb-rp", "nb-rr")
         sh("docker", "run", "-d", "--name", "nb-rp", "--network", NET, "-p", "6391:6379", "redis:7.4", "redis-server", "--appendonly", "no", "--save", "")
         sh("docker", "run", "-d", "--name", "nb-rr", "--network", NET, "-p", "6392:6379", "redis:7.4", "redis-server", "--replicaof", "nb-rp", "6379", "--save", "")
         p, rr = redis_conn(6391), redis_conn(6392)
         wait(lambda: p.ping() and rr.ping(), 30)
         wait(lambda: rr.info("replication").get("master_link_status") == "up", 30)
-        acked, lat = write_until_killed(p, lambda: sh("docker", "kill", "-s", "KILL", "nb-rp"), 5, wait_replicas=use_wait)
-        time.sleep(0.5)
+        stop = [False]
+        acked = [0]; confirmed = [0]; unconfirmed = [0]; lat = []
+        def writer():
+            i = 0
+            while not stop[0]:
+                try:
+                    t0 = time.perf_counter()
+                    p.set("k:%d" % i, i)
+                    ok = True
+                    if use_wait:
+                        ok = p.execute_command("WAIT", 1, 500) >= 1
+                    lat.append(time.perf_counter() - t0)
+                    i += 1; acked[0] = i
+                    if ok: confirmed[0] = i
+                    else: unconfirmed[0] += 1
+                except Exception:
+                    break
+        t = threading.Thread(target=writer); t.start()
+        time.sleep(3)
+        sh("docker", "pause", "nb-rr")
+        time.sleep(1)
+        sh("docker", "kill", "-s", "KILL", "nb-rp")
+        t.join(timeout=10); stop[0] = True
+        sh("docker", "unpause", "nb-rr")
+        rr = redis_conn(6392)
+        wait(lambda: rr.ping(), 10)
         rr.execute_command("REPLICAOF", "NO", "ONE")
-        got = present(rr, acked)
+        got = present(rr, acked[0])
         med = statistics.median(lat) * 1000 if lat else 0
-        log("  %-50s acknowledged %6d, on the promoted replica %6d, lost %4d, median write %.3f ms" % (label, acked, got, acked - got, med))
+        if use_wait:
+            got_conf = present(rr, confirmed[0]) if confirmed[0] else 0
+            log("  %-52s acknowledged %6d, %4d of them reported unconfirmed by WAIT; confirmed and lost: %d. Median write %.3f ms" % (
+                label, acked[0], unconfirmed[0], confirmed[0] - got_conf, med))
+        else:
+            log("  %-52s acknowledged %6d, on the promoted replica %6d, lost %4d. Median write %.3f ms" % (label, acked[0], got, acked[0] - got, med))
         docker_rm("nb-rp", "nb-rr")
-    log("  Read it this way: without WAIT, the writes in flight to the replica when the primary died were")
-    log("  acknowledged and are gone. WAIT makes the client wait for the replica, which closes that gap for")
-    log("  this client at the cost of a round trip to the replica on every write. It does not make Redis a")
-    log("  consensus system: a replica that confirmed can still be the one that is not promoted.")
+    log("  Read it this way: the primary acknowledges a write before any replica has it. Writes acknowledged")
+    log("  while the replica was behind are gone after the promotion. WAIT does not stop that, but it tells the")
+    log("  client which writes no replica confirmed, so the application can retry them or report them. It does")
+    log("  not make Redis a consensus system.")
 
 
 # -------------------------------------------------------------- Cassandra
@@ -232,18 +263,28 @@ def nb_cassandra(log):
     sh("docker", "stop", "nb-c2")
     wait(lambda: up_count() == 1, 120, 3)
     off = trial("1 of 3 up:", N, off)
-    log("### 4. Both nodes back: hints replay the writes they missed")
+    log("### 4. Both nodes back. Do they get the writes they missed?")
+    written_while_down = list(range(1500, 2500)) + list(range(3000, 3500))
     sh("docker", "start", "nb-c2"); sh("docker", "start", "nb-c3")
     wait(lambda: up_count() == 3, 400, 5)
-    time.sleep(20)
-    ins.consistency_level = CL.ALL
-    sel.consistency_level = CL.ALL
-    found = sum(1 for i in range(off) if se.execute(sel, (i,)).one() is not None)
-    log("  all %d keys written so far, read back at ALL: %d found" % (off, found))
+    def pending():
+        out = sh("docker", "exec", "nb-c1", "nodetool", "listpendinghints", check=False) + sh("docker", "exec", "nb-c2", "nodetool", "listpendinghints", check=False)
+        return [l for l in out.splitlines() if l.strip() and not l.startswith(("Host ID", "This node does not have any pending hints"))]
+    t_h = time.time()
+    drained = wait(lambda: not pending(), 180, 5)
+    log("  pending hints on the other nodes: %s after %.0f s" % ("none" if drained else "still some", time.time() - t_h))
+    sh("docker", "stop", "nb-c1"); sh("docker", "stop", "nb-c2")
+    wait(lambda: sh("docker", "exec", "nb-c3", "nodetool", "status", check=False).count("UN") == 1, 120, 3)
+    time.sleep(5)
+    out = sh("docker", "exec", "nb-c3", "cqlsh", "-e", "CONSISTENCY ONE; PAGING OFF; SELECT k FROM nb.kv;", check=False)
+    have = set(int(l.strip()) for l in out.splitlines() if l.strip().isdigit())
+    found = sum(1 for k in written_while_down if k in have)
+    log("  with only node 3 running, reads at ONE of the %d writes it missed while down: %d found" % (len(written_while_down), found))
+    log("  (1,000 written at ONE and QUORUM with node 3 down, 500 at ONE with nodes 2 and 3 down)")
     cl.shutdown()
     log("  Read it this way: with three copies, QUORUM needs two. One node down, QUORUM still works and ALL")
-    log("  fails at once with Unavailable. Two down, only ONE works. A write at ONE with two nodes down lives")
-    log("  on one machine until the others come back and the hints, or repair, copy it over.")
+    log("  fails at once with Unavailable. Two down, only ONE works, and those writes live on one machine until")
+    log("  the others come back and hints (kept up to max_hint_window, 3 hours by default) or repair copy them.")
     docker_rm("nb-c1", "nb-c2", "nb-c3")
 
 
