@@ -3,6 +3,11 @@ name: Verify commands
 # Runs every command shown on the site against real engines and fails the
 # build on any error. On a passing push to main it also rolls the footer
 # "Checked against" stamp to the current month (only when the month changed).
+# The stamp goes out as a pull request, never as a direct push to main, so it
+# works with a branch ruleset that requires pull requests. The repository
+# setting "Allow GitHub Actions to create and approve pull requests" must be on.
+# A pull request opened with the default token does not start the pull_request
+# workflows, so close and reopen the stamp pull request once to run the checks.
 on:
   push:
     branches: [main]
@@ -12,6 +17,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
   verify-commands:
@@ -96,14 +102,30 @@ jobs:
           docker cp ci-out/shell-my.sh ci-my:/tmp/shell-my.sh
           docker exec ci-my bash /tmp/shell-my.sh
 
-      - name: Update Checked against stamp
+      - name: Open a pull request for the Checked against stamp
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           python3 scripts/update-checked-stamp.py
-          if [ -n "$(git status --porcelain)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "Update Checked against stamp [skip ci]"
-            git push
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "Stamp is current, nothing to do."
+            exit 0
+          fi
+          BRANCH="stamp/$(date -u +%Y-%m)"
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            echo "A pull request for $BRANCH is already open."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "Update Checked against stamp"
+          git push --force origin "$BRANCH"
+          if ! gh pr create --base main --head "$BRANCH" \
+              --title "Update Checked against stamp ($(date -u '+%b %Y'))" \
+              --body "Monthly roll of the footer stamp, made by scripts/update-checked-stamp.py after a passing run on main. Close and reopen this pull request once to start the checks."; then
+            echo "::error::Could not open the pull request. Turn on Settings, Actions, General, Allow GitHub Actions to create and approve pull requests."
+            exit 1
           fi
